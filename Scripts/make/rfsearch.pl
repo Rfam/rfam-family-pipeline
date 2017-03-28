@@ -503,6 +503,12 @@ if ($do_build) {
   if($do_hand)  { $buildopts .= " --hand";  }
   if($do_enone) { $buildopts .= " --enone"; }
 
+  # name model based on desc->$id (if it exists)
+  if(defined $id && $id ne "") {
+    # add in -n $id
+    $buildopts .= " -n $id ";
+  }
+
   # clean up buildopts string
   $buildopts =~ s/\s+/ /g; # replace multiple spaces with single spaces
   $buildopts =~ s/\s+$//;  # remove trailing spaces
@@ -521,7 +527,7 @@ if ($do_build) {
   $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
   if(! $do_dirty) { unlink $outfile; }
   if($buildopts ne "") { $buildopts .= " "; } # add trailing single space so next line properly formats BM (and blank opts ("") will work too)
-  $famObj->DESC->BM("cmbuild -F " . $buildopts . "CM SEED");
+  $famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
 
   # define (or possibly redefine) $cm
   $cm = $famObj->CM($io->parseCM("CM"));
