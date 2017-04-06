@@ -7,7 +7,6 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::UUID;
 use Try::Tiny;
-
 use Bio::Rfam::Config;
 use Bio::Rfam::View;
 
@@ -71,6 +70,7 @@ my $rfam_jobs = $config->rfamlive;
 die "couldn't connect to the 'rfam_live' tracking database\n"
   unless $rfam_jobs;
 
+#fetch job from the database
 $job = $rfam_jobs->resultset('PostProcess')
                  ->search( { rfam_acc => $rfam_acc, #new line
                              uuid => $job_uuid
@@ -89,9 +89,8 @@ die "couldn't find a row for this job (job ID $job_uuid) in the tracking table"
 
 foreach my $plugin_set ( @ARGV ) {
   print "\nPlugin Sets: $plugin_set\n";
-  try{
+ # try{
   my $plugins = $config->viewPluginSets( $plugin_set );
-  print "test\n";
   print "Plugins:\n$plugins\n";
   print "Config: $config\n";
   print "Rfam_acc: $rfam_acc\n";
@@ -103,22 +102,23 @@ foreach my $plugin_set ( @ARGV ) {
     family    => $rfam_acc,
     job_uuid  => $job_uuid,
     #job => $job,
-    seqdb     => 'rfamseq'
+    seqdb     => 'rfamseq',
   } );
 
   print "\nView object: $view\n";
   print "bp1\n";
 
   $job->run; # unless $no_db; #modified PostProcess.pm in RfamLive ResultSet 
-  
 
   print "bp2\n";
 
+  #print "view plugins: @{$view->plugins}\n";
 
   foreach my $plugin ( @{ $view->plugin_list } ) {
-    print $plugin;
+    print "bp2.1\n";
     #move try catch at this point
     $plugin->process; #call the subroutine to process the plugin
+    
     print "bp3\n";
     # TODO could wrap the call to "process" in a try/catch and store the
     # message from the exception in the tracking DB, along with the name of the
@@ -126,7 +126,7 @@ foreach my $plugin_set ( @ARGV ) {
   }
   print "bp3.1\n";
   #marked as DONE if all plugins execute successfully
-  $job->done; # unless $no_db; #this one will now work after modifying the 
+  #$job->done; #unless $no_db; #this one will now work after modifying the 
   #PostProcess.pm in RfamLive ResultSet
   print "bp4\n";
 
@@ -135,12 +135,14 @@ foreach my $plugin_set ( @ARGV ) {
   # RfamJobs/Result/JobHistory.pm.) 
   # modified PostProcess.pm file to include those too.. currently modified under 
   # result set and may need to move those to result/PostProcess.pm
-}
+#}
+=pod
 catch{
    print "bp5\n";
    #print "Failed on: $p_var\n";
    $job->failure; #this will set the job status to 'FAIL' upon failure
 };
+=cut
 print "bp6\n";
 }
 
