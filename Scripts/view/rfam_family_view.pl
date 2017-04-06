@@ -88,13 +88,8 @@ die "couldn't find a row for this job (job ID $job_uuid) in the tracking table"
 # call the plugins
 
 foreach my $plugin_set ( @ARGV ) {
-  print "\nPlugin Sets: $plugin_set\n";
  # try{
   my $plugins = $config->viewPluginSets( $plugin_set );
-  print "Plugins:\n$plugins\n";
-  print "Config: $config\n";
-  print "Rfam_acc: $rfam_acc\n";
-  print "Job uuid: $job_uuid\n";
  
   my $view = Bio::Rfam::View->new ( {
     plugins   => $plugins,
@@ -105,30 +100,20 @@ foreach my $plugin_set ( @ARGV ) {
     seqdb     => 'rfamseq',
   } );
 
-  print "\nView object: $view\n";
-  print "bp1\n";
 
-  $job->run; # unless $no_db; #modified PostProcess.pm in RfamLive ResultSet 
-
-  print "bp2\n";
-
-  #print "view plugins: @{$view->plugins}\n";
+  $job->run;  
 
   foreach my $plugin ( @{ $view->plugin_list } ) {
-    print "bp2.1\n";
-    #move try catch at this point
     $plugin->process; #call the subroutine to process the plugin
     
-    print "bp3\n";
     # TODO could wrap the call to "process" in a try/catch and store the
     # message from the exception in the tracking DB, along with the name of the
     # plugin that failed
   }
-  print "bp3.1\n";
+
   #marked as DONE if all plugins execute successfully
   #$job->done; #unless $no_db; #this one will now work after modifying the 
   #PostProcess.pm in RfamLive ResultSet
-  print "bp4\n";
 
   # (the $job row object has methods "run", "fail" and "done, which set the
   # status for that row and update the "closed" time stamp too. See
@@ -136,14 +121,12 @@ foreach my $plugin_set ( @ARGV ) {
   # modified PostProcess.pm file to include those too.. currently modified under 
   # result set and may need to move those to result/PostProcess.pm
 #}
+
 =pod
 catch{
-   print "bp5\n";
-   #print "Failed on: $p_var\n";
    $job->failure; #this will set the job status to 'FAIL' upon failure
 };
 =cut
-print "bp6\n";
 }
 
 exit;
