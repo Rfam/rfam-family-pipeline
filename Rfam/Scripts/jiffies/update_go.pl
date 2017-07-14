@@ -40,10 +40,12 @@ else{
 	#fetch family accessions
 	my %families;
 	my $rfamdbh=$rfamdb->storage->dbh;
-
+=pod
 	my $query=qq(select distinct rfam_acc from database_link
 		     where rfam_acc not in (select distinct rfam_acc from database_link where db_id='GO') 
-		     and rfam_acc > 'RF02545';);
+		     and rfam_acc > 'RF02544';);
+=cut
+	my $query=qq(select rfam_acc from family;);
 
 	my $db_cursor=$rfamdbh->prepare($query);
 	$db_cursor->execute();
@@ -53,13 +55,24 @@ else{
 	foreach my $entry (@$results){
     		$families{$entry->[0]}=1;
 	}
-	
+
+	#my $counter = 0;
 	# loop over all family accessions
 	foreach my $rfam_acc (keys %families){
         	# load family from the SVN repository 
+
         	my $familyObj = $familyIO->loadRfamFromSVN($rfam_acc, $client);
+
+		if(!defined($familyObj)){
+			croak ("Failed to load family $rfam_acc from the SVN.");
+		}
 		print $familyObj->{DESC}->{AC};
 		# update database_link table 
 		$rfamdb->resultset('DatabaseLink')->find_or_createFromFamilyObj($familyObj);
-        }
+
+	#$counter=$counter+1;
+	}
+
+#print "$counter\n";
+
 }
