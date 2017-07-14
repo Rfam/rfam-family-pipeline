@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-# 
+# Generates annotated CMs for a new release.
+#
 # example-writeCM.pl: simple script to demonstrate how to use the Bio::Rfam::FamilyIO::writeCM() method.
 #
 # NOTE: This script must be run from Rfam/Scripts/jiffies inside a checkout of the Rfam code repository,

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 # 
-# writeAnnotatedSeed.pl:  Generates annotated SEED files for use as release flatfiles
+# writeAnnotatedSeed.pl:  Generates annotated SEED files
 #
 # 
 use strict;
