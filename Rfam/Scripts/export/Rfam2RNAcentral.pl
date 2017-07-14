@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 #TODO:
 #Logfile
 # useage
@@ -32,7 +32,11 @@ my $rfdbh    = $schema->storage->dbh;
 
 my $query1 = qq(select rfam_acc from family;);
 
-my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.type like 'Gene%' and f.type not like '%lncRNA%' and f.rfam_acc = ? and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+#include: gene, leader, riboswitch exclude: cis-reg & lncRNA 
+my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%') and f.type not like '%lncRNA%' and f.type not like '%leader%' and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+
+#my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.type like '%riboswitch%' or f.type like '%leader%' and f.type not like 'Intron%' or (f.type not like 'Gene%lncRNA%' and f.type not like 'Cis-reg%') and f.rfam_acc = ? and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+
 
 #my $query = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc =  'RF01888' group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score ;); 
 	
@@ -57,6 +61,8 @@ my %classes = (
 	"Gene; snRNA; snoRNA; scaRNA;" => "snoRNA",   
 	"Gene; lncRNA;" => "lncRNA",                  
 	"Gene; CRISPR;" => "other",
+	"Cis-reg; riboswitch;" => "other",
+	"Cis-reg; leader;" => "other",
 );
 
 my %types = (
