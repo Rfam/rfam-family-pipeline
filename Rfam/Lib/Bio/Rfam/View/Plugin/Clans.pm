@@ -1,4 +1,4 @@
-package Bio::Rfam::View::Plugin::Clans;
+ackage Bio::Rfam::View::Plugin::Clans;
 
 use Moose;
 with 'MooseX::Role::Pluggable::Plugin';
@@ -24,10 +24,10 @@ sub competeClan {
 	my @clan_members;
 	#my @clan_members = qw(RF00015 RF00016 RF00017);
 
-	my $config = $self->parent->config;
-	my $rfamdb = $self->parent->config->rfamlive;
-	my $familyObj = $self->parent->family;
-	my $rfam_acc = $self->parent->family->DESC->AC;
+	my $config = $self->_mxrp_parent->config;
+	my $rfamdb = $self->_mxrp_parent->config->rfamlive;
+	my $familyObj = $self->_mxrp_parent->family;
+	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 	my $clan_rs = $rfamdb->resultset('ClanMembership')->find({rfam_acc => $rfam_acc});
 	return if (!$clan_rs);
 	my $clan_acc = $clan_rs->clan_acc->clan_acc;

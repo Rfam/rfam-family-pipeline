@@ -54,8 +54,8 @@ sub process {
 
   # the accession of the family for which we're going to build a sunburst
   # and the sequence database
-  my $rfam_acc = $self->parent->family->DESC->AC;
-  my $seq_db   = $self->parent->seqdb;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
+  my $seq_db   = $self->_mxrp_parent->seqdb;
 
   # a connection to the database where we're going to store the sunburst
   my $schema = $self->_config->rfamlive;

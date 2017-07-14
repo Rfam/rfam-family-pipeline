@@ -11,7 +11,7 @@ has foo => (
 sub process {
   my $self = shift;
   print "In Bio::Rfam::View::Plugin::CM::process\n";
-  print 'Work on this ' . $this->parent->family->SEED->path . "\n";
+  print 'Work on this ' . $this->_mxrp_parent->family->SEED->path . "\n";
   $self->annotatedCM;
 }
 

@@ -15,8 +15,6 @@ sub process{
 
 sub mapPDB {
 	
-	
-
 	my ($self) = @_;	
 	#Sorry Rob, a hardcoded path. Need to put this someplace more permanent.
 	#This file is the fasta file of all the non-protein nucleic acid sequences in the PDB.
@@ -24,12 +22,11 @@ sub mapPDB {
 	#Documentation on Confluence as to how to produce this fasta file.
 	#
 	#my $PDB_fasta = '/nfs/production/xfam/rfam/RELEASE_FILES/RFAM_12/PDB_RFAM12.fa';
-	my $PDB_fasta = '/nfs/production/xfam/rfam/RELEASE_FILES/RFAM_12_1/PDB_RFAM12_1.fa';
-        #my $PDB_fasta = '/nfs/production/xfam/rfam/CURATION/PDB/pdb_trimmed_noillegals.fa';	
- 	my $config = $self->parent->config;
+	my $PDB_fasta = '/nfs/production/xfam/rfam/RELEASE_FILES/RFAM_12_3/pdb_mappings/PDB_RFAM_12_3.fa';
+ 	my $config = $self->_mxrp_parent->config;
 	# my $client = Bio::Rfam::SVN::Client->new({config => $config});
 	my $familyIO = Bio::Rfam::FamilyIO->new;	
-	my $familyObj = $self->parent->family;
+	my $familyObj = $self->_mxrp_parent->family;
 	my $rfam_acc = $familyObj->DESC->AC;
 	my $prefix = "$rfam_acc.XXXX";
         my @hex_colour = qw(1fc01f c00f0f bdc000 c008ae 00bac0 8484c0 93c090 c0af92 8e2511 f29242 8585e6 ff87fa 008700 454545 0003c0 ebeb30 ff87a4 0064f4);
@@ -49,7 +46,7 @@ sub mapPDB {
 									DIR => '/tmp',
 									SUFFIX => '.log');
 
-	my $rfamdb = $self->parent->config->rfamlive;
+	my $rfamdb = $self->_mxrp_parent->config->rfamlive;
 
 	# File to put the CM which we extract from the SVN:
 	#
@@ -69,7 +66,7 @@ sub mapPDB {
 	system ($cmpress) == 0
           or die 'ERROR: failed to run cmpress';
 
-	my $cmscan_cmd = "$cmscan -o  $out --tblout $tblout --cut_ga $cm_file $PDB_fasta >>$logfile";
+	my $cmscan_cmd = "$cmscan -o $out --tblout $tblout --cut_ga $cm_file $PDB_fasta >>$logfile";
 	system ( $cmscan_cmd) == 0
           or die 'ERROR: failed to run cmscan';
 
@@ -114,7 +111,8 @@ sub mapPDB {
 							evalue_score => $hit->{evalue_score},
 							cm_start => $hit->{cm_start},
 							cm_end => $hit->{cm_end},
-                                                        hex_colour => $hit->{hex_colour}
+                                                        hex_colour => $hit->{hex_colour},
+							is_significant => '1'
 							});
 	}
 }
@@ -124,4 +122,4 @@ catch{
 
 } 
 	
-	
+1;	

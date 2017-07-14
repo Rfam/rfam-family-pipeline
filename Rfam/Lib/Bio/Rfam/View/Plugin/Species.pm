@@ -6,14 +6,14 @@ with 'MooseX::Role::Pluggable::Plugin';
 sub process {
   my $this = shift;
   print "In Bio::Rfam::View::Plugin::Species::process\n";
-  print 'Making subburst for ' . $this->parent->family->DESC->AC . "\n";
+  print 'Making subburst for ' . $this->_mxrp_parent->family->DESC->AC . "\n";
 }
 
 sub makeSpeciesJsonString {
   my ( $self ) = @_;
 
   my $json = JSON->new;
-  my $rfamdb = $self->parent->config;
+  my $rfamdb = $self->_mxrp_parent->config;
   my $dbh  = $rfamdb->storage->dbh;
 
   #List of seed sequences

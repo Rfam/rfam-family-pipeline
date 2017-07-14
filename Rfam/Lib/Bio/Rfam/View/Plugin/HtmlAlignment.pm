@@ -89,7 +89,7 @@ has '_types' => (
 sub process {
   my $self = shift;
 
-  my $rfam_acc = $self->parent->family->DESC->AC;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
   $self->_rfam_acc( $rfam_acc );
 
   $self->_log->debug( "working on family $rfam_acc" );
@@ -100,7 +100,7 @@ sub process {
     # there's no way to hand the in-memory seed alignment from the native
     # component of Bio::Easel::MSA object into the Bio::Rfam::HtmlAlignment
     # object, so we have to  write it out and pass the filehandle instead
-    my $alignment = $self->parent->family->$type;
+    my $alignment = $self->_mxrp_parent->family->$type;
     my $fh = File::Temp->new;
     $alignment->write_msa($fh->filename, 'stockholm');
     $self->_log->debug( 'wrote the alignment to ' . $fh->filename . "'" );

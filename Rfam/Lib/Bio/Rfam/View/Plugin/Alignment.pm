@@ -29,14 +29,14 @@ sub process {
   my $self = shift;
 
   print "In Bio::Rfam::View::Plugin::Alignment::process\n";
-  print 'Family alignment stuff ' . $self->parent->family->DESC->AC . "\n";
+  print 'Family alignment stuff ' . $self->_mxrp_parent->family->DESC->AC . "\n";
 
 
   $self->makeMatchList;
   $self->makeFasta;
   
   #Only when we are dealing with Rfamseq do we need to do this.
-  if($self->parent->seqdb eq 'rfamseq'){
+  if($self->_mxrp_parent->seqdb eq 'rfamseq'){
     $self->seedAlignmentAndTree( "seed-annot.sto" );
     #Now do the tax version....
     $self->seedAlignmentAndTree( "seedTax-annot.sto", 1 );
@@ -52,8 +52,8 @@ sub process {
 sub makeMatchList {
   my ($self) = @_;
 
-  my $rfamdb = $self->parent->config->rfamlive;
-  my $rfam_acc = $self->parent->family->DESC->AC;
+  my $rfamdb = $self->_mxrp_parent->config->rfamlive;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
   #Check family is present, get the expected number of hits from the table.
   #TODO - make the match file pretty.
@@ -69,7 +69,7 @@ sub makeMatchList {
   my $row = $rfamdb->resultset('MatchAndFasta')->find_or_create(
     {
       rfam_acc => $rfam_acc,
-      type     => $self->parent->seqdb
+      type     => $self->_mxrp_parent->seqdb
     }
   );
   $row->update( { match_list => $matchListGzipped } );
@@ -78,8 +78,8 @@ sub makeMatchList {
 sub makeFasta {
   my ($self) = @_;
 
-  my $rfamdb   = $self->parent->config->rfamlive;
-  my $rfam_acc = $self->parent->family->DESC->AC;
+  my $rfamdb   = $self->_mxrp_parent->config->rfamlive;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
   my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
 
   #TODO - need a swith based on the seqdb type.....
@@ -97,9 +97,9 @@ sub makeFasta {
   }
   close(F);
 
-  my $config   = $self->parent->config;
+  my $config   = $self->_mxrp_parent->config;
   my $bin      = $config->easelPath . '/' . 'esl-sfetch';
-  my $seqDbLoc = $config->seqdbConfig( $self->parent->seqdb )->{fetchpath};
+  my $seqDbLoc = $config->seqdbConfig( $self->_mxrp_parent->seqdb )->{fetchpath};
   my $cmd      = "$bin -f eslInput $seqDbLoc";
 
   print STDERR "$cmd\n";
@@ -141,7 +141,7 @@ sub makeFasta {
   my $row = $rfamdb->resultset('MatchAndFasta')->find_or_create(
     {
       rfam_acc => $rfam_acc,
-      type     => $self->parent->seqdb
+      type     => $self->_mxrp_parent->seqdb
     }
   );
   $row->update( { fasta => $fastaGzipped } );
@@ -153,19 +153,19 @@ sub seedAlignmentAndTree {
   my ($self, $filename, $tax) = @_;
 
 #------------------------------------------------------------------------------
-#TODOPush up to the parent class the family row.
-  my $rfamdb   = $self->parent->config->rfamlive;
-  my $rfam_acc = $self->parent->family->DESC->AC;
+#TODOPush up to the _mxrp_parent class the family row.
+  my $rfamdb   = $self->_mxrp_parent->config->rfamlive;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
   my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
 
 #------------------------------------------------------------------------------
 #Generate the Annotated Stockholm file
 
   my $io = Bio::Rfam::FamilyIO->new;
-  my $msa = $self->parent->family->SEED;
+  my $msa = $self->_mxrp_parent->family->SEED;
   
   # TODO, write writeDESC2Array function, no need to output to file
-  $io->writeDESC($self->parent->family->DESC);
+  $io->writeDESC($self->_mxrp_parent->family->DESC);
   open( IN, '<', 'DESC' ) || die "ERROR unable to open DESC";
   my $line;
   my $tag;

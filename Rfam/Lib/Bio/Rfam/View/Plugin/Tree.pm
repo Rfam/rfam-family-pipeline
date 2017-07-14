@@ -19,8 +19,8 @@ sub makeSeedTrees {
   my ($self) = @_;
   my ($treeMethod,$cmd,$taxcmd,$infile,$outfile,$type);
 
-  my $rfamdb = $self->parent->config->rfamlive;
-  my $rfam_acc = $self->parent->family->DESC->AC;
+  my $rfamdb = $self->_mxrp_parent->config->rfamlive;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 #Set up some locations for writing files to:
 #
   my $location = tempdir( CLEANUP => 1 );
@@ -30,7 +30,7 @@ sub makeSeedTrees {
   my $taxtree  = "$location/$rfam_acc.taxtree";
 
 #Get SEED file, and check the family exists in the database:
-  my $msa = $self->parent->family->SEED;
+  my $msa = $self->_mxrp_parent->family->SEED;
   
   my $famRow = $rfamdb->resultset('Family')->find( {rfam_acc => $rfam_acc} );
   if (!defined($famRow)) {

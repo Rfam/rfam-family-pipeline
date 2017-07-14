@@ -23,9 +23,9 @@ has foo => (
 
 sub process {
   my $self = shift;
-  # print 'Work on this ' . $self->parent->family->SEED->path . "\n";
   
   $self->makeRchie;
+  $self->makeRscape;
   $self->makeBling;
 }
 
@@ -33,40 +33,46 @@ sub process {
 sub makeRchie {
 	my ($self) = @_;
 
-        my $config = $self->parent->config;
+        my $config = $self->_mxrp_parent->config;
 	
 	my $rfamdb = $config->rfamlive;
-	my $rfam_acc = $self->parent->family->DESC->AC;
+	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
 	my $location = tempdir( CLEANUP => 1 );
 	my $seed_loc = "$location/$rfam_acc";
 	my $rchie_img = "$location/$rfam_acc.rchie.png";
-	my $msa = $self->parent->family->SEED;
+	my $msa = $self->_mxrp_parent->family->SEED;
         $msa->write_msa($seed_loc);
 	
 	my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
-	if (!defined($famRow)) {
+	
+    if (!defined($famRow)) {
 		croak ("Failed to find entry in the Family table for $rfam_acc.");
 	}
 
-        my $r_script = $config->config->{binLocation} . '/stockholm2Arc.R';
+    my $r_script = $config->config->{binLocation} . '/stockholm2Arc.R';
 
 	my $Rchie_cmd = "$r_script $seed_loc $rchie_img 2> $location/$$.err";
-	print "Making arc diagram for $rfam_acc\n";
-	system ($Rchie_cmd);
-	if ($? == -1) {
+	
+    print "Making arc diagram for $rfam_acc\n";
+	
+    system ($Rchie_cmd);
+	
+    if ($? == -1) {
 		croak ("Failed to generate Rchie image for $rfam_acc!\n");
 	}
-	my $fileGzipped;
+	
+    my $fileGzipped;
 	gzip $rchie_img => \$fileGzipped;
 		
-		my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create( 
+    my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
 			{rfam_acc => $rfam_acc,
 			 type => 'rchie'},
-			{key => 'acc_and_type'});
-		$resultset->update({ image => $fileGzipped,
-							 type => 'rchie'},
-							{key => 'acc_and_type'});
+            {key => 'acc_and_type'});
+    
+    $resultset->update({ image => $fileGzipped,
+                         type => 'rchie'},
+                       {key => 'acc_and_type'});
 
        # my $resultset= $rfamdb->resultset('SecondaryStructureImage')->update_or_create(
         #                                                            {rfam_acc => $rfam_acc,
@@ -76,14 +82,85 @@ sub makeRchie {
 	
 }
 
+sub makeRscape{
+	
+	#some init steps from the config file
+	my ($self) = @_;
+  	my $config = $self->_mxrp_parent->config;
+  	my $rfamdb = $config->rfamlive;
+  	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
+
+ 	my $location = tempdir( CLEANUP => 1 );
+	my $outdir = "$location";
+	my $seed_loc = "$outdir/SEED";
+	my $msa = $self->_mxrp_parent->family->SEED;
+
+	$msa->write_msa($seed_loc);
+	
+	#look for a family entry in the database
+	my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
+        if (!defined($famRow)) {
+                croak ("Failed to find entry in the Family table for $rfam_acc.");
+        }
+	
+	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
+	my $rscape_cmd = "$rscape_exec --outdir $outdir --cyk $seed_loc";
+	
+	print "Making rscape image for $rfam_acc\n";
+        
+	system ($rscape_cmd);
+
+	if ($? == -1) {
+                croak ("Failed to generate rscape images for $rfam_acc!\n");
+        }
+    
+	my $rscape_img = "$outdir/SEED_1.R2R.sto.svg";
+    my $rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
+	
+	my $rscapeImgGzipped;
+	my $rscapeCykGzipped;
+    
+    #if the files exist, compress and load to the database
+    if (-e $rscape_img){
+        gzip $rscape_img => \$rscapeImgGzipped;
+        
+        #load image to the database
+        my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
+                            {	rfam_acc => $rfam_acc,
+                                type => 'rscape'},
+                            { 	key => 'acc_and_type'});
+	
+        $resultset->update({	image => $rscapeImgGzipped,
+                                type => 'rscape'},
+                            {	key => 'acc_and_type'});
+        }
+
+    if (-e $rscape_cyk_img){
+        gzip $rscape_cyk_img => \$rscapeCykGzipped;
+        
+        #load image to the database
+        my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
+                            {    rfam_acc => $rfam_acc,
+                                type => 'rscape-cyk'},
+                            {    key => 'acc_and_type'});
+
+        $fam_cyk_entry->update({    image => $rscapeCykGzipped,
+                                type => 'rscape-cyk'},
+                            {    key => 'acc_and_type'});
+        }
+	
+}
+
+
 sub makeBling {
   my ($self) = @_;
   
-  my $config = $self->parent->config;
-  my $rfamdb = $self->parent->config->rfamlive;
-  my $rfam_acc = $self->parent->family->DESC->AC;
+  my $config = $self->_mxrp_parent->config;
+  my $rfamdb = $self->_mxrp_parent->config->rfamlive;
+  my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
-  my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
+  #my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
+  my $location = "/nfs/production/xfam/rfam/rfam_rh7/public_html/ss_images/rel_13_0/$rfam_acc";
   File::Path::make_path($location);
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
@@ -100,7 +177,7 @@ sub makeBling {
   my $maxCMparseSVG = "$location/$rfam_acc.maxcm.svg";
 
   # This is simply to get around a 'not digitized' error that easel is giving
-  my $msa = $self->parent->family->SEED;
+  my $msa = $self->_mxrp_parent->family->SEED;
   $msa->write_msa($seed_loc);
   $msa=Bio::Easel::MSA->new({ fileLocation => $seed_loc}); 
 
@@ -114,7 +191,7 @@ sub makeBling {
   my $SScons = $msa->get_ss_cons_dot_parantheses();
 
   # Write the CM file from the database
-  Bio::Rfam::FamilyIO->writeCM($self->parent->family->CM, $CM_loc);
+  Bio::Rfam::FamilyIO->writeCM($self->_mxrp_parent->family->CM, $CM_loc);
 
   # Create a hash of positions that form basepairs for generating specific bp images
   my $i=0;
@@ -147,7 +224,7 @@ sub makeBling {
   chdir($location);
   
   use IPC::Run qw(run);
-  my @cmd2 = ("/nfs/production/xfam/rfam/software/bin/RNAplot", "-o", "svg");
+  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
 
   unless(-e $RNAplot_img) {
@@ -242,7 +319,7 @@ sub makeBling {
   my $cmemitPath = $config->infernalPath . "cmemit";
   my $cmalignPath = $config->infernalPath . "cmalign";
   my $out_tfile = "$location/$rfam_acc.tfile";
-  my $clen = $self->parent->family->CM->cmHeader->{clen};  #consensus length of the CM 
+  my $clen = $self->_mxrp_parent->family->CM->cmHeader->{clen};  #consensus length of the CM 
   my @escAR = ();
   my @cseqAR = ();
   my $cpos;
@@ -418,13 +495,13 @@ sub makeBling {
     my $fileGzipped;
     gzip $imageHandleRef->[0] => \$fileGzipped;
 
-	my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
-																{ rfam_acc => $rfam_acc,
-																  type => $imageHandleRef->[1]},
-																{ key => 'acc_and_type'});
-	$resultset->update( {image => $fileGzipped,
-						type => $imageHandleRef->[1]},
-						{key => 'acc_and_type'});
+  my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
+                                { rfam_acc => $rfam_acc,
+                                  type => $imageHandleRef->[1]},
+                                { key => 'acc_and_type'});
+  $resultset->update( {image => $fileGzipped,
+            type => $imageHandleRef->[1]},
+            {key => 'acc_and_type'});
 
 #    my $resultset= $rfamdb->resultset('SecondaryStructureImage')->update_or_create(
  #                                                                   {rfam_acc => $rfam_acc,

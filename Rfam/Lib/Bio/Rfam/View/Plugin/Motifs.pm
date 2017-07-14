@@ -33,8 +33,8 @@ sub process {
 sub findMotifs {
 	my ($self) = @_;
 	
-	my $rfamdb      = $self->parent->config->rfamlive;
-	my $rfam_acc    = $self->parent->family->DESC->AC;
+	my $rfamdb      = $self->_mxrp_parent->config->rfamlive;
+	my $rfam_acc    = $self->_mxrp_parent->family->DESC->AC;
         my $originalCWD = cwd;
 
         # Confirm the family exists in the database
@@ -51,7 +51,7 @@ sub findMotifs {
         my $CMdb	= "/nfs/production/xfam/rfam/MOTIFS/cmdb/CM";        
 
         # Write the seed to file
-	my $msa = $self->parent->family->SEED;
+	my $msa = $self->_mxrp_parent->family->SEED;
         $msa->write_msa($SEED);
 	
         # Values used in the filtering of the SEED and inclusion cutoff
@@ -78,7 +78,7 @@ sub findMotifs {
 
         # Run cmscan on the SEED
         my $cmscanOpts  = " --cpu 4 --max --toponly --verbose --cut_ga --tblout $results_loc/TBL -o $results_loc/cmscan "; 
-        my $infernal    = $self->parent->config->infernalPath;
+        my $infernal    = $self->_mxrp_parent->config->infernalPath;
         my $command     = $infernal . "cmscan";
         my $arg = $command . $cmscanOpts .  $CMdb ." ". $SEED;
         system($arg) == 0 
