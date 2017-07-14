@@ -65,6 +65,7 @@ __PACKAGE__->add_columns(
         "rchie",
         "species",
         "ss",
+	"rscape",
       ],
     },
     is_nullable => 0,
