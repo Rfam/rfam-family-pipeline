@@ -972,8 +972,8 @@ sub checkSpell {
   }
   close $tfh;
 
-  # Start ispell session on file
-  system("ispell -W 0 -w 0123456789 -p$dictionary $tfilename");
+  # Start ispell session on file - replacing ispell with aspell
+  system("aspell -W 0 -w 0123456789 -p$dictionary $tfilename");
 
   # Now need to put changes back into DESC file
   my ( %editedline, $line_number );
