@@ -54,7 +54,7 @@ sub predict_ss {
 	}
 
 #run ppfold
-	system("java -jar $bin/PPfold-v3-0.jar $$.fasta") and die "Cannot run PPfold on $fa $!\n";
+	system("java -jar $bin/PPfold3.1.1.jar $$.fasta") and die "Cannot run PPfold on $fa $!\n";
 	if ($seqcount == 1){
 	    $output = "$$.seq";
 	    &parse_pp_single($output, $outfile);
