@@ -767,7 +767,7 @@ sub moveNewFamily {
   $self->_checkCommitObj($cinfo);
 }
 
-# Priavte methods that should not be used from outside this module
+# Private methods that should not be used from outside this module
 #-------------------------------------------------------------------------------
 
 =head2 _checkCommitObj
@@ -1203,7 +1203,7 @@ sub checkClanExists {
     }
   };
   
-  #Now see if that famuly is present!
+  #Now see if that family is present!
   my $revision = $self->revision;
   eval {
      $self->{txn}->info( $url, undef, $revision, $codeRef, 0 ); 
