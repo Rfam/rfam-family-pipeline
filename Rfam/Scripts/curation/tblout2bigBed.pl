@@ -33,8 +33,10 @@ while (<IN>){
 #start must be lower than end - so the two need reversing if strand = '-'
 		if ($data[9] eq '+'){
 	   	  	print BED "$data[0]\t$data[7]\t$data[8]\t$data[2]\n";
+			#print BED "$data[3]\t$data[0]\t$data[7]\t$data[8]\t$data[2]\n";
 		} elsif ($data[9] eq '-'){
 	   		print BED "$data[0]\t$data[8]\t$data[7]\t$data[2]\n";
+			#print BED "$data[3]\t$data[0]\t$data[8]\t$data[7]\t$data[2]\n";
 		} else {
 	    		print "Strand character unrecognised in line: $_";
 		}
@@ -49,7 +51,6 @@ close (BED);
 
 my $sortedfile = $infile . "_sorted.bed";
 system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
-
 
 
 #use fetchChromSizes to create chrom.sizes file
