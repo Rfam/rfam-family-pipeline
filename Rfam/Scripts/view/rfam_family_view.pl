@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-
+use Data::Dumper qw(Dumper);
 use Getopt::Long;
 use Pod::Usage;
 use Data::UUID;
@@ -58,7 +58,6 @@ die "ERROR: you must specify at least one plugin set\n"
 # setup 
 
 my $config  = Bio::Rfam::Config->new;
-
 # we need to get the row in the pos_process table for this job, so that we can
 # update its status before and after running the plugins. It's also a good
 # validation for the UUID, so we'll check it before trying to run anything.
@@ -69,7 +68,6 @@ my $rfam_jobs = $config->rfamlive;
 
 die "couldn't connect to the 'rfam_live' tracking database\n"
   unless $rfam_jobs;
-
 #fetch job from the database
 $job = $rfam_jobs->resultset('PostProcess')
                  ->search( { rfam_acc => $rfam_acc, #new line
@@ -83,23 +81,20 @@ $job = $rfam_jobs->resultset('PostProcess')
 die "couldn't find a row for this job (job ID $job_uuid) in the tracking table"
   unless $job;
 # }
-                         
 #-------------------------------------------------------------------------------
 # call the plugins
-
 foreach my $plugin_set ( @ARGV ) {
- # try{
+# try{
   my $plugins = $config->viewPluginSets( $plugin_set );
- 
+
   my $view = Bio::Rfam::View->new ( {
     plugins   => $plugins,
     config    => $config,
     family    => $rfam_acc,
     job_uuid  => $job_uuid,
-    #job => $job,
-    seqdb     => 'rfamseq',
+    job => $job,
+    seqdb     => 'rfamseq'
   } );
-
 
   $job->run;  
 
