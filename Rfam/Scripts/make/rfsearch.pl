@@ -178,11 +178,10 @@ my $famObj = Bio::Rfam::Family->new(
                                                 },
                                     'DESC'   => ($do_hmmonly) ? $io->parseDESCallowHmmonly("DESC") : $io->parseDESC("DESC"),
                                    );
-my $msa    = $famObj->SEED;
-my $desc   = $famObj->DESC;
-my $id     = $desc->ID;
-my $acc    = $desc->AC;
-my $cmdesc = $desc->DE;
+my $msa  = $famObj->SEED;
+my $desc = $famObj->DESC;
+my $id   = $desc->ID;
+my $acc  = $desc->AC;
 
 # extra processing of command-line options 
 if ($only_build) { # -onlybuild, verify incompatible options are not set
@@ -503,12 +502,6 @@ if ($do_build) {
   if($do_hand)  { $buildopts .= " --hand";  }
   if($do_enone) { $buildopts .= " --enone"; }
 
-  # name model based on desc->$id (if it exists)
-  if(defined $id && $id ne "") {
-    # add in -n $id
-    $buildopts .= " -n $id ";
-  }
-
   # clean up buildopts string
   $buildopts =~ s/\s+/ /g; # replace multiple spaces with single spaces
   $buildopts =~ s/\s+$//;  # remove trailing spaces
@@ -528,10 +521,12 @@ if ($do_build) {
   if(! $do_dirty) { unlink $outfile; }
   if($buildopts ne "") { $buildopts .= " "; } # add trailing single space so next line properly formats BM (and blank opts ("") will work too)
   $famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
+  #$famObj->DESC->BM("cmbuild -F " . $buildopts . "CM SEED");
 
   # define (or possibly redefine) $cm
   $cm = $famObj->CM($io->parseCM("CM"));
   $famObj->CM($io->parseCM("CM"));
+
 
   $is_cm_calibrated = 0;
 
@@ -549,7 +544,7 @@ if ($do_build) {
   # add RF annotation from cmalign --mapali output file to original SEED
   # to create a new SEED file 
   # (this subroutine expects the extra consensus sequence in the $cmalign_mapali_file alignment)
-  add_rf_sscons_acc_and_desc_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen}, $acc, $cmdesc);
+  add_rf_and_ss_cons_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen});
   unlink $cmalign_mapali_file;
 
   # rebuild CM from new SEED
@@ -1056,7 +1051,7 @@ sub strip_default_options_from_sm {
 
 ######################################################################
 #
-# add_rf_sscons_acc_and_desc_given_cmalign_mapali_output(): 
+# add_rf_and_ss_cons_given_cmalign_mapali_output(): 
 #
 # Given an original SEED alignment ($orig_infile) used to build a CM,
 # and an alignment output from cmalign --mapali
@@ -1089,9 +1084,9 @@ sub strip_default_options_from_sm {
 # lost. Pseudoknots (k,l) will be preserved though (another reason we
 # need this function) unless k or l is an insert position.
 # 
-sub add_rf_sscons_acc_and_desc_given_cmalign_mapali_output {
+sub add_rf_and_ss_cons_given_cmalign_mapali_output {
 
-  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen, $acc, $cmdesc) = @_;
+  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen) = @_;
 
   # read in original seed
   my $orig_seed = Bio::Easel::MSA->new({
@@ -1202,11 +1197,7 @@ sub add_rf_sscons_acc_and_desc_given_cmalign_mapali_output {
   $orig_seed->set_ss_cons($output_sscons);
 
   $orig_seed->capitalize_based_on_rf();
-
-  if(defined $acc    && $acc ne "")    { $orig_seed->setAccession($acc); }
-
-  if(defined $cmdesc && $cmdesc ne "") { $orig_seed->setDesc($cmdesc); }
-
+  
   $orig_seed->write_msa($outfile);
   
   return;
@@ -1361,7 +1352,7 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
 
             OTHER OPTIONS:
             -q <str>     specify queue to submit job to as <str> (EBI \'-q <str>\' JFRC: \'-l <str>=true\')
-                         (shortcuts: use <str>='p' for 'production-rh6', <str>='r' for 'research-rh6')
+                         (shortcuts: use <str>='p' for 'production-rh7', <str>='r' for 'research-rh7')
             -ssopt <str> add extra arbitrary string <str> to qsub cmsearch commands, for multiple options use multiple -ssopt <s>
             -nodesc      create a default DESC file, because none exists, also requires one of -t, -e or -cut_ga
             -quiet       be quiet; do not output anything to stdout (rfsearch.log still created)
