@@ -7,7 +7,7 @@ use Carp;
 
 use Bio::Rfam::Family;
 use Bio::Rfam::MooseTypes;
-# use Bio::Rfam::FamilyIO;
+use Bio::Rfam::FamilyIO;
 
 with 'MooseX::Role::Pluggable';
 
