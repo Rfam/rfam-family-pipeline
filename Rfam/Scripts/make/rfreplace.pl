@@ -693,7 +693,7 @@ sub interactive_replacement_selection {
           $ncand++;
           my $sqname = remove_rfreplace_prefix_from_sqname($msa->get_sqname($j), "hit");
           # make sure we have $sqname in infoHHR, we better (since we already dealt with prefix removal if nec)
-          if(! exists $infoHHR->{$sqname}) { die "ERROR sequence $sqname aligned but not in outlist..."; }
+          #if(! exists $infoHHR->{$sqname}) { die "ERROR sequence $sqname aligned but not in outlist..."; }
           # determine the max percent identity between this replacement candidate
           # and all replacement seqs we've chosen thus far
           my $max_eid = "-";
