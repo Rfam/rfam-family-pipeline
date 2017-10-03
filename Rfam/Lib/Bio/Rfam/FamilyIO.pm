@@ -612,7 +612,7 @@ sub parseDESC {
       croak("A terminal whitespace found in $l of your DESC file!\n");
     }
     
-    if ( $file[$i] =~ /^(AC|ID|AU|SE|TP|TX|SQ|CL|FR|SN)\s{3}(.*)$/ ) {
+    if ( $file[$i] =~ /^(AC|ID|SE|TP|TX|SQ|CL|FR|SN)\s{3}(.*)$/ ) {
       if ( exists( $params{$1} ) ) {
         croak("Found second $1 line, only expecting one\n");
       }
