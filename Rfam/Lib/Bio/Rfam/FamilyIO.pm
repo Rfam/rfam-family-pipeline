@@ -554,6 +554,7 @@ sub parseDESCallowHmmonly {
   return $self->parseDESC($file, 1);
 }
 
+# ------------------------------------------------------------------------------------------------------------------------
 # parseDESC: normally takes two arguments, but if we want to allow
 # the --hmmonly option in 'SM' pass a third argument: '1'.
 
@@ -570,7 +571,7 @@ sub parseDESC {
   }
 
   my %params;
-  my $expLen = 80;
+  my $expLen = 80; # expected length
 
   my $refTags = {
                  RC => {
@@ -1067,6 +1068,8 @@ sub parseDESC {
 
   #End of uber for loop
 }
+
+# ------------------------------------------------------------------------------------------------------------------------
 
 sub writeEmptyDESC {
   my ($self) = @_;
