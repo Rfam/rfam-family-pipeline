@@ -33,7 +33,7 @@ subtype RfamId,
 
 subtype RfamAuthor,
   as Str,
-  where { $_ =~ /^((\S+\s{1}\S{1,3})(\;\s{1})(((\d{4}-){3})\d{3}(\d{1}|X))){1}$/ },
+  where { $_ =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/ },
   message { 'Not a vailid Rfam author' };
 
 subtype RfamDesc,
