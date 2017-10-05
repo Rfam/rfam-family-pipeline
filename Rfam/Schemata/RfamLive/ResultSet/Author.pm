@@ -22,8 +22,8 @@ sub create_or_updateAuthorFromFamilyObj {
     croak('Either the Bio::Rfam::Family object was undefined or not an object of that type.');
   }
 
-  if(defined($familyObj->{DESC}->{AU})){
-    foreach my $author (@{$familyObj->{DESC}->{AU}}){ 
+  if(defined($familyObj->DESC->AU)){
+    foreach my $author (@{$familyObj->DESC->AU}){ 
     # check both author name and synonyms to search for existing author
     # search for an author by name
     my $author_entry = $self->find({name => $author->{name}},{key => 'author_id'});
