@@ -36,16 +36,16 @@ sub create_or_updateAuthorFromFamilyObj {
       }
       else{
         # update if an orcid is found in the DESC file and not in DB
-        if(($author->{orcid} ne '') && $check_author->{orcid} ne ''){
-          $check_author->update({orcid => $author->{orcid}},{key => 'author_id'});
+        if(($author->{orcid} ne '') && $author_entry->{orcid} ne ''){
+          $author_entry->update({orcid => $author->{orcid}},{key => 'author_id'});
         }
       }
     }
     # found author name
     else{
-      # check if we need to add orcid
-        if(($author->{orcid} ne '') && $check_author->orcid ne ''){
-          $check_author->update({orcid => $author->{orcid}},{key => 'author_id'});
+        # check if we need to add orcid
+        if(($author->{orcid} ne '') && $author_entry->orcid ne ''){
+          $author_entry->update({orcid => $author->{orcid}},{key => 'author_id'});
         }
     }
   }
