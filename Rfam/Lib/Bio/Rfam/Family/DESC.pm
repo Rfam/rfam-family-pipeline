@@ -90,7 +90,7 @@ has 'PI' => (
 
 has 'AU' => (
   is        => 'ro',
-  isa       => RfamAuthor,
+  isa       => 'ArrayRef[ HashRef ]',
   required  => 0
 );
 
