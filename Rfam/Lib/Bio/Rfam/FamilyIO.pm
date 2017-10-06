@@ -650,7 +650,7 @@ sub parseDESC {
       }
       
     }elsif($file[$i] =~ /^(AU)\s{3}(.*)$/){
-      
+      my $implicit_order = 1;
       # loop over all AU lines
       for ( ; $i <= $#file ; $i++ ) {
       
@@ -677,8 +677,9 @@ sub parseDESC {
          push(
                  @{ $params{AU} },
                  {
-                  name => $author_name, orcid => $orcid }
+                  name => $author_name, orcid => $orcid, order => $implicit_order}
                 );
+        $implicit_order+=1;
         }
     # done with AU lines, break and move file pointer up one position
     else{
@@ -1205,7 +1206,7 @@ sub writeDESC {
           if ( $xref->{other_params} ) {
             #TODO - go back and remove this is a really nasty hack!!!
             
-            
+       
             print D "DR   "
               . $xref->{db_id} . "; "
                 . $xref->{db_link} . "; "
