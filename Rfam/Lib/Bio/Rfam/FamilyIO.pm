@@ -1157,10 +1157,22 @@ sub writeDESC {
   $Text::Wrap::columns = 80;
   foreach my $tagOrder ( @{ $desc->order } ) {
     if ( length($tagOrder) == 2 ) {
-      if ( $desc->$tagOrder and $desc->$tagOrder =~ /\S+/ ) {
+      # bypass AU lines
+      if ( $desc->$tagOrder and $desc-$tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
         print D wrap( "$tagOrder   ", "$tagOrder   ", $desc->$tagOrder );
-        print D "\n";
+        print D "\n";  
+    }
+      # write AU lines
+      elsif($desc->$tagOrder eq 'AU'){
+        foreach my $author ( @{ $desc->$tagOrder } ) {
+          if ($author->{orcid} ne ''){
+          print D "AU   " . $author->{name} . "; " . $author->{orcid} . ";\n";
+          }
+          else{
+            print D "AU   " . $author->{name} . "\n";
+          }
       }
+    }
     } else {
       next unless ( $desc->$tagOrder );
       if ( $tagOrder eq 'CUTTC' ) {
