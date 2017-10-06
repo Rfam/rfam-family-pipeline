@@ -42,10 +42,10 @@ sub updateFamilyFromObj {
     
     # join author name to author string
     if ($author_count > 1){
-      $author_string.= $author_name.', ';
+      $author_string.= $author->{name}.', ';
     }
     else{
-      $author_string.= $author_name;
+      $author_string.= $author->{name};
     }
     $author_count-=1;
   }
