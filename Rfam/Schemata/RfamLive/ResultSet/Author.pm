@@ -1,5 +1,5 @@
 use utf8;
-package RfamLive::Result::Author;
+package RfamLive::ResultSet::Author;
 
 # Created by DBIx::Class::Schema::Loader
 # DO NOT MODIFY THE FIRST PART OF THIS FILE
