@@ -660,34 +660,35 @@ sub parseDESC {
           my $author_line = $2;
           # check AU line in correct format
           # We need to do this because AU type in DESC is 'ArrayRef[ HashRef ]' type   
-          if (($author_line =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/)!=1){
-            croak("Incorrect AU line format. Expecting author_name; orcid\n");
-
-          }
-
-         # aplit author line to author fields (name, orcid)
-         my @author_fields = (split /;/, $author_line);
-         my $author_name = $author_fields[0];
-         my $orcid = $author_fields[1];
-         
-         # strip white spaces
-         $author_name=~ s/(^\s+|\s+$)//g;
-         $orcid=~ s/(^\s+|\s+$)//g;
-         
-         # create a new hash for author
-         push(
-                 @{ $params{AU} },
-                 {
-                  name => $author_name, orcid => $orcid, order => $implicit_order}
-                );
-        $implicit_order+=1;
+          if ($author_line =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/){
+            
+           # aplit author line to author fields (name, orcid)
+           my @author_fields = (split /;/, $author_line);
+           my $author_name = $author_fields[0];
+           my $orcid = $author_fields[1];
+           
+           # strip white spaces
+           $author_name=~ s/(^\s+|\s+$)//g;
+           $orcid=~ s/(^\s+|\s+$)//g;
+           
+           # create a new hash for author
+           push(
+                   @{ $params{AU} },
+                   {
+                    name => $author_name, orcid => $orcid, order => $implicit_order}
+                  );
+          $implicit_order+=1;
+      
+      }else{
+        croak("Incorrect AU line format. Expecting author_name; orcid\n");
+      }
         }
     # done with AU lines, break and move file pointer up one position
     else{
       $i--;
         last;
     }
-    }
+    } #for loop
     
     }elsif($file[$i] =~ /^(T[P|X])\s{3}(.*)$/){ 
       my $tag = $1;
