@@ -660,7 +660,7 @@ sub parseDESC {
           my $author_line = $2;
           # check AU line in correct format
           # We need to do this because AU type in DESC is 'ArrayRef[ HashRef ]' type   
-          if (($author_line =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/)!=1){
+          if (($author_line =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(\s{1}((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/)!=1){
             croak("Incorrect AU line format. Expecting author_name; orcid\n");
           }
 
