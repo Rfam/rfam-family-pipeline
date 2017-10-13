@@ -26,18 +26,18 @@ sub create_or_updateAuthorFromFamilyObj {
     foreach my $author (@{$familyObj->DESC->AU}){ 
     # check both author name and synonyms to search for existing author
     # search for an author by name
-    my $author_entry = $self->find({name => $author->{name}},{key => 'author_id'});
+    my $author_entry = $self->find({name => $author->{name}});
     if(!defined $author_entry){
       # search for an author by synonym
-      my $author_entry = $self->search_like({synonyms => '%$author->{name}%'},{key => 'author_id'});
+      my $author_entry = $self->search_like({synonyms => '%$author->{name}%'});
       if(!defined $author_entry){
         # create a new entry
-        my $new_entry = $self->create({name => $author->{name}, orcid => $author->{orcid}},{key => 'author_id'});
+        my $new_entry = $self->create({name => $author->{name}, orcid => $author->{orcid}});
       }
       else{
         # update if an orcid is found in the DESC file and not in DB
         if(($author->{orcid} ne '') && ($author_entry->{orcid} ne '')){
-          $author_entry->update({orcid => $author->{orcid}},{key => 'author_id'});
+          $author_entry->update({orcid => $author->{orcid}});
         }
       }
     }
@@ -45,7 +45,7 @@ sub create_or_updateAuthorFromFamilyObj {
     else{
         # check if we need to add orcid
         if(($author->{orcid} ne '') && ($author_entry->orcid ne '')){
-          $author_entry->update({orcid => $author->{orcid}},{key => 'author_id'});
+          $author_entry->update({orcid => $author->{orcid}});
         }
       }
     }
