@@ -670,8 +670,10 @@ sub parseDESC {
            
            # strip white spaces
            $author_name=~ s/(^\s+|\s+$)//g;
+           if (defined($orcid) and $orcid ne ''){
            $orcid=~ s/(^\s+|\s+$)//g;
-           
+           }
+
            # create a new hash for author
            push(
                    @{ $params{AU} },
@@ -1161,22 +1163,23 @@ sub writeDESC {
   foreach my $tagOrder ( @{ $desc->order } ) {
     if ( length($tagOrder) == 2 ) {
       # bypass AU lines
-      if ( $desc->$tagOrder and $desc-$tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
+      if ( $desc->$tagOrder and $desc->$tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
         print D wrap( "$tagOrder   ", "$tagOrder   ", $desc->$tagOrder );
         print D "\n";  
     }
-      # write AU lines
-      elsif($desc->$tagOrder eq 'AU'){
-        foreach my $author ( @{ $desc->$tagOrder } ) {
-          if ($author->{orcid} ne ''){
-          print D "AU   " . $author->{name} . "; " . $author->{orcid} . ";\n";
-          }
-          else{
-            print D "AU   " . $author->{name} . "\n";
-          }
-      }
+    #   # write AU lines
+    #   elsif($desc->$tagOrder eq 'AU'){
+    #     foreach my $author ( @{ $desc->$tagOrder } ) {
+    #       if ($author->{orcid} ne ''){
+    #       print D "AU   " . $author->{name} . "; " . $author->{orcid} . ";\n";
+    #       }
+    #       else{
+    #         print D "AU   " . $author->{name} . "\n";
+    #       }
+    #   }
+    # }
     }
-    } else {
+     else {
       next unless ( $desc->$tagOrder );
       if ( $tagOrder eq 'CUTTC' ) {
         printf D "TC   %.2f\n", $desc->$tagOrder;
