@@ -27,14 +27,13 @@ sub find_or_create_authorsFromFamilyObj {
 	my $new_author = $self->find_or_create( { rfam_acc => $familyObj->{DESC}->{AC},
                                           	  name  => $author->{name},
                                               orcid => $author->{orcid},
-                                              order => $author->{order}},
-					  						  {key => 'author_id'});
+                                              order => $author->{order}});
       	
 	if(!defined($new_author)){	
 		croak("Error updating family authors for $familyObj->{DESC}->{AC}");
     }
 	else{
-  		$new_author->update({orcid => $orcid}, {key => 'composite_key'});
+  		$new_author->update({orcid => $orcid});
 	}
 	}
 }
