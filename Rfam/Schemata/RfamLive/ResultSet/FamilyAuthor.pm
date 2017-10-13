@@ -6,7 +6,7 @@ use Carp;
 
 use base 'DBIx::Class::ResultSet';
 
-sub find_or_create_authors {
+sub find_or_create_authorsFromFamilyObj {
 	my ($self, $familyObj) = @_;
   
   	if(!$familyObj or !$familyObj->isa('Bio::Rfam::Family')){
