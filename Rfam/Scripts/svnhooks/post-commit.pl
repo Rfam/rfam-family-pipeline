@@ -181,7 +181,7 @@ eval {
 if ($@) {
   print STDERR $@;
   my %header = (
-    To      => ['jgt@ebi.ac.uk', 'rdf@ebi.ac.uk'],
+    To      => ['ikalvari@ebi.ac.uk', 'joanna@ebi.ac.uk', 'apetrov@ebi.ac.uk'],
     From    => 'rfam@ebi.ac.uk',
     Subject => 'Error in post-commit '
   );
