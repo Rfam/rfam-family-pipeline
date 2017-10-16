@@ -5,7 +5,6 @@ use warnings;
 use Carp;
 
 use base 'DBIx::Class::ResultSet';
-use RfamLive::ResultSet::Author;
 
 sub find_or_create_authorsFromFamilyObj {
 	my ($self, $familyObj) = @_;
@@ -15,7 +14,7 @@ sub find_or_create_authorsFromFamilyObj {
   }
 
   # create an instance of the author table
-  my $author_tbl=RfamLive::ResultSet::Author->new();
+  my $author_tbl= $schema->resultset('Author');
 
   # delete family records if any
   my $family_records = $self->search({rfam_acc => $familyObj->{DESC}->{AC}});
