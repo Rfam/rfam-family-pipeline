@@ -38,13 +38,13 @@ __PACKAGE__->table("author");
 =head2 last_name
 
   data_type: 'varchar'
-  is_nullable: 0
+  is_nullable: 1
   size: 50
 
 =head2 initials
 
   data_type: 'varchar'
-  is_nullable: 0
+  is_nullable: 1
   size: 4
 
 =head2 orcid
@@ -67,9 +67,9 @@ __PACKAGE__->add_columns(
   "name",
   { data_type => "varchar", is_nullable => 0, size => 20 },
   "last_name",
-  { data_type => "varchar", is_nullable => 0, size => 50 },
+  { data_type => "varchar", is_nullable => 1, size => 50 },
   "initials",
-  { data_type => "varchar", is_nullable => 0, size => 4 },
+  { data_type => "varchar", is_nullable => 1, size => 4 },
   "orcid",
   { data_type => "varchar", is_nullable => 1, size => 19 },
   "synonyms",
