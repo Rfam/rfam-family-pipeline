@@ -22,29 +22,30 @@ sub create_or_updateAuthorFromFamilyObj {
     croak('Either the Bio::Rfam::Family object was undefined or not an object of that type.');
   }
 
-  if(defined($familyObj->DESC->AU)){
+  if(defined($familyObj->{DESC}->{AU})){
     foreach my $author (@{$familyObj->DESC->AU}){ 
     # check both author name and synonyms to search for existing author
     # search for an author by name
     my $author_entry = $self->find({name => $author->{name}});
     if(!defined $author_entry){
-      # search for an author by synonym
-      my $author_entry = $self->search_like({synonyms => '%$author->{name}%'});
+      # author not found by name, search by synonym
+      my $author_entry = $self->find({synonyms => '%$author->{name}%'});
+      # author not found by synonym
       if(!defined $author_entry){
         # create a new entry
         my $new_entry = $self->create({name => $author->{name}, orcid => $author->{orcid}});
       }
+      # author found by synonym, update orcid if available
       else{
-        # update if an orcid is found in the DESC file and not in DB
-        if(defined($author->{orcid}) && defined($author_entry->{orcid})){
+        if(defined($author->{orcid})){
           $author_entry->update({orcid => $author->{orcid}});
         }
       }
     }
     # found author name
     else{
-        # check if we need to add orcid
-        if(defined($author->{orcid}) && defined($author_entry->{orcid})){
+        # author found by name, update orcid if availablr
+        if(defined($author->{orcid}){
           $author_entry->update({orcid => $author->{orcid}});
         }
       }
