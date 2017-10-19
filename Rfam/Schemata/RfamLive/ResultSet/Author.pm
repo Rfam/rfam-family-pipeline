@@ -53,6 +53,7 @@ sub create_or_updateAuthorFromFamilyObj {
   }
 }
 
+
 sub get_author_ids{
 
   my ($self, $familyObj) = @_;
@@ -61,26 +62,30 @@ sub get_author_ids{
     croak('Either the Bio::Rfam::Family object was undefined or not an object of that type.');
   }
 
-  my %author_ids;
+  my %author_ids = ();
 
-  if(defined($familyObj->DESC->AU)){
+  if(defined($familyObj->{DESC}->{AU})){
     foreach my $author (@{$familyObj->DESC->AU}){ 
+      
       # search author table by author name
       my $author_entry = $self->find({name => $author->{name}});
-      # if not found
+      
+      # if not found search by synonym
       if(!defined $author_entry){
-        # search for an author by synonym
-        my $author_entry = $self->search_like({synonyms => '%$author->{name}%'});
+        my $author_entry = $self->find({synonyms => { 'like' => '%$author->{name}%'}});
+       
         if(!defined $author_entry){
           croak('Aurhor $author->{name} does not exist in the database.');
         }
+        
       }else{
         # update hash
-      $author_ids{$author->{name}}=$author_entry->{'author_id'};
+      $author_ids{$author->{name}}=$author_entry->get_column('author_id');
       }
     }
   }
-  return %author_ids;
+
+  return \%author_ids;
 } # sub
 
 1;
