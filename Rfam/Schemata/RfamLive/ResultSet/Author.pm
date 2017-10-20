@@ -45,7 +45,7 @@ sub create_or_updateAuthorFromFamilyObj {
     # found author name
     else{
         # author found by name, update orcid if availablr
-        if(defined($author->{orcid}){
+        if(defined($author->{orcid})){
           $author_entry->update({orcid => $author->{orcid}});
         }
       }
