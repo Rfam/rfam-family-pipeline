@@ -1109,7 +1109,6 @@ sub parseDESC {
 
   my $desc = 'Bio::Rfam::Family::DESC'->new(%params);
   return $desc;
-
   #End of uber for loop
 }
 
@@ -1131,6 +1130,7 @@ sub writeEmptyDESC {
   # now add default fields that must be changed prior to checkin 
   # (QC will check that these have been changed away from their default values before a checkin)
   foreach my $key (keys (%{$tmpdesc->defaultButIllegalFields})) { 
+    
     $descH{$key} = $tmpdesc->defaultButIllegalFields->{$key};
   }  
 
@@ -1163,21 +1163,22 @@ sub writeDESC {
   foreach my $tagOrder ( @{ $desc->order } ) {
     if ( length($tagOrder) == 2 ) {
       # bypass AU lines
-      if ( $desc->$tagOrder and $desc->$tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
+      if ( $desc->$tagOrder and $tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
         print D wrap( "$tagOrder   ", "$tagOrder   ", $desc->$tagOrder );
         print D "\n";  
     }
-    #   # write AU lines
-    #   elsif($desc->$tagOrder eq 'AU'){
-    #     foreach my $author ( @{ $desc->$tagOrder } ) {
-    #       if ($author->{orcid} ne ''){
-    #       print D "AU   " . $author->{name} . "; " . $author->{orcid} . ";\n";
-    #       }
-    #       else{
-    #         print D "AU   " . $author->{name} . "\n";
-    #       }
-    #   }
-    # }
+    # write AU lines
+    elsif($tagOrder eq 'AU'){
+                foreach my $author (@{$desc->$tagOrder}){
+                        if (defined($author->{orcid})){
+                                printf D "AU   $author->{name}; $author->{orcid}\n";
+                        }
+                        else{
+                                printf D "AU   $author->{name}\n";
+                        }
+
+                }
+     }
     }
      else {
       next unless ( $desc->$tagOrder );
