@@ -208,7 +208,7 @@ has 'requiredFields' => (
 has 'defaultButIllegalFields' => (
   is    => 'ro',
   isa   => 'HashRef',
-  default => sub {{ 'ID' => 'ShortName', 'DE' => 'Family description', 'AU' => 'Who RU', 'SE' => 'Where did the seed come from'}}
+  default => sub {{ 'ID' => 'ShortName', 'DE' => 'Family description', 'AU' => [{ 'name' => 'Who RU', 'orcid' => undef }], 'SE' => 'Where did the seed come from'}}
 );
 
 
