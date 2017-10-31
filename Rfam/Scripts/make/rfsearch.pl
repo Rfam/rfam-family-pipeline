@@ -520,8 +520,8 @@ if ($do_build) {
   $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
   if(! $do_dirty) { unlink $outfile; }
   if($buildopts ne "") { $buildopts .= " "; } # add trailing single space so next line properly formats BM (and blank opts ("") will work too)
-  $famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
-  #$famObj->DESC->BM("cmbuild -F " . $buildopts . "CM SEED");
+  #$famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
+  $famObj->DESC->BM("cmbuild -F " . $buildopts . "CM SEED");
 
   # define (or possibly redefine) $cm
   $cm = $famObj->CM($io->parseCM("CM"));
