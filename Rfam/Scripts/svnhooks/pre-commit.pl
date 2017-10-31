@@ -235,7 +235,7 @@ elsif ( $msg =~ /SEQUP/ ) {
 }
 else {
   $logger->debug( qq(parsing msg; unrecognised commit message: "$msg") );
-  $logger->logdie( qq(ERROR: do not know here this commit has come from: "$msg") );
+  $logger->logdie( qq(ERROR: do not know where this commit has come from: "$msg") );
 }
 
 exit(0);

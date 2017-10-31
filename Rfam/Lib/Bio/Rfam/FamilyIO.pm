@@ -554,6 +554,7 @@ sub parseDESCallowHmmonly {
   return $self->parseDESC($file, 1);
 }
 
+# ------------------------------------------------------------------------------------------------------------------------
 # parseDESC: normally takes two arguments, but if we want to allow
 # the --hmmonly option in 'SM' pass a third argument: '1'.
 
@@ -570,7 +571,7 @@ sub parseDESC {
   }
 
   my %params;
-  my $expLen = 80;
+  my $expLen = 80; # expected length
 
   my $refTags = {
                  RC => {
@@ -612,7 +613,7 @@ sub parseDESC {
       croak("A terminal whitespace found in $l of your DESC file!\n");
     }
     
-    if ( $file[$i] =~ /^(AC|ID|AU|SE|TP|TX|SQ|CL|FR|SN)\s{3}(.*)$/ ) {
+    if ( $file[$i] =~ /^(AC|ID|SE|TP|TX|SQ|CL|FR|SN)\s{3}(.*)$/ ) {
       if ( exists( $params{$1} ) ) {
         croak("Found second $1 line, only expecting one\n");
       }
@@ -648,6 +649,50 @@ sub parseDESC {
         $params{'DE'} = $deLine;
       }
       
+    }elsif($file[$i] =~ /^(AU)\s{3}(.*)$/){
+      my $implicit_order = 1;
+      # loop over all AU lines
+      for ( ; $i <= $#file ; $i++ ) {
+      
+        # redo the check to know where to stop
+        if ( $file[$i] =~ /^(AU)\s{3}(.*)$/ ) { 
+          
+          my $author_line = $2;
+          # check AU line in correct format
+          chomp($author_line);
+          # We need to do this because AU type in DESC is 'ArrayRef[ HashRef ]' type   
+          if ($author_line =~ /^((\S+\s{1}\S{1,3})((\;\s{1})|$)(((\d{4}-){3})\d{3}(\d{1}|X))?){1}$/){
+            
+           # aplit author line to author fields (name, orcid)
+           my @author_fields = (split /;/, $author_line);
+           my $author_name = $author_fields[0];
+           my $orcid = $author_fields[1];
+           
+           # strip white spaces
+           $author_name=~ s/(^\s+|\s+$)//g;
+           if (defined($orcid) and $orcid ne ''){
+           $orcid=~ s/(^\s+|\s+$)//g;
+           }
+
+           # create a new hash for author
+           push(
+                   @{ $params{AU} },
+                   {
+                    name => $author_name, orcid => $orcid, order => $implicit_order}
+                  );
+          $implicit_order+=1;
+      
+      }else{
+        croak("Incorrect AU line format. Expecting author_name; orcid\n");
+      }
+        }
+    # done with AU lines, break and move file pointer up one position
+    else{
+      $i--;
+        last;
+    }
+    } #for loop
+    
     }elsif($file[$i] =~ /^(T[P|X])\s{3}(.*)$/){ 
       my $tag = $1;
       my $tLine = $2;
@@ -1064,9 +1109,10 @@ sub parseDESC {
 
   my $desc = 'Bio::Rfam::Family::DESC'->new(%params);
   return $desc;
-
   #End of uber for loop
 }
+
+# ------------------------------------------------------------------------------------------------------------------------
 
 sub writeEmptyDESC {
   my ($self) = @_;
@@ -1084,6 +1130,7 @@ sub writeEmptyDESC {
   # now add default fields that must be changed prior to checkin 
   # (QC will check that these have been changed away from their default values before a checkin)
   foreach my $key (keys (%{$tmpdesc->defaultButIllegalFields})) { 
+    
     $descH{$key} = $tmpdesc->defaultButIllegalFields->{$key};
   }  
 
@@ -1115,11 +1162,25 @@ sub writeDESC {
   $Text::Wrap::columns = 80;
   foreach my $tagOrder ( @{ $desc->order } ) {
     if ( length($tagOrder) == 2 ) {
-      if ( $desc->$tagOrder and $desc->$tagOrder =~ /\S+/ ) {
+      # bypass AU lines
+      if ( $desc->$tagOrder and $tagOrder ne 'AU' and $desc->$tagOrder =~ /\S+/ ) {
         print D wrap( "$tagOrder   ", "$tagOrder   ", $desc->$tagOrder );
-        print D "\n";
-      }
-    } else {
+        print D "\n";  
+    }
+    # write AU lines
+    elsif($tagOrder eq 'AU'){
+                foreach my $author (@{$desc->$tagOrder}){
+                        if (defined($author->{orcid})){
+                                printf D "AU   $author->{name}; $author->{orcid}\n";
+                        }
+                        else{
+                                printf D "AU   $author->{name}\n";
+                        }
+
+                }
+     }
+    }
+     else {
       next unless ( $desc->$tagOrder );
       if ( $tagOrder eq 'CUTTC' ) {
         printf D "TC   %.2f\n", $desc->$tagOrder;
@@ -1164,7 +1225,7 @@ sub writeDESC {
           if ( $xref->{other_params} ) {
             #TODO - go back and remove this is a really nasty hack!!!
             
-            
+       
             print D "DR   "
               . $xref->{db_id} . "; "
                 . $xref->{db_link} . "; "

@@ -34,13 +34,29 @@ sub updateFamilyFromObj {
         . ". This is really bad!\n" );
   }
 
+  # build author string
+  my $author_count = scalar @{$familyObj->DESC->AU};
+  my $author_string = '';
+  
+  foreach my $author (@{$familyObj->DESC->AU}){
+    
+    # join author name to author string
+    if ($author_count > 1){
+      $author_string.= $author->{name}.', ';
+    }
+    else{
+      $author_string.= $author->{name};
+    }
+    $author_count-=1;
+  }
+
   #We have found a family, so now set all the essential attributes and
   #zero all calculated data fields.
 
   $fam->rfam_id( $familyObj->DESC->ID );
   $fam->description( $familyObj->DESC->DE );
   $fam->auto_wiki($wiki) if($wiki);
-  $fam->author( $familyObj->DESC->AU );
+  $fam->author($author_string);
   $fam->seed_source( $familyObj->DESC->SE );
   $fam->gathering_cutoff( $familyObj->DESC->CUTGA );
   $fam->trusted_cutoff( $familyObj->DESC->CUTTC );
@@ -88,14 +104,32 @@ sub createFamilyFromObj {
         . $familyObj->DESC->AC
         . " when there should not be one. This is really bad!\n" );
   }
+
   my $dt = DateTime->now( time_zone  => 'Europe/London');
+
+  # build author string
+  my $author_count = scalar @{$familyObj->DESC->AU};
+  my $author_string = '';
+  
+  foreach my $author (@{$familyObj->DESC->AU}){
+    
+    # join author name to author string
+    if ($author_count > 1){
+      $author_string.= $author->{name}.', ';
+    }
+    else{
+      $author_string.= $author->{name};
+    }
+    $author_count-=1;
+  }
+
   $self->create(
     {
       rfam_acc         => $familyObj->DESC->AC,
       rfam_id          => $familyObj->DESC->ID,
       description      => $familyObj->DESC->DE,
       auto_wiki        => $wiki,
-      author           => $familyObj->DESC->AU,
+      author           => $author_string,
       seed_source      => $familyObj->DESC->SE,
       gathering_cutoff => $familyObj->DESC->CUTGA,
       trusted_cutoff   => $familyObj->DESC->CUTTC,

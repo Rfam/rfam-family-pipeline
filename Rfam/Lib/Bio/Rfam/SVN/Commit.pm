@@ -177,9 +177,15 @@ sub _commitEntry {
   $self->{logger}->debug( 'family creation/update complete' );
 
   $rfamdb->resultset('LiteratureReference')->find_or_createFromFamilyObj( $familyObj );
-  $rfamdb->resultset('DatabaseLink')->find_or_createFromFamilyObj( $familyObj );  
+  $rfamdb->resultset('DatabaseLink')->find_or_createFromFamilyObj( $familyObj );
 
   $self->{logger}->debug( 'updated literature references and database links' );
+
+  $rfamdb->resultset('Author')->create_or_updateAuthorFromFamilyObj($familyObj);
+  $rfamdb->resultset('FamilyAuthor')->find_or_create_authorsFromFamilyObj($familyObj);  
+
+  $self->{logger}->debug( 'updated author tables' );
+  
  
   if ( scalar(@updated) == 1 and $updated[0] eq 'DESC' ) {
     $self->{logger}->debug( 'only the DESC file was changed' );
