@@ -172,10 +172,10 @@ sub getDESCData {
   
   $descData->{AC} = $row->rfam_acc;
   $descData->{ID} = $row->rfam_id;
-  $descData->{AU} = $row->author;
+  #$descData->{AU} = $row->author;
+  $descData->{AU} = $self->loadAuthorDetails($acc);
   $descData->{DE} = $row->description;
   $descData->{SE} = $row->seed_source;
-  
   $descData->{BM} = $row->cmbuild;
   $descData->{CB} = $row->cmcalibrate;
   $descData->{SM} = $row->cmsearch;
@@ -243,5 +243,37 @@ sub getAllFamilyAcc {
   return($accs);
 }
 
+sub loadAuthorData{
+  my ($self, $rfam_acc) = @_;
+
+  # need to optimize by fetching results with a join
+
+  my @author_list=();
+  my $schema = $self->result_source->schema;
+  my $author_tbl= $schema->resultset('Author');
+  my $fam_author_tbl = $schema->resultset('FamilyAuthor');
+
+  my $author_ids =  $fam_author_tbl->search({rfam_acc => $rfam_acc}, {order_by => { -asc => 'desc_order'}});
+
+  # fetch first
+  my $temp = $author_ids->next;
+
+  while(defined($temp)){
+      my $id = $temp->author_id;
+        my $author = $author_tbl->search({author_id => $id})->next;
+        
+        if ($author->orcid eq ''){
+                push (@author_list, {name => $author->name, orcid => undef});
+        }
+        else{
+                push (@author_list, {name => $author->name, orcid => $author->orcid});
+        }
+
+$temp=undef;
+$temp = $results->next;
+}
+
+return @author_list;
+}
 
 1;
