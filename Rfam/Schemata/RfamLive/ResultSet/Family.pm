@@ -273,7 +273,7 @@ $temp=undef;
 $temp = $author_ids->next;
 }
 
-return @author_list;
+return \@author_list;
 }
 
 1;
