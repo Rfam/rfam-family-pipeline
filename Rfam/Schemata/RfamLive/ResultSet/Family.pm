@@ -270,7 +270,7 @@ sub loadAuthorData{
         }
 
 $temp=undef;
-$temp = $results->next;
+$temp = $author_ids->next;
 }
 
 return @author_list;
