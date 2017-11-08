@@ -173,7 +173,7 @@ sub getDESCData {
   $descData->{AC} = $row->rfam_acc;
   $descData->{ID} = $row->rfam_id;
   #$descData->{AU} = $row->author;
-  $descData->{AU} = $self->loadAuthorDetails($acc);
+  $descData->{AU} = $self->loadAuthorData($acc);
   $descData->{DE} = $row->description;
   $descData->{SE} = $row->seed_source;
   $descData->{BM} = $row->cmbuild;
