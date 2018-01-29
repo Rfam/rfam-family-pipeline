@@ -418,11 +418,19 @@ sub cm_evalue2bitsc {
   # this subroutine corresponds to infernal 1.1's cmstat.c line 295 ('else if(output_mode == OUTMODE_BITSCORES_E) {')
   my $bitsc;  # bit score to return;
 
-  # two seperate blocks: are we using an HMM or a CM to search?
+  # are we using an HMM or a CM to search?
+  my $use_hmm = 0;
+  # two ways we are using an hmm: 
+  # 1. --hmmonly option 
+  if($opts =~ m/\-\-hmmonly/) { $use_hmm = 1; }
+  # 2. --nohmmonly option NOT used and CM has 0 basepairs
+  if($opts !~ m/\-\-nohmmonly/ && ($cm->match_pair_node == 0)) { $use_hmm = 1; }
+
+  # determine bit score differently depending on if we are using an HMM or CM to search
   #######
   # HMM #
   #######
-  if($opts =~ m/\-\-hmmonly/) { 
+  if($use_hmm) { 
     # HMM only search, use HMM E-value parameters
     my ($hitlen, $tau, $lambda) = Bio::Rfam::Infernal::search_opts_to_hmm_evalue_stats($cm);
     $bitsc = $tau + ((log($evalue / (($Z * 1000000.) / $hitlen))) / (-1 * $lambda));
@@ -468,12 +476,20 @@ sub cm_bitsc2evalue {
   my $evalue;  # evalue to return;
   my $surv;    # survivor function value (calc'ed same as in esl_exp_surv())
 
+  
+  # are we using an HMM or a CM to search?
+  my $use_hmm = 0;
+  # two ways we are using an hmm: 
+  # 1. --hmmonly option 
+  if($opts =~ m/\-\-hmmonly/) { $use_hmm = 1; }
+  # 2. --nohmmonly option NOT used and CM has 0 basepairs
+  if($opts !~ m/\-\-nohmmonly/ && ($cm->match_pair_node == 0)) { $use_hmm = 1; }
 
-  # two seperate blocks: are we using an HMM or a CM to search?
+  # determine E-value differently depending on if we are using an HMM or CM to search
   #######
   # HMM #
   #######
-  if($opts =~ m/\-\-hmmonly/) { 
+  if($use_hmm) { 
     # HMM only search, use HMM E-value parameters
     my ($hitlen, $tau, $lambda) = Bio::Rfam::Infernal::search_opts_to_hmm_evalue_stats($cm);
     # See C code esl_exp_surv && Infernal 1.1 stats.c:Score2E
