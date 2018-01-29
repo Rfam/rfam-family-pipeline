@@ -370,7 +370,7 @@ sub _parseCMBody {
       ) {
     push(@{ $cm->{cmBody} }, $cm->{rawcm}->[$i]);
     if ( $cm->{rawcm}->[$i] =~ /\s+\[\s+MATP\s+\d+\s+\]/ ) {
-      $cm->{'match_pair_node'} = 1;
+      $cm->{match_pair_node} = 1;
     } elsif ( $cm->{rawcm}->[$i] =~ /\/\//) {
       #Should have reached the end of the CM body, so set the reference counter
       #to be equal to our counter.
