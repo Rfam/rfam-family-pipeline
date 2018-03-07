@@ -9,6 +9,13 @@ use DateTime::Format::MySQL;
 
 use base 'DBIx::Class::ResultSet';
 
+sub id2acc {
+  my ( $self, $id ) = @_;
+
+  my $motif = $self->find( { motif_id => $id } );
+
+  return ( defined($motif) ? $motif->motif_acc() : undef );
+}
 
 sub updateMotifFromObj {
   my ( $self, $motifObj) = @_;
