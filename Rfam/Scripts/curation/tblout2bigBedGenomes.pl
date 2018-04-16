@@ -21,13 +21,14 @@ my $rfamdb = $config->rfamlive;
 my $upid = substr $infile, 0, 11;
 
 my $bedfile = $upid . ".bed";
+my $chrom_sizes_file = "chrom.sizes";
+my %chrom_sizes_hash;
 
 #create BED format file
 #open bed file and write header
 open (BED, ">$bedfile") or die "Cannot open file $bedfile $!\n";
 
 #open infile and parse
-
 open (IN, "$infile") or die "Cannot open file $infile $!\n";
 
 while (<IN>){
@@ -51,6 +52,7 @@ while (<IN>){
 			next;
 		}
 
+		# Write region to bed file
 		#start must be lower than end - so the two need reversing if strand = '-'
 		if ($data[9] eq '+'){
 	   	  	print BED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\t$data[9]\n";
@@ -60,6 +62,12 @@ while (<IN>){
 			#print BED "$data[3]\t$data[0]\t$data[8]\t$data[7]\t$data[2]\n";
 		} else {
 	    		print "Strand character unrecognised in line: $_";
+		}
+
+		# update chromosome sizes hash
+		if (!exists $chrom_sizes_hash{$chromosome_label}){
+			my $chrom_size = $rfamdb->resultset('Rfamseq')->get_sequence_length($rfamseq_acc);
+			$chrom_sizes_hash{$chromosome_label} = $chrom_size;
 		}
 
 	}
@@ -78,7 +86,15 @@ system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 #use fetchChromSizes to create chrom.sizes file
 #system("/nfs/production/xfam/rfam/software/fetchChromSizes $db > chrom.sizes") and die "Could not create chrom.sizes for $db $!\n";
 
+# generate chrom.sizes file using the chromosome sizes hash generated in the previous step
+open (CHRSIZES, ">$chrom_sizes_file") or die "Cannot open file $chrom_sizes_file $!\n";
+
+foreach my $chrom_label (keys %chrom_sizes_hash){
+	print CHRSIZES "$chrom_label\t$chrom_sizes_hash{$chrom_label}\n";
+}
+close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
 #my $bigbedfile = $infile . ".bb";
 #system ("/nfs/production/xfam/rfam/software/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+
