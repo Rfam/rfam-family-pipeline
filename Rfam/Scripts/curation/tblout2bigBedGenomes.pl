@@ -21,12 +21,14 @@ my $rfamdb = $config->rfamlive;
 my $upid = substr $infile, 0, 11;
 
 my $bedfile = $upid . ".bed";
+my $detail_bed = $upid . "_detail.bed";
 my $chrom_sizes_file = "chrom.sizes";
 my %chrom_sizes_hash;
 
 #create BED format file
 #open bed file and write header
 open (BED, ">$bedfile") or die "Cannot open file $bedfile $!\n";
+open (DETAILBED, ">$detail_bed") or die "Cannot open file $detail_bed $!\n";
 
 #open infile and parse
 open (IN, "$infile") or die "Cannot open file $infile $!\n";
@@ -55,10 +57,12 @@ while (<IN>){
 		# Write region to bed file
 		#start must be lower than end - so the two need reversing if strand = '-'
 		if ($data[9] eq '+'){
-	   	  	print BED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\t$data[9]\n";
+	   	  	print DETAILBED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\t$data[9]\n";
+	   	  	print BED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\n";
 			#print BED "$data[3]\t$data[0]\t$data[7]\t$data[8]\t$data[2]\n";
 		} elsif ($data[9] eq '-'){
-	   		print BED "$chromosome_label\t$data[8]\t$data[7]\t$data[2]\t$data[9]\n";
+	   		print DETAILBED "$chromosome_label\t$data[8]\t$data[7]\t$data[2]\t$data[9]\n";
+	   		print BED "$chromosome_label\t$data[8]\t$data[7]\t$data[2]\n";
 			#print BED "$data[3]\t$data[0]\t$data[8]\t$data[7]\t$data[2]\n";
 		} else {
 	    		print "Strand character unrecognised in line: $_";
@@ -76,6 +80,7 @@ while (<IN>){
  
 close (IN);
 close (BED);
+close (DETAILBED);
 
 #sort BED file chrom then chromStart: sort -k1,1 -k2,2n unsorted.bed > input.bed
 
@@ -95,6 +100,6 @@ foreach my $chrom_label (keys %chrom_sizes_hash){
 close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
-#my $bigbedfile = $infile . ".bb";
-#system ("/nfs/production/xfam/rfam/software/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+my $bigbedfile = $upid . ".bigbed";
+system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
 
