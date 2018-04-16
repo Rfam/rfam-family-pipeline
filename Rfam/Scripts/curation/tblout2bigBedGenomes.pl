@@ -21,7 +21,7 @@ my $rfamdb = $config->rfamlive;
 my $upid = substr $infile, 0, 11;
 
 my $bedfile = $upid . ".bed";
-my $detail_bed = $upid . "_detail.bed";
+my $detail_bed = $upid . ".bedDetail";
 my $chrom_sizes_file = "chrom.sizes";
 my %chrom_sizes_hash;
 
