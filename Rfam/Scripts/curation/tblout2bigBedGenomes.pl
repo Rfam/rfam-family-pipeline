@@ -100,6 +100,6 @@ foreach my $chrom_label (keys %chrom_sizes_hash){
 close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
-my $bigbedfile = $upid . ".bigbed";
+my $bigbedfile = $upid . ".bigBed";
 system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
 
