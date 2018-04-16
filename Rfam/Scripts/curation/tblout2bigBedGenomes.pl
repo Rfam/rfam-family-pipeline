@@ -53,10 +53,10 @@ while (<IN>){
 
 		#start must be lower than end - so the two need reversing if strand = '-'
 		if ($data[9] eq '+'){
-	   	  	print BED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\n";
+	   	  	print BED "$chromosome_label\t$data[7]\t$data[8]\t$data[2]\t$data[9]\n";
 			#print BED "$data[3]\t$data[0]\t$data[7]\t$data[8]\t$data[2]\n";
 		} elsif ($data[9] eq '-'){
-	   		print BED "$chromosome_label\t$data[8]\t$data[7]\t$data[2]\n";
+	   		print BED "$chromosome_label\t$data[8]\t$data[7]\t$data[2]\t$data[9]\n";
 			#print BED "$data[3]\t$data[0]\t$data[8]\t$data[7]\t$data[2]\n";
 		} else {
 	    		print "Strand character unrecognised in line: $_";
