@@ -32,7 +32,7 @@ foreach my $region (@$regions) {
 	$bit_score = $region->[4];
 	$new_evalue = Bio::Rfam::Infernal::cm_bitsc2evalue($familyIO_obj->{'CM'}, $bit_score, $config->seqdbConfig("rfamseq")->{"dbSize"}, $opt); 
 	# convert the new e-value to scientific notation
-	$new_evalue_sn = sprintf("%e", $new_evalue);
+	my $new_evalue_sn = sprintf("%.1e", $new_evalue);
 	print "$rfam_acc\t$region->[3]\t$region->[1]\t$region->[2]\t$region->[4]\t$new_evalue_sn\t$region->[6]\t$region->[7]\t$region->[8]\t$region->[9]\t$region->[10]\n";
 	$bit_score = 0;
 	$new_evalue = 0.0;
