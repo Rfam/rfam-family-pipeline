@@ -23,7 +23,8 @@ sub mapPDB {
 	#
 	#my $PDB_fasta = '/nfs/production/xfam/rfam/RELEASE_FILES/RFAM_12/PDB_RFAM12.fa';
 	#my $PDB_fasta = '/nfs/production/xfam/rfam/RELEASE_FILES/RFAM_12_3/pdb_mappings/PDB_RFAM_12_3.fa';
- 	my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/13.0/pdb_files/PDB_RFAM_13_0.fa';
+ 	#my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/13.0/pdb_files/PDB_RFAM_13_0.fa';
+	my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/14.0/pdb_files/rel14/PDB_RFAM_14_0_relaxed.fa';
 	my $config = $self->_mxrp_parent->config;
 	# my $client = Bio::Rfam::SVN::Client->new({config => $config});
 	my $familyIO = Bio::Rfam::FamilyIO->new;	
