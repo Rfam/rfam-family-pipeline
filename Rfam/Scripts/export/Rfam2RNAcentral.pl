@@ -33,7 +33,7 @@ my $rfdbh    = $schema->storage->dbh;
 my $query1 = qq(select rfam_acc from family;);
 
 #include: gene, leader, riboswitch exclude: cis-reg & lncRNA 
-my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%') and f.type not like '%lncRNA%' and f.type not like '%leader%' and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%' or f.type like '%IRES%' or f.type like '%thermoregulator%' ) and (f.type not like '%lncRNA%' and f.type not like '%leader%' and f.type not like '%frameshift element%' and f.type not like 'Cis-reg;') and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
 
 #my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.type like '%riboswitch%' or f.type like '%leader%' and f.type not like 'Intron%' or (f.type not like 'Gene%lncRNA%' and f.type not like 'Cis-reg%') and f.rfam_acc = ? and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
 
@@ -52,10 +52,12 @@ my %classes = (
 	"Gene;" => "other",                          
 	"Gene; ribozyme;" => "ribozyme",               
 	"Gene; snRNA; snoRNA; CD-box;" => "snoRNA",  
-	"Gene; sRNA;" => "other",                   
-	"Gene; miRNA;" => "miRNA",        
+	"Gene; sRNA;" => "siRNA",                   
+	"Gene; sRNA" => "siRNA",
+	"Gene; miRNA;" => "pre_miRNA",        
 	"Gene; antisense;" => "antisense_RNA",              
 	"Gene; snRNA; snoRNA; HACA-box;" => "snoRNA",
+	"Gene; snRNA; snoRNA; HACA-box" => "snoRNA",
 	"Gene; snRNA;" => "snRNA",                  
 	"Gene; antitoxin;" => "other",               
 	"Gene; snRNA; snoRNA; scaRNA;" => "snoRNA",   
@@ -63,6 +65,11 @@ my %classes = (
 	"Gene; CRISPR;" => "other",
 	"Cis-reg; riboswitch;" => "other",
 	"Cis-reg; leader;" => "other",
+	"Cis-reg; thermoregulator;" => "other", 
+	"Cis-reg; IRES;" => "other",
+	"Cis-reg; frameshift_element;" => "other",
+	"Intron;" => "autocatalytically_spliced_intron",
+	"Cis-reg;" => "other",
 );
 
 my %types = (
