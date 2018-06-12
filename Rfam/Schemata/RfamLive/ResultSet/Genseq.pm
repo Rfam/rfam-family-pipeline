@@ -11,13 +11,14 @@ use base 'DBIx::Class::ResultSet';
 # TO DO: need to simplify the code and add more checks
 
 sub get_chromosome_label_for_genome_browser_hub {
-  my ($self, $upid, $rfamseq_acc) = @_;
+  my ($self, $upid, $rfamseq_acc, $rel_version) = @_;
 
   my $chromosome_label='';
 
   # check if the rfamseq_acc exists in Genseq table
   my $rfamseq_acc_entry = $self->find({rfamseq_acc => $rfamseq_acc,
-                                          upid => $upid});
+                                          upid => $upid,
+					  version => $rel_version});
   # if no entry found, return empty string
   if(!defined($rfamseq_acc_entry)){
       #croak("No entry found in Genseq for rfamseq_acc: $rfamseq_acc");

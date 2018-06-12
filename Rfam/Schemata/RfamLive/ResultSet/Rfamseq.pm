@@ -23,8 +23,9 @@ sub seqaccToTaxon {
 sub get_sequence_length {
 	my ($self, $rfamseq_acc) = @_;
 
+  my $seq_length=0;
 	my $rfamseq_row = $self->find({rfamseq_acc => $rfamseq_acc});
-	my $seq_length = $rfamseq_row->get_column('length');
+	$seq_length = $rfamseq_row->get_column('length');
 
 	return $seq_length;
 }
