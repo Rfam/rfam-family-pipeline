@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use DDP;
+use File::Basename;
 use Bio::Rfam::Config;
 
 
@@ -18,11 +19,10 @@ my $rel_version = $ARGV[1];
 my $config = Bio::Rfam::Config->new;
 my $rfamdb = $config->rfamlive;
 
-my $upid = substr $infile, 0, 11;
-
-my $bedfile = $upid . ".bed";
-my $detail_bed = $upid . ".bedDetail";
-my $chrom_sizes_file = "chrom.sizes";
+my $upid = substr basename($infile), 0, 11;
+my $dirname = dirname($infile);
+my $bedfile = $dirname . '/' . $upid . ".bed";
+my $chrom_sizes_file = $dirname . '/' . "chrom.sizes";
 my %chrom_sizes_hash = ();
 
 #create BED format file
@@ -41,9 +41,17 @@ while (<IN>){
 		
 		# working with the rfamseq_acc here. Split target and use third item in the table. 
 		my $accession = $data[0];
-		my @target = (split/\|/,$accession);
-		my $rfamseq_acc = $target[2];
+		my $rfamseq_acc = '';
 
+		if (index($accession, '|') != -1) {
+			my @target = (split/\|/, $accession);
+			$rfamseq_acc = $target[2];
+		}
+		
+		else{
+			$rfamseq_acc = $accession;
+		}
+		
 		my $chromosome_label;
 		$chromosome_label = $rfamdb->resultset('Genseq')->get_chromosome_label_for_genome_browser_hub($upid, $rfamseq_acc, $rel_version);
 
@@ -55,7 +63,7 @@ while (<IN>){
 
 		# Write region to bed file
 		#start must be lower than end - so the two need reversing if strand = '-'
-		my @value_array = (split/\./,$data[14]);
+		my @value_array = (split/\./, $data[14]);
 		my $bit_score = $value_array[0];
 
 		# maximum score allowed in bed file
@@ -87,7 +95,7 @@ close (BED);
 
 #sort BED file chrom then chromStart: sort -k1,1 -k2,2n unsorted.bed > input.bed
 
-my $sortedfile = $upid . "_sorted.bed";
+my $sortedfile = $dirname . '/' . $upid . "_sorted.bed";
 system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 
 # DO this later - need a script to replace UCSC's fetchChromSizes
@@ -98,12 +106,11 @@ system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 open (CHRSIZES, ">$chrom_sizes_file") or die "Cannot open file $chrom_sizes_file $!\n";
 
 foreach my $chrom_label (keys %chrom_sizes_hash){
-	print "$chrom_label\n";
 	print CHRSIZES "$chrom_label\t$chrom_sizes_hash{$chrom_label}\n";
 }
 close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
-my $bigbedfile = $upid . ".bigBed";
-system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+my $bigbedfile = $dirname . '/' . $upid . ".bigBed";
+system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile $chrom_sizes_file $bigbedfile") and die "Could not convert BED to bigBed $!\n";
 
