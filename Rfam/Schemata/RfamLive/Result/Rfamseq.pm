@@ -1,5 +1,5 @@
-use utf8;
 package RfamLive::Result::Rfamseq;
+
 
 # Created by DBIx::Class::Schema::Loader
 # DO NOT MODIFY THE FIRST PART OF THIS FILE
@@ -12,7 +12,7 @@ RfamLive::Result::Rfamseq
 
 use strict;
 use warnings;
-
+use utf8;
 use base 'DBIx::Class::Core';
 
 =head1 TABLE: C<rfamseq>
