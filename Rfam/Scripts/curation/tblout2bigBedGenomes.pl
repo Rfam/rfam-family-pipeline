@@ -37,12 +37,13 @@ while (<IN>){
 #skip lines beginning #
 	unless ($_ =~ /^#/){
 		my @data = (split/\s+/,$_);
-#need to ignore those where chrom is non-standard
+		#need to ignore those where chrom is non-standard
 		
 		# working with the rfamseq_acc here. Split target and use third item in the table. 
 		my $accession = $data[0];
 		my $rfamseq_acc = '';
 
+		# check if accession needs trimming 
 		if (index($accession, '|') != -1) {
 			my @target = (split/\|/, $accession);
 			$rfamseq_acc = $target[2];
@@ -51,11 +52,11 @@ while (<IN>){
 		else{
 			$rfamseq_acc = $accession;
 		}
-		
+
+		# fetch chromosome label from Genseq table based on the sequence accession
 		my $chromosome_label;
 		$chromosome_label = $rfamdb->resultset('Genseq')->get_chromosome_label_for_genome_browser_hub($upid, $rfamseq_acc, $rel_version);
 
-		#print "accession: $rfamseq_acc chromosome_label: $chromosome_label\n";
 		# jump to next hit if chromosome label is empty or does not comply with the expected format
 		if ($chromosome_label eq '' or $chromosome_label =~ /chr\w{1,2}_\S+/){
 			next;
@@ -81,7 +82,7 @@ while (<IN>){
 	    		print "Strand character unrecognised in line: $_";
 		}
 
-		# update chromosome sizes hash
+		# update chromosome sizes hash directly from rfamseq table using sequence length
 		if (!exists($chrom_sizes_hash{$chromosome_label})){
 			my $chrom_size = $rfamdb->resultset('Rfamseq')->get_sequence_length($rfamseq_acc);
 			$chrom_sizes_hash{$chromosome_label} = $chrom_size;
@@ -94,7 +95,6 @@ close (IN);
 close (BED);
 
 #sort BED file chrom then chromStart: sort -k1,1 -k2,2n unsorted.bed > input.bed
-
 my $sortedfile = $dirname . '/' . $upid . "_sorted.bed";
 system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 
