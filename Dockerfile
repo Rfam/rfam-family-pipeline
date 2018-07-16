@@ -142,11 +142,11 @@ git clone https://github.com/cbcrg/tcoffee.git && \
 cd tcoffee/compile && \
 make t_coffee
 
-# MUSCLE installation -- test
+# MUSCLE installation
 RUN cd /Rfam/software && \
 curl -OL http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz && \
 tar -zxvf muscle3.8.31_i86linux64.tar.gz && \
-ln -s muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
+ln -s /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
 
 # argtable2/ClustalW dependencies
 RUN cd /Rfam/software && \
@@ -176,8 +176,8 @@ ln -s PPfold3.1.1.jar /Rfam/software/bin/.
 RUN cd /Rfam/software && \
 git clone https://github.com/stamatak/standard-RAxML.git && \
 cd /Rfam/software/standard-RAxML && \
-make -f Makefile.gcc
-
+make -f Makefile.gcc && \
+ln -s /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
 RUN cd /Rfam/software && \
