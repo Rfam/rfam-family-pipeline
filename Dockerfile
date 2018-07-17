@@ -34,6 +34,13 @@ RUN apt-get install -y libimage-size-perl \
 RUN mkdir /Rfam 
 RUN mkdir /Rfam/software
 RUN mkdir /Rfam/software/bin
+RUN mkdir /Rfam/rfamseq
+
+# fetch sequence files
+RUN cd /Rfam/rfamseq && \
+wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/misc/rfamseq_test.tar.gz && \
+gunzip rfamseq_test.tar.gz && \
+tar -xvf rfamseq_test.tar.gz
 
 RUN cpan -f install File::ShareDir::Install && \
 cpan -f install Inline::C && \
@@ -138,7 +145,7 @@ ln -s RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
 
 #TCOFFEE installation -- test and fix
 RUN cd /Rfam/software && \
-git clone https://github.com/cbcrg/tcoffee.git && \
+git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
 cd tcoffee/compile && \
 make t_coffee
 
@@ -179,7 +186,7 @@ cd /Rfam/software/standard-RAxML && \
 make -f Makefile.gcc && \
 ln -s /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
-# Blast installation
+# Blast installation - TO DO
 RUN cd /Rfam/software && \
 curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.7.1+-src.tar.gz && \
 tar -zxvf ncbi-blast-2.7.1+-src.tar.gz && \
@@ -199,9 +206,8 @@ cd /Rfam/Bio-Easel && perl Makefile.PL && \
 make && \
 make install
 
-
 # clone Rfam repo
-RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git
+RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
@@ -212,4 +218,3 @@ ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Eas
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
-
