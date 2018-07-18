@@ -76,7 +76,7 @@ ln -s esl-sfetch esl-shuffle esl-ssdraw esl-translate esl-weight /Rfam/software/
 
 # make infernal tools available in software bin
 RUN cd /Rfam/software/infernal-1.1.2/src && \
-ln -s cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch /Rfam/software/bin/.
+ln -s cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch cmcalibrate /Rfam/software/bin/.
 
 
 # CMfinder installation
