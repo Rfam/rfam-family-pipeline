@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y curl \
     perl \
     wget \
     make \
-    automake \ 
+    automake \
     curl \
     gzip \
     g++ \
@@ -31,7 +31,7 @@ RUN apt-get install -y libimage-size-perl \
   && apt-get clean
 
 # create an Rfam directory where all software will be installed
-RUN mkdir /Rfam 
+RUN mkdir /Rfam
 RUN mkdir /Rfam/software
 RUN mkdir /Rfam/software/bin
 RUN mkdir /Rfam/rfamseq
@@ -47,7 +47,7 @@ cpan -f install Inline::C && \
 cpan -f install Data::Printer && \
 cpan -f install Config::General && \
 cpan -f install DBIx::Class::Schema && \
-cpan -f install DateTime && \ 
+cpan -f install DateTime && \
 cpan -f install DateTime::Format::MySQL && \
 cpan -f install MooseX::NonMoose
 
@@ -121,7 +121,7 @@ make dnaml && \
 ln -s dnaml /Rfam/software/bin/. && \
 ln -s dnaml-erate /Rfam/software/bin/.
 
-# RNAcode installation  - fix 
+# RNAcode installation  - fix
 RUN cd /Rfam/software && \
 git clone https://github.com/wash/rnacode.git && \
 cd rnacode
@@ -195,7 +195,7 @@ cd ncbi-blast-2.7.1+-src
 #make && \
 #make install
 
-# install Bio-Easel 
+# install Bio-Easel
 RUN cd /Rfam && \
 git clone https://github.com/nawrockie/Bio-Easel.git && \
 cd Bio-Easel && \
