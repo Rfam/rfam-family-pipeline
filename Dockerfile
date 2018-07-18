@@ -39,8 +39,8 @@ RUN mkdir /Rfam/rfamseq
 # fetch sequence files
 RUN cd /Rfam/rfamseq && \
 wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/misc/rfamseq14_test.tar.gz && \
-gunzip rfamseq_test.tar.gz && \
-tar -xvf rfamseq_test.tar.gz
+gunzip rfamseq14_test.tar.gz && \
+tar -xvf rfamseq14_test.tar
 
 RUN cpan -f install File::ShareDir::Install && \
 cpan -f install Inline::C && \
