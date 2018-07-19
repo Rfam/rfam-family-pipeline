@@ -60,6 +60,7 @@ my $do_dirty = 0;               # TRUE to not unlink files
 my $do_stdout = 1;              # TRUE to output to STDOUT
 my $allow_no_desc = 0;          # TRUE to let rfsearch run without a DESC file (we'll create it)
 my $do_quiet  = 0;              # TRUE to not output anything to STDOUT
+my $do_local_opt = 0;           # TRUE to run all jobs locally
 my $do_help = 0;                # TRUE to print help and exit, if -h used
 
 # database related options:
@@ -203,7 +204,7 @@ if ((defined $t_opt) && ($do_cutga))      { die "ERROR you can't use both -t and
 
 # A few complicated checks about the search thresholds, we want to do this here, before
 # the build step (and not wait til the search step) so we exit early and don't waste 
-# the user's time.
+# the user's time if there's a problem.
 # if a threshold already exists in SM (-E or -T) and rfsearch.pl -e or -t was used without -ignoresm, then die
 my $desc_searchopts = undef;
 my $t_sm = undef;
@@ -355,13 +356,13 @@ if($ignore_bm)                 { push(@opt_lhsA, "# ignore DESC's BM line: ");  
 if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in database: "); push(@opt_rhsA, "yes [-relax]"); }
 if($force_calibrate)           { push(@opt_lhsA, "# force cmcalibrate step: ");             push(@opt_rhsA, "yes [-c]"); }
 if($calibrate_nompi)           { push(@opt_lhsA, "# threaded calibration, not MPI: ");      push(@opt_rhsA, "yes [-cnompi]"); }
-if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for MPI cmcalibrate: "); push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
+if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for cmcalibrate: ");     push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
 if(defined $e_opt)             { push(@opt_lhsA, "# E-value cutoff: ");                     push(@opt_rhsA, $e_opt . " [-e]"); }
 if(defined $t_opt)             { push(@opt_lhsA, "# bit score cutoff: ");                   push(@opt_rhsA, $t_opt . " [-t]"); }
 if($do_cutga)                  { push(@opt_lhsA, "# use GA bit score threshold: ");         push(@opt_rhsA, "yes [-cut_ga]"); }
 if($no_search)                 { push(@opt_lhsA, "# skip cmsearch stage: ");                push(@opt_rhsA, "yes [-nosearch]"); }
 if($no_rev_search)             { push(@opt_lhsA, "# omit reversed db search: ");            push(@opt_rhsA, "yes [-norev]"); }
-if(defined $ncpus_cmsearch)    { push(@opt_lhsA, "# number of CPUs for cmsearch jobs: ");   push(@opt_rhsA, "$ncpus_cmsearch [-scpu]"); }
+if(defined $ncpus_cmsearch)    { push(@opt_lhsA, "# number of CPUs for cmsearch: ");        push(@opt_rhsA, "$ncpus_cmsearch [-scpu]"); }
 if(defined $mxsize_opt)        { push(@opt_lhsA, "# max cmsearch DP matrix size (Mb): ");   push(@opt_rhsA, "$mxsize_opt [-mxsize]"); }
 $str = ""; foreach $opt (@cmosA) { $str .= $opt . " "; }
 if(scalar(@cmosA) > 0)         { push(@opt_lhsA, "# single dash cmsearch options: ");       push(@opt_rhsA, $str . "[-cmos]"); }
@@ -424,6 +425,13 @@ foreach $outfile (@outfile_orderA) {
 }
 
 Bio::Rfam::Utils::log_output_progress_column_headings($logFH, "per-stage progress:", $do_stdout);
+
+# determine location and whether we will run all jobs locally or not
+my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
+# we also run everything locally is if location is set to the empty string or to 'docker'
+if($config->location eq "")       { $do_all_local = 1; } 
+if($config->location eq "docker") { $do_all_local = 1; } 
+if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
 ###########################################################################################################
 # Preliminary check: verify that all sequences in the SEED derive from the database we're about to search #
@@ -600,22 +608,29 @@ if($do_calibrate) {
                                                                    $calibrate_errO,       # path to error output file 
                                                                    $ncpus_cmcalibrate,    # number of processors
                                                                    $q_opt,                # queue to use, "" for default, ignored if location eq "EBI"
-                                                                   (! $calibrate_nompi)); # use MPI? 
+                                                                   (! $calibrate_nompi),  # use MPI? 
+                                                                   ($do_all_local));      # run job locally?
   my @jobnameA = ("c.$$");
   my @outnameA = ("c.$$.out");
   my @errnameA = ("$calibrate_errO"); 
   #$calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@jobnameA, \@outnameA, "[ok]", "cmcalibrate-mpi", $logFH, 
                                                                 #sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
   my $cmcalibrate_string = ($calibrate_nompi) ? "cmcalibrate-thr" : "cmcalibrate-mpi";
-  $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
-                                                                sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
-  Bio::Rfam::Utils::checkStderrFile($config->location, $calibrate_errO);
-  # if we get here, err file was empty, so we keep going
-  if(! $do_dirty) { unlink $calibrate_errO; } # this file is empty anyway 
 
+  if(! $do_all_local) { # job is running on the cluster
+    $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
+                                                                        sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
+    Bio::Rfam::Utils::checkStderrFile($config->location, $calibrate_errO);
+    # if we get here, err file was empty, so we keep going
+    if(! $do_dirty) { unlink $calibrate_errO; } # this file is empty anyway 
+    $calibrate_wall_secs = time() - $calibrate_start_time;
+  }
+  else { # job ran locally 
+    $calibrate_wall_secs = time() - $calibrate_start_time;
+    Bio::Rfam::Utils::log_output_progress_local($logFH, $cmcalibrate_string, $build_wall_secs, 0, 1, "", $do_stdout);
+  }
   $famObj->DESC->CB("cmcalibrate --mpi CM");
 
-  $calibrate_wall_secs = time() - $calibrate_start_time;
   Bio::Rfam::Infernal::process_cpu_times($calibrateO, "# CPU time:", undef, undef, \$calibrate_cpu_secs, \$calibrate_elp_secs);
   my $mpi_overhead_secs = 10;
   $calibrate_elp_secs += $mpi_overhead_secs; # MPI slows things down, and we don't want our efficiency to be lower due to this
@@ -809,13 +824,18 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
     die "ERROR processing search threshold, bug in code (6)." 
   }
   # define other options for cmsearch
-  my $ncpus; 
-  if (! defined $ncpus_cmsearch) { $ncpus_cmsearch = 4; }
+  my $ncpu_opt = "";
+  if (! defined $ncpus_cmsearch) { 
+    $ncpus_cmsearch = ($do_all_local) ? "" : 4;
+    # if -scpu not used, and we're running locally, do not specify --cpu 
+    # (this will use all available threads by default in infernal 1.1.2)
+  }
+  $ncpu_opt = ($ncpus_cmsearch eq "") ? "" : "--cpu $ncpus_cmsearch";
 
   # use same reporting threshold for regular and reversed searches
   my $nohmm_opt = ($do_hmmonly) ? "" : "--nohmmonly "; # if $do_hmmonly we've already added --hmmonly to $extra_searchopts above
-  my $searchopts     = "--cpu $ncpus_cmsearch --verbose " . $nohmm_opt . $thr_searchopts;
-  my $rev_searchopts = "--cpu $ncpus_cmsearch --verbose " . $nohmm_opt;
+  my $searchopts     = $ncpu_opt . " --verbose " . $nohmm_opt . $thr_searchopts;
+  my $rev_searchopts = $ncpu_opt . " --verbose " . $nohmm_opt;
 
   $rev_searchopts  = $searchopts . $rev_Zopt;
   $searchopts     .= $Zopt;
@@ -846,9 +866,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my @rev_cmsOA    = (); # names of cmsearch output files for reversed searches
   my @rev_errOA    = (); # names of error files for reversed searches
 
-  submit_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt);
+  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
-    submit_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt);
+    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
   }
   my @all_jobnameA = @jobnameA;
   my @all_tblOA    = @tblOA;
@@ -964,38 +984,40 @@ foreach $outfile (@outfile_orderA) {
 $description = sprintf("log file (*this* output)");
 Bio::Rfam::Utils::log_output_file_summary($logFH,   "rfsearch.log", $description, $do_stdout);
 
-# output time summary
-Bio::Rfam::Utils::log_output_timing_summary_column_headings($logFH, $do_stdout);
+# output time summary, but only if ! $do_all_local
+if(! $do_all_local) { 
+  Bio::Rfam::Utils::log_output_timing_summary_column_headings($logFH, $do_stdout);
 
-my $total_wall_secs = time() - $start_time;
-my $total_cpu_secs  = $build_wall_secs + $calibrate_cpu_secs + $search_cpu_secs;
-my $total_elp_secs  = $build_elp_secs + $calibrate_elp_secs + $search_max_elp_secs;
-# define ideal_*_secs: the amount of time each stage takes if max efficiency parallelism achieved: all CPUs take equal time
-my $ideal_build_secs     = 0;
-my $ideal_calibrate_secs = 0;
-my $ideal_search_secs    = 0;
-my $ideal_tot_wall_secs  = 0;
-my $ncpus_cmsearch_act   = ((! defined $ncpus_cmsearch) || ($ncpus_cmsearch == 0)) ? 1 : $ncpus_cmsearch; # deal with --cpu 0 (that's really 1 CPU)
-my $tot_ncpus_cmsearch   = $ncpus_cmsearch_act * ($ndbfiles + $rev_ndbfiles);
-
-if($did_build) { 
-  $ideal_build_secs = $build_elp_secs / 1.; 
-  Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmbuild", $build_wall_secs, $build_elp_secs, "-", $build_elp_secs, $ideal_build_secs, $do_stdout);
-  # Note: we fudge the timing a bit for cmbuild by using 'build_elp_secs' where we should use 'build_cpu_secs'
-  # in the 3rd to last argument. This shouldn't make any significant difference though since it's safe to 
-  # assume CPU and Elapsed time for single CPU cmbuild processes are approx equal.
-}
-if($did_calibrate) { 
-  $ideal_calibrate_secs = $calibrate_cpu_secs / $ncpus_cmcalibrate;
-  Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmcalibrate", $calibrate_wall_secs, $calibrate_cpu_secs, $calibrate_max_wait_secs, $calibrate_elp_secs, $ideal_calibrate_secs, $do_stdout);
-}
-if($did_search) { 
-  $ideal_search_secs = $search_cpu_secs / $tot_ncpus_cmsearch;
-  Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmsearch", $search_wall_secs, $search_cpu_secs, $search_max_wait_secs, $search_max_elp_secs, $ideal_search_secs, $do_stdout);
-}
-if($did_build || $did_calibrate || $did_search) { 
-  $ideal_tot_wall_secs = $ideal_build_secs + $ideal_calibrate_secs + $ideal_search_secs;
-  Bio::Rfam::Utils::log_output_timing_summary($logFH,   "total", $total_wall_secs, $total_cpu_secs, "-", $total_elp_secs, $ideal_tot_wall_secs, $do_stdout);
+  my $total_wall_secs = time() - $start_time;
+  my $total_cpu_secs  = $build_wall_secs + $calibrate_cpu_secs + $search_cpu_secs;
+  my $total_elp_secs  = $build_elp_secs + $calibrate_elp_secs + $search_max_elp_secs;
+  # define ideal_*_secs: the amount of time each stage takes if max efficiency parallelism achieved: all CPUs take equal time
+  my $ideal_build_secs     = 0;
+  my $ideal_calibrate_secs = 0;
+  my $ideal_search_secs    = 0;
+  my $ideal_tot_wall_secs  = 0;
+  my $ncpus_cmsearch_act   = ((! defined $ncpus_cmsearch) || ($ncpus_cmsearch == 0)) ? 1 : $ncpus_cmsearch; # deal with --cpu 0 (that's really 1 CPU)
+  my $tot_ncpus_cmsearch   = $ncpus_cmsearch_act * ($ndbfiles + $rev_ndbfiles);
+  
+  if($did_build) { 
+    $ideal_build_secs = $build_elp_secs / 1.; 
+    Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmbuild", $build_wall_secs, $build_elp_secs, "-", $build_elp_secs, $ideal_build_secs, $do_stdout);
+    # Note: we fudge the timing a bit for cmbuild by using 'build_elp_secs' where we should use 'build_cpu_secs'
+    # in the 3rd to last argument. This shouldn't make any significant difference though since it's safe to 
+    # assume CPU and Elapsed time for single CPU cmbuild processes are approx equal.
+  }
+  if($did_calibrate) { 
+    $ideal_calibrate_secs = $calibrate_cpu_secs / $ncpus_cmcalibrate;
+    Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmcalibrate", $calibrate_wall_secs, $calibrate_cpu_secs, $calibrate_max_wait_secs, $calibrate_elp_secs, $ideal_calibrate_secs, $do_stdout);
+  }
+  if($did_search) { 
+    $ideal_search_secs = $search_cpu_secs / $tot_ncpus_cmsearch;
+    Bio::Rfam::Utils::log_output_timing_summary($logFH,   "cmsearch", $search_wall_secs, $search_cpu_secs, $search_max_wait_secs, $search_max_elp_secs, $ideal_search_secs, $do_stdout);
+  }
+  if($did_build || $did_calibrate || $did_search) { 
+    $ideal_tot_wall_secs = $ideal_build_secs + $ideal_calibrate_secs + $ideal_search_secs;
+    Bio::Rfam::Utils::log_output_timing_summary($logFH,   "total", $total_wall_secs, $total_cpu_secs, "-", $total_elp_secs, $ideal_tot_wall_secs, $do_stdout);
+  }
 }
 
 Bio::Rfam::Utils::printToFileAndOrStdout($logFH, sprintf("#\n"), $do_stdout);
@@ -1008,8 +1030,8 @@ exit(0);
 
 ######################################################################
 
-sub submit_cmsearch_jobs {
-  my ($config, $ndbfiles, $prefix, $searchopts, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt) = @_;
+sub submit_or_run_cmsearch_jobs {
+  my ($config, $ndbfiles, $prefix, $searchopts, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
   my ($idx, $file_idx, $dbfile);
 
   # determine Gb of memory we need per thread based on $searchopts, if it contains '--mxsize <d>' with <d> > 500
@@ -1021,12 +1043,12 @@ sub submit_cmsearch_jobs {
   }
 
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
-    $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 1..$ndbfiles-1
+    $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 0..$ndbfiles-1
     $jobnameAR->[$idx] = $prefix . "$$.$file_idx";  
     $tblOAR->[$idx]    = $prefix . "$$.$file_idx.tbl";
     $cmsOAR->[$idx]    = $prefix . "$$.$file_idx.cmsearch";
     $errOAR->[$idx]    = $prefix . "$$.$file_idx.err";
-    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . $tblOAR->[$idx] . " " . $searchopts, $cmfile, $dbfileAR->[$idx], $cmsOAR->[$idx], $errOAR->[$idx], $ssopt_str, $q_opt, 0, $gbPerThread);  
+    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . $tblOAR->[$idx] . " " . $searchopts, $cmfile, $dbfileAR->[$idx], $cmsOAR->[$idx], $errOAR->[$idx], $ssopt_str, $q_opt, $do_local, $gbPerThread);  
   }
 }
 
@@ -1357,6 +1379,7 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
             -nodesc      create a default DESC file, because none exists, also requires one of -t, -e or -cut_ga
             -quiet       be quiet; do not output anything to stdout (rfsearch.log still created)
   	    -dirty       do not remove temporary/intermediate files that are normally removed
+  	    -local       run all commands locally, do not submit cmsearch/cmcalibrate to cluster
   	    -h|-help     print this help, then exit
 EOF
 }
