@@ -878,9 +878,12 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
     push(@all_tblOA,    @rev_tblOA);
     push(@all_errOA,    @rev_errOA);
   }
-  # wait for cluster jobs to finish
-  #$search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@all_jobnameA, \@all_tblOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
-  $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
+
+  if(! $do_all_local) { 
+    # wait for cluster jobs to finish
+    #$search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@all_jobnameA, \@all_tblOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
+    $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
+  }
   $search_wall_secs     = time() - $search_start_time;
   
   # concatenate files (no need to validate output, we already did that in wait_for_cluster())
@@ -889,14 +892,17 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $all_rev_tblO = "REVTBLOUT";
   my $all_cmsO     = "searchout";
   my $all_rev_cmsO = "revsearchout";
-  # first, create the concatenated error file, if it's not empty we'll die before creating TBLOUT
-  Bio::Rfam::Utils::concatenate_files(\@all_errOA, $all_errO, (! $do_dirty)); # '1' says delete original files after concatenation, unless -dirty
-  if(-s $all_errO) { 
-    Bio::Rfam::Utils::checkStderrFile($config->location, $all_errO); 
+
+  if(! $do_all_local) { 
+    # if we ran jobs on the cluster, first create the concatenated error file, if it's not empty we'll die before creating TBLOUT
+    Bio::Rfam::Utils::concatenate_files(\@all_errOA, $all_errO, (! $do_dirty)); # '1' says delete original files after concatenation, unless -dirty
+    if(-s $all_errO) { 
+      Bio::Rfam::Utils::checkStderrFile($config->location, $all_errO); 
+    }
+    if(! $do_dirty) { unlink $all_errO; } # this file is empty anyway
   }
 
-  # if we get here, all err files were empty, so we keep going
-  if(! $do_dirty) { unlink $all_errO; } # this file is empty anyway
+  # if we get here, either $do_all_local is TRUE or all err files were empty, so we keep going
   Bio::Rfam::Utils::concatenate_files(\@tblOA,     $all_tblO,     (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
   Bio::Rfam::Utils::concatenate_files(\@cmsOA,     $all_cmsO,     (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
   if($rev_ndbfiles > 0) { 
@@ -924,7 +930,7 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
   $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
 
-  # End of block for submitting and processing cmsearch jobs
+  # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
 }
 # update DESC
