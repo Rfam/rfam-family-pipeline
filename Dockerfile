@@ -16,7 +16,9 @@ RUN apt-get update && apt-get install -y curl \
     gzip \
     g++ \
     gfortran \
-    default-jdk
+    default-jdk \
+    r-base \
+    r-base-dev
 
 RUN apt-get install -y libimage-size-perl \
   libtest-most-perl \
@@ -69,15 +71,14 @@ make install && \
 cd miniapps && \
 
 # create links to make easel tools available in software bin
-ln -s esl-afetch esl-alimanip esl-alimap esl-alimask esl-alimerge esl-alipid /Rfam/software/bin/. && \
-ln -s esl-alirev esl-cluster esl-alistat esl-compalign esl-compstruct esl-construct /Rfam/software/bin/. && \
-ln -s esl-histplot esl-mask esl-reformat esl-selectn esl-seqrange esl-seqstat /Rfam/software/bin/. && \
-ln -s esl-sfetch esl-shuffle esl-ssdraw esl-translate esl-weight /Rfam/software/bin/.
+cp esl-afetch esl-alimanip esl-alimap esl-alimask esl-alimerge esl-alipid /Rfam/software/bin/. && \
+cp esl-alirev esl-cluster esl-alistat esl-compalign esl-compstruct esl-construct /Rfam/software/bin/. && \
+cp esl-histplot esl-mask esl-reformat esl-selectn esl-seqrange esl-seqstat /Rfam/software/bin/. && \
+cp esl-sfetch esl-shuffle esl-ssdraw esl-translate esl-weight /Rfam/software/bin/.
 
 # make infernal tools available in software bin
 RUN cd /Rfam/software/infernal-1.1.2/src && \
-ln -s cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch cmcalibrate /Rfam/software/bin/.
-
+cp cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch cmcalibrate /Rfam/software/bin/.
 
 # CMfinder installation
 RUN cd /Rfam/software && \
@@ -85,7 +86,7 @@ wget http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
 tar -xvf CMfinder_0.2.tgz && \
 cd CMfinder_0.2 && \
 make && \
-ln -s bin/cmfinder /Rfam/software/bin/.
+cp bin/cmfinder /Rfam/software/bin/.
 
 # HMMER installation
 RUN cd /Rfam/software && \
@@ -96,9 +97,9 @@ cd /Rfam/software/hmmer-3.2.1 && \
 make && \
 make install && \
 cd /Rfam/software/hmmer-3.2.1/src && \
-ln -s alimask hmmalign hmmbuild hmmc2 hmmconvert hmmemit hmmerfm-exactmatch /Rfam/software/bin/. && \
-ln -s hmmfetch hmmlogo hmmpgmd hmmpress hmmscan hmmsearch hmmsim hmmstat /Rfam/software/bin/. && \
-ln -s jackhmmer makehmmerdb nhmmer nhmmscan phmmer /Rfam/software/bin/.
+cp alimask hmmalign hmmbuild hmmc2 hmmconvert hmmemit hmmerfm-exactmatch /Rfam/software/bin/. && \
+cp hmmfetch hmmlogo hmmpgmd hmmpress hmmscan hmmsearch hmmsim hmmstat /Rfam/software/bin/. && \
+cp jackhmmer makehmmerdb nhmmer nhmmscan phmmer /Rfam/software/bin/.
 
 # MAFFT installation
 RUN cd /Rfam/software && \
@@ -109,8 +110,7 @@ make clean && \
 make && \
 make install && \
 cd /Rfam/software/mafft-7.402-with-extensions/binaries && \
-mv mafft.1 mafft && \
-ln -s mafft /Rfam/software/bin/.
+cp mafft.1 /Rfam/software/bin/mafft
 
 # ERATE installation
 RUN cd /Rfam/software && \
@@ -118,42 +118,24 @@ curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
 tar -xzf erate-v.0.8.tar.gz && \
 cd erate-v.0.8/phylip3.66-erate/src && \
 make dnaml && \
-ln -s dnaml /Rfam/software/bin/. && \
-ln -s dnaml-erate /Rfam/software/bin/.
+cp dnaml /Rfam/software/bin/.
 
-# RNAcode installation  - fix
+# RNAcode installation
 RUN cd /Rfam/software && \
-git clone https://github.com/wash/rnacode.git && \
-cd rnacode
-#./configure && \
-#make && \
-#make install
-
-# ViennaRNA installation
-RUN cd /Rfam/software && \
-curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
-tar -zxvf ViennaRNA-2.4.9.tar.gz && \
-cd ViennaRNA-2.4.9 && \
-./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
+#git clone https://github.com/wash/rnacode.git && \
+curl -OL http://github.com/downloads/wash/rnacode/RNAcode-0.3.tar.gz && \
+tar -xzf RNAcode-0.3.tar.gz && \
+cd RNAcode-0.3 && \
+./configure --prefix=/Rfam/software/RNAcode-0.3 && \
 make && \
 make install && \
-cd bin && \
-ln -s RNA2Dfold RNAaliduplex RNAalifold RNAcode RNAcofold RNAdistance /Rfam/software/bin/. && \
-ln -s RNAduplex RNAeval RNAfold RNAforester RNAheat RNAinverse RNALalifold /Rfam/software/bin/. && \
-ln -s RNALfold RNApaln RNAparconv RNApdist RNAPKplex RNAplex RNAplfold /Rfam/software/bin/. && \
-ln -s RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
-
-#TCOFFEE installation -- test and fix
-RUN cd /Rfam/software && \
-git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
-cd tcoffee/compile && \
-make t_coffee
+cp /Rfam/software/RNAcode-0.3/bin/RNAcode /Rfam/software/bin/.
 
 # MUSCLE installation
 RUN cd /Rfam/software && \
 curl -OL http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz && \
 tar -zxvf muscle3.8.31_i86linux64.tar.gz && \
-ln -s /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
+cp /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
 
 # argtable2/ClustalW dependencies
 RUN cd /Rfam/software && \
@@ -172,28 +154,50 @@ cd clustal-omega-1.2.4 && \
 ./configure CFLAGS=-I/Rfam/software/argtable2-13/include LDFLAGS=-L/Rfam/software/argtable2-13/lib --prefix=/Rfam/software/clustal-omega-1.2.4 && \
 make && \
 make install && \
-ln -s /Rfam/software/clustal-omega-1.2.4/bin/clustalo /Rfam/software/bin/.
+cp /Rfam/software/clustal-omega-1.2.4/bin/clustalo /Rfam/software/bin/.
 
 # PPFold installation
 RUN cd /Rfam/software && \
 curl -OL http://www.daimi.au.dk/~compbio/pfold/PPfold/PPfold3.1.1.jar && \
-ln -s PPfold3.1.1.jar /Rfam/software/bin/.
+cp PPfold3.1.1.jar /Rfam/software/bin/.
 
 # RAxML installation
 RUN cd /Rfam/software && \
 git clone https://github.com/stamatak/standard-RAxML.git && \
 cd /Rfam/software/standard-RAxML && \
 make -f Makefile.gcc && \
-ln -s /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
+cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
-# Blast installation - TO DO
-RUN cd /Rfam/software && \
-curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.7.1+-src.tar.gz && \
-tar -zxvf ncbi-blast-2.7.1+-src.tar.gz && \
-cd ncbi-blast-2.7.1+-src
+# Blast installation
+#RUN cd /Rfam/software && \
+#curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.7.1+-src.tar.gz && \
+#tar -zxvf ncbi-blast-2.7.1+-src.tar.gz && \
+#cd ncbi-blast-2.7.1+-src/c++ && \
 #./configure && \
 #make && \
 #make install
+
+# ViennaRNA installation
+#RUN cd /Rfam/software && \
+#curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz #&& \
+#tar -zxvf ViennaRNA-2.4.9.tar.gz && \
+#cd ViennaRNA-2.4.9 && \
+#./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
+#make && \
+#make install
+#cd bin
+#cp RNA2Dfold RNAaliduplex RNAalifold RNAcode RNAcofold RNAdistance /Rfam/software/bin/. && \
+#cp RNAduplex RNAeval RNAfold RNAforester RNAheat RNAinverse RNALalifold /Rfam/software/bin/. && \
+#cp RNALfold RNApaln RNAparconv RNApdist RNAPKplex RNAplex RNAplfold /Rfam/software/bin/. && \
+#cp RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
+
+#TCOFFEE installation -- test and fix
+RUN cd /Rfam/software && \
+git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
+cd tcoffee/compile && \
+make t_coffee
+
+
 
 # install Bio-Easel
 RUN cd /Rfam && \
@@ -207,7 +211,8 @@ make && \
 make install
 
 # clone Rfam repo
-RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git
+RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
