@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y curl \
     curl \
     gzip \
     g++ \
+    vim \
     gfortran \
     default-jdk \
     r-base \
