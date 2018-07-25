@@ -38,6 +38,7 @@ RUN mkdir /Rfam
 RUN mkdir /Rfam/software
 RUN mkdir /Rfam/software/bin
 RUN mkdir /Rfam/rfamseq
+RUN mkdir /workdir
 
 # fetch sequence files
 RUN cd /Rfam/rfamseq && \
