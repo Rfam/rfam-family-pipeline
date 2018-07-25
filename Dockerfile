@@ -122,7 +122,6 @@ cp dnaml /Rfam/software/bin/.
 
 # RNAcode installation
 RUN cd /Rfam/software && \
-#git clone https://github.com/wash/rnacode.git && \
 curl -OL http://github.com/downloads/wash/rnacode/RNAcode-0.3.tar.gz && \
 tar -xzf RNAcode-0.3.tar.gz && \
 cd RNAcode-0.3 && \
@@ -169,35 +168,31 @@ make -f Makefile.gcc && \
 cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
-#RUN cd /Rfam/software && \
-#curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.7.1+-src.tar.gz && \
-#tar -zxvf ncbi-blast-2.7.1+-src.tar.gz && \
-#cd ncbi-blast-2.7.1+-src/c++ && \
-#./configure && \
-#make && \
-#make install
+RUN cd /Rfam/software && \
+curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.7.1+-x64-linux.tar.gz && \
+tar -zxvf ncbi-blast-2.7.1+-x64-linux.tar.gz && \
+cd /Rfam/software/ncbi-blast-2.7.1+/bin
+#cp /Rfam/software/ncbi-blast-2.7.1+/bin/. /Rfam/software/bin/.§1
 
 # ViennaRNA installation
-#RUN cd /Rfam/software && \
-#curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz #&& \
-#tar -zxvf ViennaRNA-2.4.9.tar.gz && \
-#cd ViennaRNA-2.4.9 && \
-#./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
-#make && \
-#make install
-#cd bin
-#cp RNA2Dfold RNAaliduplex RNAalifold RNAcode RNAcofold RNAdistance /Rfam/software/bin/. && \
-#cp RNAduplex RNAeval RNAfold RNAforester RNAheat RNAinverse RNALalifold /Rfam/software/bin/. && \
-#cp RNALfold RNApaln RNAparconv RNApdist RNAPKplex RNAplex RNAplfold /Rfam/software/bin/. && \
-#cp RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
+tar -zxvf ViennaRNA-2.4.9.tar.gz && \
+cd ViennaRNA-2.4.9 && \
+./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
+make && \
+make install && \
+cd bin && \
+cp RNA2Dfold RNALalifold RNALfold RNAPKplex RNAaliduplex RNAalifold /Rfam/software/bin/. && \
+cp RNAcofold RNAdistance RNAduplex RNAeval RNAfold RNAforester RNAheat /Rfam/software/bin/. && \
+cp RNAinverse RNAlocmin RNApaln RNAparconv RNApdist RNAplex RNAplfold /Rfam/software/bin/. && \
+cp RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
 
 #TCOFFEE installation -- test and fix
 RUN cd /Rfam/software && \
 git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
 cd tcoffee/compile && \
 make t_coffee
-
-
 
 # install Bio-Easel
 RUN cd /Rfam && \
