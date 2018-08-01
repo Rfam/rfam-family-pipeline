@@ -54,7 +54,9 @@ cpan -f install DBIx::Class::Schema && \
 cpan -f install DateTime && \
 cpan -f install DateTime::Format::MySQL && \
 cpan -f install MooseX::NonMoose && \
-cpan -f install Bio::Annotation::Reference
+cpan -f install Bio::Annotation::Reference && \
+cpan -f install File::Touch && \
+cpan -f install IPC::Run
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
