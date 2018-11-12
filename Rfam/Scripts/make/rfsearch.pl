@@ -430,7 +430,8 @@ Bio::Rfam::Utils::log_output_progress_column_headings($logFH, "per-stage progres
 my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
 # we also run everything locally is if location is set to the empty string or to 'docker'
 if($config->location eq "")       { $do_all_local = 1; } 
-if($config->location eq "docker") { $do_all_local = 1; } 
+if($config->location eq "docker") { $do_all_local = 1; }
+if($config->location eq "cloud")  { $do_all_local = 1; } # don't use MPI in the Cloud
 if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
 ###########################################################################################################
