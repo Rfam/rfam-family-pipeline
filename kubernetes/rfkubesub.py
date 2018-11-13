@@ -55,7 +55,7 @@ def main():
 			      """
 
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
-    fp = open().write(rfam_job % (job_name, user, pod_template, user, pod_template, cmd))
+    fp = open(rfjob_manifest).write(rfam_job % (job_name, user, pod_template, user, pod_template, cmd))
     fp.close()
     
     # this will be generated
