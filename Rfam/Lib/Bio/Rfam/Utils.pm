@@ -91,6 +91,8 @@ sub submit_nonmpi_job {
   }
   elsif($location eq "CLOUD"){
     # develop code here to create kubernetes jobs
+    $submit_cmd = "kubectl ";
+
   }
   elsif($location eq "JFRC") { 
     my $batch_opt = "";
