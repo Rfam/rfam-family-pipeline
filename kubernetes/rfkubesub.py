@@ -1,7 +1,6 @@
 import sys
 import os
-import pwd
-import config as rc
+import getpass
 
 from kubernetes import client, config, utils
 
@@ -15,14 +14,12 @@ def main():
     config.load_kube_config()
     k8s_client = client.ApiClient()
 
-    user = pwd.getpwnam('aix').pw_uid
-    job_name = "rfam_" + user
     cmd = sys.argv[1]
-    cpus = sys.argv[2]
-    pod_template = "rfam-pod" # check if a uuid is needed
-    image = rc.RFAM_CLOUD_IMG
-    user_dir = os.getcwd()
 
+    user = getpass.getuser()
+    job_name = "rfam-job-" + user
+    pod_template = "rfam-pod-" + user # check if a uuid is needed
+    volume_name = "rfam-pod-storage-" + user
     rfam_job = """
 				apiVersion: batch/v1
 				kind: Job
@@ -48,12 +45,17 @@ def main():
 				 		- -cpus
 				 		- 8 
 				      restartPolicy: Never
+				      volumeMounts:
+    				  - name: rfam-pod-storage # this one must match the volume name of the pvc
+      					mountPath: /workdir
 				    volumes:
-				      mountPoint: 
+				    - name: rfam-pod-storage
+    				  persistentVolumeClaim:
+      				    claimName: rfam-pod-pvc
 			      """
 
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
-    fp = open().write(rfam_job % (job_name, pod_template, user, pod_template, image, cmd))
+    fp = open().write(rfam_job % (job_name, user, pod_template, user, pod_template, cmd))
     fp.close()
     
     # this will be generated
