@@ -64,7 +64,7 @@ def main():
     fp.write(rfam_k8s_job % (job_name, pod_name, user, pod_name, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
-    """
+    
     # this will be generated
     k8s_api = utils.create_from_yaml(k8s_client, rfjob_manifest)
 
@@ -72,7 +72,7 @@ def main():
     deps = k8s_api.read_namespaced_deployment(job_name, "default")
 
     print("Deployment {0} created".format(deps.metadata.name))
-    """
+    
     
 # -----------------------------------------------------------------------------------
 
