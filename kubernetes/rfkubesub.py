@@ -11,9 +11,11 @@ def main():
     # Configs can be set in Configuration class directly or using helper
     # utility. If no argument provided, the config will be loaded from
     # default location.
- 	config.load_kube_config()
- 	k8s_client = client.ApiClient()
 
+    
+    config.load_kube_config()
+    k8s_client = client.ApiClient()
+    
     cmd = sys.argv[1]
 
     user = getpass.getuser()
@@ -24,36 +26,36 @@ def main():
     
     # rfsearch job manifest
     rfam_k8s_job = ("apiVersion: batch/v1\n"
-	"kind: Job\n"
-	"metadata:\n"
-	"  name: %s\n"
-	"spec:\n"
-	"  template:\n"
-	"    metadata:\n"
-	"      name: %s\n" 
-	"      labels:\n"
-	"        app: family-builder\n"
-	"        user: %s\n"
-	"        tier: backend\n"
-	"    spec:\n"
-	"      containers:\n"
-	"      - name: %s\n"
-	"        image: ikalvari/rfam-cloud:inpod-kubectl\n"
-	"        resources:\n"
-	"          limits:\n"
-	"            cpu: 8\n"
-	"          requests:\n"
-	"            cpu: 8\n"
-	"        command: [%s]\n"
-	"        imagePullPolicy: IfNotPresent\n"
-	"        restartPolicy: OnFailure\n"
-	"        volumeMounts:\n"
-	"        - name: %s\n" # this one must match the volume name of the pvc
-    "          mountPath: /workdir\n"
-	"      volumes:\n"
-	"      - name: %s\n"
-    "        persistentVolumeClaim:\n"
-    "          claimName: %s\n")
+    	"kind: Job\n"
+    	"metadata:\n"
+    	"  name: %s\n"
+    	"spec:\n"
+    	"  template:\n"
+    	"    metadata:\n"
+    	"      name: %s\n" 
+    	"      labels:\n"
+    	"        app: family-builder\n"
+    	"        user: %s\n"
+    	"        tier: backend\n"
+    	"    spec:\n"
+    	"      containers:\n"
+    	"      - name: %s\n"
+    	"        image: ikalvari/rfam-cloud:inpod-kubectl\n"
+    	"        resources:\n"
+    	"          limits:\n"
+    	"            cpu: 8\n"
+    	"          requests:\n"
+    	"            cpu: 8\n"
+    	"        command: [\"sh\", \"-c\", %s]\n"
+    	"        imagePullPolicy: IfNotPresent\n"
+    	"        volumeMounts:\n"
+		"        - name: %s\n" # this one must match the volume name of the pvc
+		"          mountPath: /workdir\n"
+		"      volumes:\n"
+		"      - name: %s\n"
+		"        persistentVolumeClaim:\n"
+		"          claimName: %s\n"
+		"      restartPolicy: OnFailure")
 
     
     # create a new k8s job yaml file
@@ -62,6 +64,7 @@ def main():
     fp.write(rfam_k8s_job % (job_name, pod_name, user, pod_name, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
+    """
     # this will be generated
     k8s_api = utils.create_from_yaml(k8s_client, rfjob_manifest)
 
@@ -69,9 +72,10 @@ def main():
     deps = k8s_api.read_namespaced_deployment(job_name, "default")
 
     print("Deployment {0} created".format(deps.metadata.name))
+    """
     
 # -----------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    
-    main()
+
+	main()
