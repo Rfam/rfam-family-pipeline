@@ -17,6 +17,7 @@ def main():
     k8s_client = client.ApiClient()
     
     cmd = sys.argv[1]
+    cpus = sys.argv[2]
 
     user = getpass.getuser()
     job_name = "rfsearch-job-%s" % user
@@ -46,6 +47,9 @@ def main():
     	"            cpu: 8\n"
     	"          requests:\n"
     	"            cpu: 8\n"
+        "        args:\n"
+        "        - -cpus\n"
+        "        - \"%s\"\n"
     	"        command: [\"sh\", \"-c\", %s]\n"
     	"        imagePullPolicy: IfNotPresent\n"
     	"        volumeMounts:\n"
@@ -61,7 +65,7 @@ def main():
     # create a new k8s job yaml file
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
     fp = open(rfjob_manifest, 'w')
-    fp.write(rfam_k8s_job % (job_name, pod_name, user, pod_name, cmd, volume_name, volume_name, pvc_name))
+    fp.write(rfam_k8s_job % (job_name, pod_name, user, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
     
