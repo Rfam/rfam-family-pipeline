@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: entry-pod-$USERID
-        image: ikalvari/rfam-cloud:inpod-kubectl
+        image: ikalvari/rfam-cloud:kubes
         ports:
         - containerPort: 9876
         volumeMounts:
