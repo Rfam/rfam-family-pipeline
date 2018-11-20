@@ -77,9 +77,9 @@ def main():
     k8s_api = utils.create_from_yaml(k8s_client, rfjob_manifest)
 
     # create unique namespace for each user
-    deps = k8s_api.read_namespaced_deployment(job_name, "default")
+    #deps = k8s_api.read_namespaced_deployment(job_name, "default")
 
-    print("Deployment {0} created".format(deps.metadata.name))
+    #print("Deployment {0} created".format(deps.metadata.name))
     
     
 # -----------------------------------------------------------------------------------
