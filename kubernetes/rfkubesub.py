@@ -13,9 +13,8 @@ def main():
     # Configs can be set in Configuration class directly or using helper
     # utility. If no argument provided, the config will be loaded from
     # default location.
-
     
-    config.load_kube_config()
+    config.load_incluster_config()
     k8s_client = client.ApiClient()
     
     cmd = sys.argv[1]
@@ -48,7 +47,7 @@ def main():
     	"        image: ikalvari/rfam-cloud:inpod-kubectl\n"
     	"        resources:\n"
     	"          limits:\n"
-    	"            cpu: 8\n"
+    	"            cpu: 8\n" # this is the upper limit of the cpus to be used in the docker container
     	"          requests:\n"
     	"            cpu: 8\n"
         "        args:\n"
@@ -69,7 +68,7 @@ def main():
     # create a new k8s job yaml file
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
     fp = open(rfjob_manifest, 'w')
-    fp.write(rfam_k8s_job % (job_name, pod_name, user, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
+    fp.write(rfam_k8s_job % (job_name, pod_name, user, jobname, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
     
