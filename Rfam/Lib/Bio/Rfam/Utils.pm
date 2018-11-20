@@ -91,8 +91,7 @@ sub submit_nonmpi_job {
   }
   elsif($location eq "CLOUD"){
     # develop code here to create kubernetes jobs
-    $submit_cmd = "kubectl ";
-
+    $submit_cmd = "../../../../kubernetes/rfkubesub \"$cmd\" $ncpu $jobname";
   }
   elsif($location eq "JFRC") { 
     my $batch_opt = "";
@@ -121,7 +120,7 @@ sub submit_nonmpi_job {
   return;
 }
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 =head2 submit_mpi_job
 
