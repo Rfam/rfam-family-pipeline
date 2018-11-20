@@ -20,6 +20,7 @@ def main():
     
     cmd = sys.argv[1]
     cpus = sys.argv[2]
+    jobname = sys.argv[3]
 
     user = getpass.getuser()
     job_name = "rfsearch-job-%s" % user
@@ -40,6 +41,7 @@ def main():
     	"        app: family-builder\n"
     	"        user: %s\n"
     	"        tier: backend\n"
+        "        jobname: %s\n"
     	"    spec:\n"
     	"      containers:\n"
     	"      - name: %s\n"
