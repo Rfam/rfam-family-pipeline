@@ -481,6 +481,7 @@ sub wait_for_cluster_light {
       if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
       elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
       elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods`);} # change command to get the pods of a specific namespace
+      # parse job log
       for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
       foreach $line (@infoA) { 
         if($line =~ m/^\s*\d+\s+/) { 
@@ -507,10 +508,11 @@ sub wait_for_cluster_light {
           # rfsearch-job-ikalvari-m5vxz                     0/1     Completed           0          4d
           # rfsearch-job-root-hzc28                         0/1     ContainerCreating   0          19m
 
-          ($)
+          ($jobname, $status) = ($elA[0], $elA[2]);
 
           }
           #printf("\tjobname: $jobname uname: $uname status: $status\n");
+          # no need to do this for CLOUD 
           if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
           # look through our list of jobs and see if this one matches
           for($i = 0; $i < $n; $i++) { 
