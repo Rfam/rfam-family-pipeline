@@ -429,7 +429,7 @@ sub wait_for_cluster_light {
       }
     }
   }
-  elsif($location ne "JFRC") { 
+  elsif($location ne "JFRC" or $location ne "CLOUD") { 
     die "ERROR in wait_for_cluster_light, unrecognized location: $location"; 
   }
 
@@ -480,6 +480,7 @@ sub wait_for_cluster_light {
       $ncluster_check++;
       if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
       elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
+      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods`);} # change command to get the pods of a specific namespace
       for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
       foreach $line (@infoA) { 
         if($line =~ m/^\s*\d+\s+/) { 
@@ -499,6 +500,15 @@ sub wait_for_cluster_light {
             if($status eq "RUN") { $jobname = $elA[6]; }
             else                 { $jobname = $elA[5]; }
             #print STDERR ("uname: $uname status: $status; jobname: $jobname\n");
+          }
+          elsif($location eq "CLOUD"){
+          # NAME                                            READY   STATUS              RESTARTS   AGE
+          # rfam-dev-entry-pod-deployment-689f678b4-58g6m   1/1     Running             0          24h
+          # rfsearch-job-ikalvari-m5vxz                     0/1     Completed           0          4d
+          # rfsearch-job-root-hzc28                         0/1     ContainerCreating   0          19m
+
+          ($)
+
           }
           #printf("\tjobname: $jobname uname: $uname status: $status\n");
           if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
