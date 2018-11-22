@@ -238,6 +238,7 @@ if((! defined $t_sm) && (! defined $e_sm)) {
     }
   }
 }
+
 # make sure that user didn't specify -T, -E, --cut_ga, --cut_tc, --cut_nc with -cmos or -cmod
 my $extra_searchopts = "";
 if($do_hmmonly) { $extra_searchopts = "--hmmonly "; }
@@ -431,7 +432,7 @@ my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
 # we also run everything locally is if location is set to the empty string or to 'docker'
 if($config->location eq "")       { $do_all_local = 1; } 
 if($config->location eq "docker") { $do_all_local = 1; }
-if($config->location eq "cloud")  { $do_all_local = 1; } # don't use MPI in the Cloud
+if($config->location eq "CLOUD")  { $do_all_local = 1; } # don't use MPI in the Cloud
 if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
 ###########################################################################################################
