@@ -33,7 +33,7 @@ def main():
     	"metadata:\n"
     	"  name: %s\n"
     	"spec:\n"
-        "  activeDeadlineSeconds: 30\n"
+        #"  activeDeadlineSeconds: 30\n"
     	"  template:\n"
     	"    metadata:\n"
     	"      name: %s\n" 
@@ -54,7 +54,7 @@ def main():
         "        args:\n"
         "        - -cpus\n"
         "        - \"%s\"\n"
-    	"        command: [\"sh\", \"-c\", \"cd /workdir &&\",%s]\n"
+    	"        command: [\"sh\", \"-c\", \"cd /workdir &&\", %s]\n"
     	"        imagePullPolicy: IfNotPresent\n"
     	"        volumeMounts:\n"
 		"        - name: %s\n" # this one must match the volume name of the pvc
