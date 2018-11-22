@@ -429,7 +429,7 @@ sub wait_for_cluster_light {
       }
     }
   }
-  elsif(($location ne "JFRC") || ($location ne "CLOUD")) { 
+  elsif(($location ne "JFRC") && ($location ne "CLOUD")) { 
     die "ERROR in wait_for_cluster_light, unrecognized location: $location"; 
   }
 
