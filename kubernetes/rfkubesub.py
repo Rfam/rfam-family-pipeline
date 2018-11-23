@@ -54,7 +54,7 @@ def main():
         "        args:\n"
         "        - -cpus\n"
         "        - \"%s\"\n"
-    	"        command: [\"sh\", \"-c\", \"cd /workdir &&\", %s]\n"
+    	"        command: [\"sh\", \"-c\", %s]\n"
     	"        imagePullPolicy: IfNotPresent\n"
     	"        volumeMounts:\n"
 		"        - name: %s\n" # this one must match the volume name of the pvc
