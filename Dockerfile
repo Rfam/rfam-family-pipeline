@@ -212,7 +212,7 @@ make && \
 make install
 
 # clone Rfam repo
-RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git && \
 cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # set up user account to prevent from using root to run the scripts
