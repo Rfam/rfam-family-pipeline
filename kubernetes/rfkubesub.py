@@ -45,7 +45,7 @@ def main():
     	"    spec:\n"
     	"      containers:\n"
     	"      - name: %s\n"
-    	"        image: ikalvari/rfam-cloud:inpod-kubectl\n"
+    	"        image: ikalvari/rfam-cloud:inpod-kubes\n"
     	"        resources:\n"
     	"          limits:\n"
     	"            cpu: 8\n" # this is the upper limit of the cpus to be used in the docker container
