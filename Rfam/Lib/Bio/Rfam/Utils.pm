@@ -10,6 +10,10 @@ use Sys::Hostname;
 use File::stat;
 use Carp;
 
+use Digest::MD5 qw(md5_hex);
+use LWP::Simple;                
+use JSON qw( decode_json );     
+
 use Cwd;
 use Data::Dumper;
 use Mail::Mailer;
@@ -2091,6 +2095,202 @@ sub numLinesInFile {
   return $line_cnt;
 }
 
+#-------------------------------------------------------------------------------
+# Subroutines brought in to check seed sequences using md5s [Nov 2018]
+#-------------------------------------------------------------------------------
+# md5_of_sequence_string:     calculate md5 of a sequence string
+# revcomp_sequence_string:    reverse complement a sequence string
+# rfamseq_nse_lookup_and_md5: fetch a sequence in Rfamseq and calculate its md5
+# ena_nse_lookup_and_md5:     fetch a sequence in ENA and calculate its md5
+# rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
+#-------------------------------------------------------------------------------
+=head2 md5_of_sequence_string
+  Title    : md5_of_sequence_string
+  Incept   : EPN, Wed Nov 14 19:38:53 2018
+  Function : Returns MD5 value for a sequence string
+           : after converting to all uppercase, and converting Ts to Us.
+  Args     : $seqstring: the sequence string
+  Returns  : the md5
+=cut
+
+sub md5_of_sequence_string { 
+  my ( $seqstring ) = @_;
+  
+  $seqstring =~ s/\n//g;     # remove newlines
+  $seqstring =~ tr/a-z/A-Z/; # all uppercase
+  $seqstring =~ s/U/T/g;     # all DNA
+
+  return md5_hex($seqstring);
+}
+
+#-------------------------------------------------------------------------------
+=head2 revcomp_sequence_string
+  Title    : revcomp_of_sequence_string
+  Incept   : EPN, Tue Nov 27 15:01:39 2018
+  Function : Returns the reverse complement DNA sequence of the passed 
+           : in DNA/RNA sequence string.
+           : If passed in sequence is RNA, it is converted to DNA before
+           : being reverse complemented.
+  Args     : $seqstring: the DNA/RNA sequence string
+  Returns  : the reverse complemented DNA sequence string
+=cut
+
+sub revcomp_sequence_string { 
+  my ( $seqstring ) = @_;
+  
+  # DNA-ize it
+  $seqstring =~ s/Uu/Tt/g; # convert to DNA
+  # reverse it 
+  $seqstring = reverse $seqstring;
+  # complement it
+  $seqstring =~ tr/ACGTRYMKHBVDacgtrymkhbvd/TGCAYRKMDVBHtgcayrkmdvbh/;
+  # see esl_alphabet.c::set_complementarity()
+  # note that S, W, N are omitted they are their own complements
+
+  return $seqstring;
+}
+
+#-------------------------------------------------------------------------------
+=head2 rfamseq_nse_lookup_and_md5
+  Title    : rfamseq_nse_lookup_and_md5
+  Incept   : EPN, Mon Nov 26 19:28:23 2018
+  Function : Looks up a sequence in Rfamseq and calculates its md5 if it's there.
+  Args     : $seqDBObj: the Rfamseq sequence database
+           : $nse:      sequence name in name/start-end format
+  Returns  : 3 values:
+           : $have_source_seq: '1' if source sequence is in Rfamseq, else '0'
+           : $have_sub_seq:    '1' if $have_source_seq and further subseq start-end is in Rfamseq too, else '0'
+           : $md5:             if $have_sub_seq, md5 of subseq, else undefined
+  Dies     : if $nse is not in valid name/start-end format
+=cut
+
+sub rfamseq_nse_lookup_and_md5 {
+  my ( $seqDBObj, $nse) = @_;
+  
+  my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
+  if(! $is_nse) { 
+    die "ERROR, in rfamseq_nse_lookup_and_md5() $nse not in name/start-end format.\n";
+  }
+  
+  my $have_source_seq = $seqDBObj->check_seq_exists($name) ? 1 : 0;
+  my $have_sub_seq    = $seqDBObj->check_subseq_exists($name, $start, $end) ? 1 : 0;
+  my $md5 = undef;
+  if($have_sub_seq) { # fetch the sequence to a string and compute its md5
+    my $subseq = $seqDBObj->fetch_subseq_to_sqstring($name, $start, $end, ($strand == -1));
+    $md5       = md5_of_sequence_string($subseq);
+  }
+
+  return ($have_source_seq, $have_sub_seq, $md5);
+}
+
+#-------------------------------------------------------------------------------
+=head2 ena_nse_lookup_and_md5
+  Title    : ena_nse_lookup_and_md5
+  Incept   : EPN, Mon Nov 26 19:28:23 2018
+  Function : Looks up a sequence in ENA and calculates its md5 if it's there.
+  Args     : $nse:      sequence name in name/start-end format
+  Returns  : 3 values:
+           : $have_source_seq: '1' if source sequence is in Rfamseq, else '0'
+           : $have_sub_seq:    '1' if $have_source_seq and further subseq start-end is in Rfamseq too, else '0'
+           : $md5:             if $have_sub_seq, md5 of subseq, else undefined
+  Dies     : if $nse is not in valid name/start-end format
+=cut
+
+sub ena_nse_lookup_and_md5 {
+  my ( $nse ) = @_;
+  
+  my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
+  if(! $is_nse) { 
+    die "ERROR, in ena_nse_lookup_and_md5() $nse not in name/start-end format.\n";
+  }
+  # $nse will have end < start if it is negative strand, but we can't fetch from ENA
+  # with an end coord less than start, so if we are negative strand, we need to fetch
+  # the positive strand, and then revcomp it later.
+  my $qstart = ($strand == 1) ? $start : $end;
+  my $qend   = ($strand == 1) ? $end   : $start;
+  my $qlen   = abs($start - $end) + 1;
+
+  my $url = sprintf("http://www.ebi.ac.uk/ena/data/view/%s&display=fasta&range=%d-%d\"", $name, $qstart, $qend);
+  
+  my $got_url = get($url);
+  my $have_source_seq = ($got_url =~ m/\>/) ? 1 : 0;
+  # if we a sequence named $name exists in ENA, $got_url will have a fasta header line
+
+  # initialize default values, which will change below if we have a valid subseq
+  my $have_sub_seq = 0; # changed to '1' below if nec
+  my $sqstring = "";
+  my $md5 = undef;
+
+  # it is possible that our coords were out of bounds of the ENA seq.
+  # We can detect this if $got_url has nothing but a header line
+  if($have_source_seq) { 
+    my @got_url_A = split(/\n/, $got_url);
+    foreach my $got_url_line (@got_url_A) { 
+      if($got_url_line !~ m/^\>/) { 
+        $sqstring .= $got_url_line;
+      }
+    }
+    if($sqstring ne "") { # $got_url had some sequence, so coords were valid
+      $have_sub_seq = 1; 
+      my $sqlen = length($sqstring);
+      # Sometimes we fetch the full sequence, sometimes we only fetch the subseq.
+      # (I'm not sure how that is determined.) To deal with this, we check if
+      # we've checked the full seq, and if so, we use substr() to get the subseq.
+      if(length($sqstring) ne $qlen) { # we fetched the full sequence, need substr() to get subseq
+        $sqstring = substr($sqstring, $qstart-1, $qlen);
+      }
+      if($strand != 1) { # negative strand, reverse complement it
+        $sqstring = revcomp_sequence_string($sqstring);
+      }
+      $md5 = md5_of_sequence_string($sqstring);
+    }
+  }
+
+  return ($have_source_seq, $have_sub_seq, $md5);
+}
+
+#-------------------------------------------------------------------------------
+=head2 rnacentral_md5_lookup
+  Title    : rnacentral_md5_lookup
+  Incept   : EPN, Tue Nov 27 11:33:59 2018
+  Function : Looks up a sequence in RNAcentral based on its md5
+  Args     : $in_md5: md5 of the sequence we are looking up
+  Returns  : 3 values:
+           : $have_seq: '1' if sequence exists in RNAcentral, else '0'
+           : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
+           :            if defined, this should be equal to $md5 input
+           : $id:       if $have_seq is '1': RNAcentral ID for sequence, else undefined
+  Dies     : if there is a problem fetching from RNAcentral
+=cut
+
+sub rnacentral_md5_lookup { 
+  my ( $in_md5 ) = @_;
+  
+  my $rnacentral_url = "https://rnacentral.org/api/v1/rna?md5=" . $in_md5;
+  #printf("rnacentral_url: $rnacentral_url\n");
+  my $json = get($rnacentral_url);
+  if(! defined $json) { die "ERROR trying to fetch from rnacentral using md5"; }
+  # Decode the entire JSON
+  my $decoded_json = decode_json($json);
+  #print Dumper $decoded_json;
+
+  my $have_seq = 0;
+  my $md5 = undef;
+  my $id  = undef;
+
+  if((defined $decoded_json->{'results'}) && 
+     (defined $decoded_json->{'results'}[0]{'md5'}) && 
+     (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
+    $have_seq = 1;
+    $md5 = $decoded_json->{'results'}[0]{'md5'};
+    $id  = $decoded_json->{'results'}[0]{'rnacentral_id'};
+  }
+
+  return ($have_seq, $md5, $id);
+}
+
+#-------------------------------------------------------------------------------
+# Miniature helper subroutines 
 #-------------------------------------------------------------------------------
 
 =head2 _max
