@@ -37,6 +37,7 @@ sub makeRchie {
 	
 	my $rfamdb = $config->rfamlive;
 	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
+  my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
 
 	my $location = tempdir( CLEANUP => 1 );
 	my $seed_loc = "$location/$rfam_acc";
@@ -114,8 +115,8 @@ sub makeRscape{
                 croak ("Failed to generate rscape images for $rfam_acc!\n");
         }
     
-	my $rscape_img = "$outdir/SEED_1.R2R.sto.svg";
-    my $rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
+	my $rscape_img = "$outdir/$rfam_id.R2R.sto.svg";
+  my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
 	
 	my $rscapeImgGzipped;
 	my $rscapeCykGzipped;
