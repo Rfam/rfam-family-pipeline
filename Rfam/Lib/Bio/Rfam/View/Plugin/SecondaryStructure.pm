@@ -90,13 +90,14 @@ sub makeRscape{
   	my $config = $self->_mxrp_parent->config;
   	my $rfamdb = $config->rfamlive;
   	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
-    my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
+    
 
 
  	my $location = tempdir( CLEANUP => 1 );
 	my $outdir = "$location";
 	my $seed_loc = "$outdir/SEED";
 	my $msa = $self->_mxrp_parent->family->SEED;
+  my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
 
 	$msa->write_msa($seed_loc);
 	
