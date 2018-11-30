@@ -90,6 +90,8 @@ sub makeRscape{
   	my $config = $self->_mxrp_parent->config;
   	my $rfamdb = $config->rfamlive;
   	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
+    my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
+
 
  	my $location = tempdir( CLEANUP => 1 );
 	my $outdir = "$location";
