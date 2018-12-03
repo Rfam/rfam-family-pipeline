@@ -144,7 +144,8 @@ $error = 0;
 
 #Check the SEED
 eval{
-  $error = Bio::Rfam::QC::compareSeedAndScores($familyObj);
+  #$error = Bio::Rfam::QC::compareSeedAndScores($familyObj);
+  $error = Bio::Rfam::QC::checkAllSeedSequencesMatchCm($familyObj, $config, "$pwd/$family");
 };
 print $L $@ if($@);
 if($error){
