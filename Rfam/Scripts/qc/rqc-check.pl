@@ -42,7 +42,8 @@ if(-e "$family/check"){
 
 my $error = 0;
 #See if all sequences are recovered.
-$error = Bio::Rfam::QC::compareSeedAndScores($familyObj);
+#$error = Bio::Rfam::QC::compareSeedAndScores($familyObj);
+$error = Bio::Rfam::QC::checkAllSeedSequencesMatchCm($familyObj, $config, "$pwd/$family");
 
 #Check that the family already exists.
 eval{

@@ -694,6 +694,47 @@ sub checkNonFreeText {
 }
 #------------------------------------------------------------------------------
 
+sub checkAllSeedSequencesMatchCm {
+  my ($familyObj, $config, $location) = @_;
+
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    die "Did not get passed in a Bio::Rfam::Family object\n";
+  }
+
+  if ( !$config ) {
+    $config = Bio::Rfam::Config->new;
+  }
+
+  my $cmsearch = $config->config->{binLocation} . '/cmsearch';
+  my $esl_reformat = $config->config->{binLocation} . '/esl-reformat';
+
+  my $tblout_file = "$location/seed-tblout.tbl";
+  my $cmd = "$esl_reformat fasta $location/SEED > $location/seed.fasta && $cmsearch --tblout $tblout_file $location/CM $location/seed.fasta > $location/cmsearch.out";
+  system($cmd);
+
+  my @errors;
+  open(my $fh, $tblout_file) or die "Could not open file '$location/$tblout_file' $!";
+  while (my $row = <$fh>) {
+    chomp $row;
+    if ($row =~ /^#/) { next; }
+    my @fields = split / +/, $row;
+    my ($seq) = $row =~ /^(\S+)\/\d+\-\d+/;
+    if ($fields[16] ne '!') {
+      warn "SERIOUS ERROR: SEED sequence $seq does not match the CM!\n";
+      push @errors, $seq;
+    }
+  }
+
+  if (@errors) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+  
+}
+
+
 =head2 compareSeedAndScores
 
   Title    : compareSeedAndScores
@@ -1633,7 +1674,8 @@ sub optional {
  
   
   if(!exists($override->{seed})){
-    $error = compareSeedAndScores($newFamily);
+    #$error = compareSeedAndScores($newFamily);
+    $error = checkAllSeedSequencesMatchCm($newFamily, $config, $dir);
     if($error){
       warn "Failed check to ensue all SEED sequences found.\n";
       $masterError =1;
