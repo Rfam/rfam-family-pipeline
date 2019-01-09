@@ -1,5 +1,3 @@
-#!/usr/bin/env perl
-
 package Bio::Rfam::View::Plugin::SecondaryStructure;
 
 use Data::Dumper;
