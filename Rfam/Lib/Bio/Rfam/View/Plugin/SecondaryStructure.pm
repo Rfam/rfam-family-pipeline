@@ -95,7 +95,7 @@ sub makeRscape{
 	my $outdir = "$location";
 	my $seed_loc = "$outdir/SEED";
 	my $msa = $self->_mxrp_parent->family->SEED;
-  my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
+  	my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
 
 	$msa->write_msa($seed_loc);
 	
@@ -106,7 +106,7 @@ sub makeRscape{
         }
 	
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir --cyk $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --cyk $seed_loc";
 	
 	print "Making rscape image for $rfam_acc\n";
         
@@ -116,16 +116,49 @@ sub makeRscape{
                 croak ("Failed to generate rscape images for $rfam_acc!\n");
         }
     
+	
 	my $rscape_img = "$outdir/$rfam_id.R2R.sto.svg";
-  my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
+	if (not -e $rscape_img){
+		$rscape_img = "$outdir/SEED_1.R2R.sto.svg";
+	}
+	
+	my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
+	if (not -e $rscape_cyk_img){
+		$rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
+	}
 	
 	my $rscapeImgGzipped;
 	my $rscapeCykGzipped;
     
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
-        gzip $rscape_img => \$rscapeImgGzipped;
-        
+	my $outfile = "$outdir/creaned.R2R.svg";
+
+	open(my $fh_in, '<:encoding(UTF-8)', $rscape_img)
+  		or die "Could not open file '$rscape_img' $!";
+
+	open(my $fh_out, '>:encoding(UTF-8)', "$outfile")
+  		or die "Could not open file '$outfile' $!";
+
+	while (my $row = <$fh_in>) {
+  		chomp $row;
+  		if (index($row, ".pk") != -1) {
+        		my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
+        		my ($junk, $pk_name) = split /[.]/, $pk_segment;
+
+        		my $final_line = "$clean_tag_line>$pk_name";
+        		print $fh_out "$final_line\n";
+        		$final_line = "";
+  		}
+  		else {
+        		print $fh_out "$row\n";
+  		}
+	}
+	close($fh_in);
+	close($fh_out);
+
+        #gzip $rscape_img => \$rscapeImgGzipped;
+        gzip $outfile => \$rscapeImgGzipped;
         #load image to the database
         my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {	rfam_acc => $rfam_acc,
@@ -138,8 +171,33 @@ sub makeRscape{
         }
 
     if (-e $rscape_cyk_img){
-        gzip $rscape_cyk_img => \$rscapeCykGzipped;
+	my $outfile = "$outdir/creaned.cyk.R2R.svg";
+	open(my $fh_in, '<:encoding(UTF-8)', $rscape_cyk_img)
+                or die "Could not open file '$rscape_cyk_img' $!";
+
+        open(my $fh_out, '>:encoding(UTF-8)', "$outfile")
+                or die "Could not open file '$outfile' $!";
+
+        while (my $row = <$fh_in>) {
+                chomp $row;
+                if (index($row, ".pk") != -1) {
+                        my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
+                        my ($junk, $pk_name) = split /[.]/, $pk_segment;
+                        my $final_line = "$clean_tag_line>$pk_name";
+                        print $fh_out "$final_line\n";
+                        $final_line = "";
+                }
+                else {
+                        print $fh_out "$row\n";
+                }
+        }
+        close($fh_in);
+        close($fh_out);
+
+        #gzip $rscape_cyk_img => \$rscapeCykGzipped;
         
+	gzip  $outfile => \$rscapeCykGzipped;
+	
         #load image to the database
         my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {    rfam_acc => $rfam_acc,
@@ -153,6 +211,30 @@ sub makeRscape{
 	
 }
 
+sub clean_rscape_svg_files{
+	my ($self, $rscape_file, $cleaned_svg) = @_;
+	open(my $fh_in, '<:encoding(UTF-8)', $rscape_file)
+                or die "Could not open file '$rscape_file' $!";
+
+        open(my $fh_out, '>:encoding(UTF-8)', "$cleaned_svg")
+                or die "Could not open file '$cleaned_svg' $!";
+
+        while (my $row = <$fh_in>) {
+                chomp $row;
+                if (index($row, ".pk") != -1) {
+                        my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
+                        my ($junk, $pk_name) = split /[.]/, $pk_segment;
+                        my $final_line = "$clean_tag_line>$pk_name";
+                        print $fh_out "$final_line\n";
+                        $final_line = "";
+                }
+                else {
+                        print $fh_out "$row\n";
+                }
+        }
+        close($fh_in);
+        close($fh_out);
+}
 
 sub makeBling {
   my ($self) = @_;
@@ -162,7 +244,7 @@ sub makeBling {
   my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
   #my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
-  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/13.0/ss_images/$rfam_acc";
+  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1/ss_images/$rfam_acc";
   File::Path::make_path($location);
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
