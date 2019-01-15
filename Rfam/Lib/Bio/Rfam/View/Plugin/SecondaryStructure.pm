@@ -88,9 +88,6 @@ sub makeRscape{
   	my $config = $self->_mxrp_parent->config;
   	my $rfamdb = $config->rfamlive;
   	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
-    
-
-
  	my $location = tempdir( CLEANUP => 1 );
 	my $outdir = "$location";
 	my $seed_loc = "$outdir/SEED";
@@ -132,33 +129,10 @@ sub makeRscape{
     
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
-	my $outfile = "$outdir/creaned.R2R.svg";
-
-	open(my $fh_in, '<:encoding(UTF-8)', $rscape_img)
-  		or die "Could not open file '$rscape_img' $!";
-
-	open(my $fh_out, '>:encoding(UTF-8)', "$outfile")
-  		or die "Could not open file '$outfile' $!";
-
-	while (my $row = <$fh_in>) {
-  		chomp $row;
-  		if (index($row, ".pk") != -1) {
-        		my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
-        		my ($junk, $pk_name) = split /[.]/, $pk_segment;
-
-        		my $final_line = "$clean_tag_line>$pk_name";
-        		print $fh_out "$final_line\n";
-        		$final_line = "";
-  		}
-  		else {
-        		print $fh_out "$row\n";
-  		}
-	}
-	close($fh_in);
-	close($fh_out);
-
-        #gzip $rscape_img => \$rscapeImgGzipped;
-        gzip $outfile => \$rscapeImgGzipped;
+	my $cleaned_r2r = "$outdir/creaned.R2R.svg";
+	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_r2r);
+        
+	gzip $cleaned_r2r => \$rscapeImgGzipped;
         #load image to the database
         my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {	rfam_acc => $rfam_acc,
@@ -171,32 +145,11 @@ sub makeRscape{
         }
 
     if (-e $rscape_cyk_img){
-	my $outfile = "$outdir/creaned.cyk.R2R.svg";
-	open(my $fh_in, '<:encoding(UTF-8)', $rscape_cyk_img)
-                or die "Could not open file '$rscape_cyk_img' $!";
 
-        open(my $fh_out, '>:encoding(UTF-8)', "$outfile")
-                or die "Could not open file '$outfile' $!";
-
-        while (my $row = <$fh_in>) {
-                chomp $row;
-                if (index($row, ".pk") != -1) {
-                        my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
-                        my ($junk, $pk_name) = split /[.]/, $pk_segment;
-                        my $final_line = "$clean_tag_line>$pk_name";
-                        print $fh_out "$final_line\n";
-                        $final_line = "";
-                }
-                else {
-                        print $fh_out "$row\n";
-                }
-        }
-        close($fh_in);
-        close($fh_out);
-
-        #gzip $rscape_cyk_img => \$rscapeCykGzipped;
-        
-	gzip  $outfile => \$rscapeCykGzipped;
+	my $cleaned_cyk_r2r = "$outdir/creaned.cyk.R2R.svg";
+	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_cyk_r2r);
+	
+	gzip  $cleaned_cyk_r2r => \$rscapeCykGzipped;
 	
         #load image to the database
         my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
