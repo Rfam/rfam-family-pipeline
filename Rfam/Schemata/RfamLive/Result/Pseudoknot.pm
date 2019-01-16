@@ -87,4 +87,9 @@ __PACKAGE__->belongs_to(
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
+__PACKAGE__->add_unique_constraint(
+	acc_id_source => ["rfam_acc", "pseudoknot_id", "source"]);
+
+__PACKAGE__->set_primary_key("rfam_acc", "pseudoknot_id", "source");
+
 1;
