@@ -130,7 +130,7 @@ sub makeRscape{
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
 	my $cleaned_r2r = "$outdir/creaned.R2R.svg";
-	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_r2r);
+	$self->clean_rscape_svg_files($rscape_img, $cleaned_r2r);
         
 	gzip $cleaned_r2r => \$rscapeImgGzipped;
         #load image to the database
@@ -166,6 +166,8 @@ sub makeRscape{
 
 sub clean_rscape_svg_files{
 	my ($self, $rscape_file, $cleaned_svg) = @_;
+	my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
+	
 	open(my $fh_in, '<:encoding(UTF-8)', $rscape_file)
                 or die "Could not open file '$rscape_file' $!";
 
@@ -174,7 +176,8 @@ sub clean_rscape_svg_files{
 
         while (my $row = <$fh_in>) {
                 chomp $row;
-                if (index($row, ".pk") != -1) {
+        	# check for pseudoknot line 
+	        if (index($row, ".pk") != -1) {
                         my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
                         my ($junk, $pk_name) = split /[.]/, $pk_segment;
                         my $final_line = "$clean_tag_line>$pk_name";
@@ -182,6 +185,13 @@ sub clean_rscape_svg_files{
                         $final_line = "";
                 }
                 else {
+			# if title line trim it off
+			if (index($row, "SEED_1") != -1){
+			$row =~ s/"SEED_1"/''/ig
+			}
+			elsif (index($row, $rfam_id) !=-1){
+			$row =~ s/$rfam_id/''/ig
+			}
                         print $fh_out "$row\n";
                 }
         }
