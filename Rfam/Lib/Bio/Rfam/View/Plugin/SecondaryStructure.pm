@@ -91,11 +91,18 @@ sub makeRscape{
  	my $location = tempdir( CLEANUP => 1 );
 	my $outdir = "$location";
 	my $seed_loc = "$outdir/SEED";
+	my $new_seed_loc = "$outdir/SEED_clean";
 	my $msa = $self->_mxrp_parent->family->SEED;
   	my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
 
 	$msa->write_msa($seed_loc);
-	
+
+	# trim off any GF lines
+	my $grep_cmd = "grep -v \"^#=GF\" $seed_loc > $new_seed_loc";
+	system ($grep_cmd);
+	system ("mv $new_seed_loc $seed_loc");
+	#$seed_loc = $new_seed_loc;
+
 	#look for a family entry in the database
 	my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
         if (!defined($famRow)) {
@@ -184,15 +191,17 @@ sub clean_rscape_svg_files{
                         print $fh_out "$final_line\n";
                         $final_line = "";
                 }
+		elsif (index($row, "SEED_1") != -1){
+                	$row =~ s/SEED_1//g;
+                	print $fh_out "$row\n";
+                }
+		elsif (index($row, $rfam_id) !=-1){
+                	$row =~ s/$rfam_id//g;
+                	print $fh_out "$row\n";
+                }
+
                 else {
-			# if title line trim it off
-			if (index($row, "SEED_1") != -1){
-			$row =~ s/"SEED_1"/''/ig
-			}
-			elsif (index($row, $rfam_id) !=-1){
-			$row =~ s/$rfam_id/''/ig
-			}
-                        print $fh_out "$row\n";
+			print $fh_out "$row\n";
                 }
         }
         close($fh_in);
