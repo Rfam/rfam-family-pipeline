@@ -71,17 +71,25 @@ sub populatePseudoknots{
 	}
 
 	# Find any SEED pseudoknots first
-    	my %pseudoknots = $self->extract_pseudoknots_from_file($rscape_sto);
-	if (%pseudoknots){
-		foreach my $pseudoknot_id (keys %pseudoknots){
+   
+	my %pseudoknot_hashes = $self->extract_pseudoknots_from_rscape_sto($rscape_sto);
+	my %cov_pseudoknots = $self->search_for_pseudoknot_covariation($pseudoknot_hashes{'ss_cons'}, $pseudoknot_hashes{'cov_ss_cons'});
+	
+	my $pseudoknot_number = 0;
+
+	if (%cov_pseudoknots){
+		foreach my $pseudoknot_id (keys %cov_pseudoknots){
+			my @chunks = split("_", $pseudoknot_id);
+			my $pk_id = 'pk'.$chunks[2];
+
 			my $resultset = $rfamdb->resultset('Pseudoknot')->find_or_create(
 				{rfam_acc => $rfam_acc,
-				pseudoknot_id => $pseudoknot_id,
+				pseudoknot_id => $pk_id,
  				source => 'seed'},
 				{key => 'acc_id_source'});
 		
-			$resultset->update({covariation => $pseudoknots{$pseudoknot_id},
-				   pseudoknot_id => $pseudoknot_id,
+			$resultset->update({covariation => $cov_pseudoknots{$pseudoknot_id},
+				   pseudoknot_id => $pk_id,
 				   source => 'seed'},
 				   {key => 'acc_id_source'});
 
@@ -89,17 +97,22 @@ sub populatePseudoknots{
 	}	
 
 	# Now work on R-scape supported pseudoknots
-	my %pseudoknots_cyk = $self->extract_pseudoknots_from_file($rscape_cyk_sto);
-	if (%pseudoknots){
-		foreach my $pseudoknot_id (keys %pseudoknots_cyk){
+	my %pseudoknot_hashes_cyk = $self->extract_pseudoknots_from_rscape_sto($rscape_cyk_sto);
+	my %cov_pseudoknots_cyk = $self->search_for_pseudoknot_covariation($pseudoknot_hashes_cyk{'ss_cons'}, $pseudoknot_hashes_cyk{'cov_ss_cons'});
+
+	if (%cov_pseudoknots_cyk){
+		foreach my $pseudoknot_id (keys %cov_pseudoknots_cyk){
+			my @chunks = split("_", $pseudoknot_id);
+                        my $pk_id = 'pk'.$chunks[2];
+
                         my $resultset = $rfamdb->resultset('Pseudoknot')->find_or_create(
                                 {rfam_acc => $rfam_acc,
-                                pseudoknot_id => $pseudoknot_id,
+                                pseudoknot_id => $pk_id,
                                 source => 'rscape'},
                                 {key => 'acc_id_source'});
                 
-                        $resultset->update({covariation => $pseudoknots_cyk{$pseudoknot_id},
-                                   pseudoknot_id => $pseudoknot_id,
+                        $resultset->update({covariation => $cov_pseudoknots_cyk{$pseudoknot_id},
+                                   pseudoknot_id => $pk_id,
                                    source => 'rscape'},
                                    {key => 'acc_id_source'});		
 		}
@@ -107,61 +120,106 @@ sub populatePseudoknots{
 }
 
 
+# -------------------------------------------------------------------
 
 
-sub extract_pseudoknots_from_file{
-
+sub extract_pseudoknots_from_rscape_sto {
 	my ($self, $input_stk) = @_;
-	
-	my %pseudoknots = ();
-	my %cov_ss_cons_strs = ();
-	my %ss_cons_strs = ();
+
+	my %ss_strs = ();
+	my %cov_ss_strs = ();
+
+	my %pseudoknot_hashes = ();
 	
 	open(my $fh_in, '<:encoding(UTF-8)', $input_stk)
-	or die "Could not open file '$input_stk' $!";
+        or die "Could not open file '$input_stk' $!";
 
-	my $pseudoknot_number = 0;
-	my $ss_cons_str;
-	my $cov_ss_cons_str;
+	my $label;
 	
-
 	while (my $row = <$fh_in>) {
 		chomp $row;
-		# look for a pseudoknot
 		if ($row =~ /^(#=GC\s{1}SS_cons_)\d+/) {
-			# get pseudoknot number
+			# split line in label and SS string
 			my @line_chunks=split(" ", $row);
-			$ss_cons_str = $line_chunks[1];
-			$ss_cons_strs{$ss_cons_str} = '';
 
+			$label = $line_chunks[1];
+
+			if (!exists $ss_strs{$label}){
+                                $ss_strs{$label} = $line_chunks[2];
+                        }
+
+			# append psudoknot ss line to existing chunk
+			else {
+				$ss_strs{$label}.$line_chunks[2];
+			}
 		}
-
-		# store pseudoknots with covariation temporarily
-		elsif($row =~ /^(#=GC\s{1}cov_SS_cons_)\d+/){
+		elsif ($row =~ /^(#=GC\s{1}cov_SS_cons_)\d+/) {
 			my @line_chunks=split(" ", $row);
-			$cov_ss_cons_str = $line_chunks[1];
-			$cov_ss_cons_strs{$cov_ss_cons_str} = '';
+
+			$label = $line_chunks[1];
+
+			if (!exists $cov_ss_strs{$label}){
+				$cov_ss_strs{$label} = $line_chunks[2];
+			}
+			else{
+				$cov_ss_strs{$label}.$line_chunks[2];
+			}
+			
 		}
+		
 	}
 
 	close($fh_in);
+	
+	$pseudoknot_hashes{'ss_cons'} = \%ss_strs;
+	$pseudoknot_hashes{'cov_ss_cons'} = \%cov_ss_strs;
+	
+	return %pseudoknot_hashes;
+}
 
-	#now assign covariation to psuedoknots
-	foreach my $pseudoknot (keys %ss_cons_strs){
-		my @chunks = split("_", $pseudoknot);
-		$pseudoknot_number = $chunks[2];
-		$pseudoknots{"pk".$pseudoknot_number} = 0;
+# -------------------------------------------------------------------
 
-		if (exists $cov_ss_cons_strs{"cov_".$pseudoknot}){
-			$pseudoknots{"pk".$pseudoknot_number} = 1;
+sub search_for_pseudoknot_covariation {
+	my ($self, $ss_strs, $cov_ss_strs) = @_;
 
-		}
+	# covariation hash
+	my %pseudoknot_cov = ();
+	
+	my $idx = -1;
+	my $cov_str;
+
+	foreach my $pseudoknot_label (keys %{$ss_strs}){
+		# find first pseudoknot bracket
+		$idx = index($ss_strs->{$pseudoknot_label},'<');	
+		my @pseudoknot_str = split(//, $ss_strs->{$pseudoknot_label});
+		$cov_str = $cov_ss_strs->{"cov_".$pseudoknot_label};
+		my @cov_array = split(//, $cov_str);
+
+		# initialize to 0
+		$pseudoknot_cov{$pseudoknot_label} = 0;
+		
+		if ($cov_array[$idx] eq '2'){
+			$pseudoknot_cov{$pseudoknot_label} = 1;	
+			next;
+		}	 
+		else{
+			my $str_len = length($ss_strs->{$pseudoknot_label});
+			while ($idx < $str_len){
+				 if (($pseudoknot_str[$idx] eq '<') && ($cov_array[$idx] eq '2')){
+					$pseudoknot_cov{$pseudoknot_label} = 1;
+					
+					# terminate inner loop if covariation found
+					last if (($pseudoknot_str[$idx] eq '<') && ($cov_array[$idx] eq '2'));
+				}
+				$idx+=1;
+				
+			}
+		}	
 
 	}
 
-	return %pseudoknots;
+	return %pseudoknot_cov;
 
 }
-
 
 -1;
