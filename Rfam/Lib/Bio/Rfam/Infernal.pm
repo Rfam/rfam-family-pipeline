@@ -73,28 +73,31 @@ sub cmbuild_wrapper {
            : function only submits command it does not
            : wait for it to finish. The predicted time
            : for calibration in minutes is returned.
-  Args     : $config:  Rfam config, with infernalPath
-           : $jobname: name for MPI job we submit
-           : $options: option string for cmcalibrate (SHOULD NOT CONTAIN '--mpi')
-           : $cmPath:  path to CM (often 'CM')
-           : $outPath: path to output file, must be defined
-           : $errPath: path to error output file, must be defined
-           : $nproc:   number of CPUs to use, if undefined $CMCALIBRATE_NCPU is used
-           : $queue:   queue to submit to, "" for default, ignored if location eq 'EBI'
-           : $doMPI:   TRUE to run using MPI, FALSE not to
+  Args     : $config:     Rfam config, with infernalPath
+           : $jobname:    name for MPI job we submit
+           : $options:    option string for cmcalibrate (SHOULD NOT CONTAIN '--mpi')
+           : $cmPath:     path to CM (often 'CM')
+           : $outPath:    path to output file, must be defined
+           : $errPath:    path to error output file, must be defined
+           : $nproc:      number of CPUs to use, if undefined $CMCALIBRATE_NCPU is used
+           : $queue:      queue to submit to, "" for default, ignored if location eq 'EBI'
+           : $doMPI:      TRUE to run using MPI, FALSE not to
+           : $do_locally: '1' to run locally, else run on cluster
   Returns  : Predicted number of minutes the calibration should take.
   Dies     : if any command fails, including prediction or cluster submission
 
 =cut
 
 sub cmcalibrate_wrapper {
-  my ($config, $jobname, $options, $cmPath, $outPath, $errPath, $nproc, $queue, $doMPI) = @_;
+  my ($config, $jobname, $options, $cmPath, $outPath, $errPath, $nproc, $queue, $doMPI, $do_locally) = @_;
   
   # ensure $cmPath exists
   if (! -e $cmPath) { die "CM file $cmPath does not exist"; }
   
   # set number of CPUs to use, currently hard-coded
-  if (! defined $nproc) { $nproc = $CMCALIBRATE_NCPU; }
+  if (! defined $nproc) { 
+    $nproc = ($do_locally) ? "" : $CMCALIBRATE_NCPU; 
+  }
   
   my $cmcalibratePath = $config->infernalPath . "cmcalibrate";
 
@@ -116,14 +119,19 @@ sub cmcalibrate_wrapper {
   if (! defined $predicted_seconds) { die "cmcalibrate prediction failed"; }
   unlink $forecast_out;
   
-  # submit MPI job
-  if($doMPI) { 
-    Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
+  # submit job
+  if($do_locally) { 
+    Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
   }
   else { 
-    my $gbPerThread = 3.0;
-    my $requiredMb = $nproc * $gbPerThread * 1000.; 
-    Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
+    if($doMPI) { 
+      Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
+    }
+    else { 
+      my $gbPerThread = 3.0;
+      my $requiredMb = $nproc * $gbPerThread * 1000.; 
+      Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
+    }
   }
   return ($predicted_seconds / 60);
 }
@@ -229,7 +237,9 @@ sub cmsearch_or_cmscan_wrapper {
     $cpus = $1; 
   }
   else { 
-    die "ERROR cmsearch_or_cmscan_wrapper() option string ($options) does not contain --cpu"; 
+    if(! $do_locally) { 
+      die "ERROR do_locally is FALSE and cmsearch_or_cmscan_wrapper() option string ($options) does not contain --cpu";
+    }
   }
 
   # run job locally or submit non-MPI job to cluster

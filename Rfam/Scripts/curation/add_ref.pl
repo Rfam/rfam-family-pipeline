@@ -12,7 +12,7 @@ use Text::Wrap;
 use Getopt::Long;
 use File::Copy;
 
-use Bio::Pfam::PfamReference;
+use Bio::Rfam::RfamReference;
 
 my $nodesc;
 my $rn = 0;
@@ -61,7 +61,7 @@ foreach my $pmid (@ARGV) {
     print "PMID [$pmid] is already in the DESC file, not adding\n";
     next;
   }
-  my $ref = Bio::Pfam::PfamReference->new();
+  my $ref = Bio::Rfam::RfamReference->new();
   $ref->get_ref_by_pubmed($pmid);
   push( @refs, $ref );
 }
