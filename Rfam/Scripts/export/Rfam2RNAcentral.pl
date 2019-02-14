@@ -46,7 +46,7 @@ from family f join seed_region fr using (rfam_acc) join rfamseq rs using (rfamse
 }
 # very basic check
 else{
-	print "\nWrong input!! Please type: full|FULL for full_region hits or seed|SEED seed region hits\n";
+	print "\nWrong input!! Please type: full|FULL for full_region hits or seed|SEED seed region hits\n\n";
 	exit;
 }
 
