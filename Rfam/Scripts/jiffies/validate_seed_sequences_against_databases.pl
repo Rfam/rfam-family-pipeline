@@ -37,8 +37,8 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
   # lookup in rfamseq
   my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $name_or_nse);
 
-  # lookup in GenBank
-  my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse);
+  # lookup in GenBank, retry up to 200 times if fetch fails, wait 3 seconds between tries
+  my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse, 200, 3);
 
   # lookup in RNAcentral
   my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);

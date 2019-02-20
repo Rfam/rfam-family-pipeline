@@ -2255,7 +2255,13 @@ sub ena_nse_lookup_and_md5 {
   Title    : genbank_nse_lookup_and_md5
   Incept   : EPN, Tue Feb 19 13:13:16 2019
   Function : Looks up a sequence in GenBank and calculates its md5 if it's there.
-  Args     : $nse:      sequence name in name/start-end format
+  Args     : $nse:       sequence name in name/start-end format
+           : $nattempts: number of attempts to make to fetch the sequence
+           :             (if this is being run in parallel it can cause failure
+           :              due (presumably) to overloading NCBI in some way.)
+           :             can be undef, in which case set to '1' 
+           : $nseconds:  number of seconds to wait between attempts
+           :             can be undef, in which case set to '3'
   Returns  : 3 values:
            : $have_source_seq: '1' if source sequence is in Rfamseq, else '0'
            : $have_sub_seq:    '1' if $have_source_seq and further subseq start-end is in Rfamseq too, else '0'
@@ -2264,12 +2270,15 @@ sub ena_nse_lookup_and_md5 {
 =cut
 
 sub genbank_nse_lookup_and_md5 {
-  my ( $nse ) = @_;
+  my ( $nse, $nattempts, $nseconds ) = @_;
   
   my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
   if(! $is_nse) { 
     die "ERROR, in ena_nse_lookup_and_md5() $nse not in name/start-end format.\n";
   }
+  if(! defined $nattempts) { $nattempts = 1; }
+  if(! defined $nseconds)  { $nseconds  = 3; }
+
   # $nse will have end < start if it is negative strand, but we can't fetch from ENA
   # with an end coord less than start, so if we are negative strand, we need to fetch
   # the positive strand, and then revcomp it later.
@@ -2277,11 +2286,6 @@ sub genbank_nse_lookup_and_md5 {
   my $qend   = ($strand == 1) ? $end   : $start;
   my $qlen   = abs($start - $end) + 1;
 
-  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
-  my $got_url = get($url);
-
-  my $have_source_seq = ($got_url =~ m/\>/) ? 1 : 0;
-  # if we a sequence named $name exists in GenBank, $got_url will have a fasta header line
 
   # initialize default values, which will change below if we have a valid subseq
   my $successful_fetch = 0; # changed to '1' below if nec
@@ -2289,11 +2293,27 @@ sub genbank_nse_lookup_and_md5 {
   my $sqstring = "";
   my $md5 = undef;
 
-  # the fetched sequence should have a header line with a name in this format:
-  # >$name:$qstart-$qend
-  # if this is not the case, then either the sequence start or end were out of bounds
-  # (longer than the sequence length of the fetched sequence)
-  if($have_source_seq) { 
+  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
+  my $got_url = get($url);
+
+  # if NCBI is being hit by a bunch of requests, got_url will be undefined, 
+  # so we wait a few seconds and try again
+  my $attempt_ctr = 1;
+  if((! defined $got_url) && ($attempt_ctr < $nattempts)) { 
+    sleep($nseconds);
+    $got_url = get($url);
+    $nattempts++;
+  }
+
+  my $have_source_seq = 0;
+  if((defined $got_url) && ($got_url =~ m/\>/)) { 
+    # if we a sequence named $name exists in GenBank, $got_url will have a fasta header line
+    $have_source_seq = 1; 
+
+    # the fetched sequence should have a header line with a name in this format:
+    # >$name:$qstart-$qend
+    # if this is not the case, then either the sequence start or end were out of bounds
+    # (longer than the sequence length of the fetched sequence)
     my @got_url_A = split(/\n/, $got_url);
     foreach my $got_url_line (@got_url_A) { 
       if($got_url_line =~ /^>(\S+)\:(\d+)\-(\d+)/) { 
