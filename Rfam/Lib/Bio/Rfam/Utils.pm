@@ -2101,7 +2101,8 @@ sub numLinesInFile {
 # md5_of_sequence_string:     calculate md5 of a sequence string
 # revcomp_sequence_string:    reverse complement a sequence string
 # rfamseq_nse_lookup_and_md5: fetch a sequence in Rfamseq and calculate its md5
-# ena_nse_lookup_and_md5:     fetch a sequence in ENA and calculate its md5
+# ena_nse_lookup_and_md5:     fetch a sequence from ENA and calculate its md5
+# genbank_nse_lookup_and_md5: fetch a sequence from NCBI's GenBank and calculate its md5
 # rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
 #-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
@@ -2239,6 +2240,77 @@ sub ena_nse_lookup_and_md5 {
       if(length($sqstring) ne $qlen) { # we fetched the full sequence, need substr() to get subseq
         $sqstring = substr($sqstring, $qstart-1, $qlen);
       }
+      if($strand != 1) { # negative strand, reverse complement it
+        $sqstring = revcomp_sequence_string($sqstring);
+      }
+      $md5 = md5_of_sequence_string($sqstring);
+    }
+  }
+
+  return ($have_source_seq, $have_sub_seq, $md5);
+}
+
+#-------------------------------------------------------------------------------
+=head2 genbank_nse_lookup_and_md5
+  Title    : genbank_nse_lookup_and_md5
+  Incept   : EPN, Tue Feb 19 13:13:16 2019
+  Function : Looks up a sequence in GenBank and calculates its md5 if it's there.
+  Args     : $nse:      sequence name in name/start-end format
+  Returns  : 3 values:
+           : $have_source_seq: '1' if source sequence is in Rfamseq, else '0'
+           : $have_sub_seq:    '1' if $have_source_seq and further subseq start-end is in Rfamseq too, else '0'
+           : $md5:             if $have_sub_seq, md5 of subseq, else undefined
+  Dies     : if $nse is not in valid name/start-end format
+=cut
+
+sub genbank_nse_lookup_and_md5 {
+  my ( $nse ) = @_;
+  
+  my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
+  if(! $is_nse) { 
+    die "ERROR, in ena_nse_lookup_and_md5() $nse not in name/start-end format.\n";
+  }
+  # $nse will have end < start if it is negative strand, but we can't fetch from ENA
+  # with an end coord less than start, so if we are negative strand, we need to fetch
+  # the positive strand, and then revcomp it later.
+  my $qstart = ($strand == 1) ? $start : $end;
+  my $qend   = ($strand == 1) ? $end   : $start;
+  my $qlen   = abs($start - $end) + 1;
+
+  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
+  my $got_url = get($url);
+
+  my $have_source_seq = ($got_url =~ m/\>/) ? 1 : 0;
+  # if we a sequence named $name exists in GenBank, $got_url will have a fasta header line
+
+  # initialize default values, which will change below if we have a valid subseq
+  my $successful_fetch = 0; # changed to '1' below if nec
+  my $have_sub_seq     = 0; # changed to '1' below if nec
+  my $sqstring = "";
+  my $md5 = undef;
+
+  # the fetched sequence should have a header line with a name in this format:
+  # >$name:$qstart-$qend
+  # if this is not the case, then either the sequence start or end were out of bounds
+  # (longer than the sequence length of the fetched sequence)
+  if($have_source_seq) { 
+    my @got_url_A = split(/\n/, $got_url);
+    foreach my $got_url_line (@got_url_A) { 
+      if($got_url_line =~ /^>(\S+)\:(\d+)\-(\d+)/) { 
+        my ($fetched_name, $fetched_qstart, $fetched_qend) = ($1, $2, $3);
+        if(($fetched_name   eq $name) && 
+           ($fetched_qstart == $qstart) && 
+           ($fetched_qend   == $qend)) { 
+          $successful_fetch = 1; 
+        }
+      }
+      elsif($got_url_line =~ m/\S/) { # not the header line, not a blank line
+        $sqstring .= $got_url_line;
+      }
+    }
+    if(($successful_fetch) && ($sqstring ne "") && (length($sqstring) == $qlen)) { 
+      # we fetched the (sub)sequence, coords were valid
+      $have_sub_seq = 1; 
       if($strand != 1) { # negative strand, reverse complement it
         $sqstring = revcomp_sequence_string($sqstring);
       }

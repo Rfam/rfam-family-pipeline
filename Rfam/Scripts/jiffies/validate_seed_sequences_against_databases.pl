@@ -25,7 +25,7 @@ my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
 
 my $nrfm_pass = 0;
-my $nena_pass = 0;
+my $ngbk_pass = 0;
 my $nrnc_pass = 0;
 my $nfail = 0;
 # look-up each SEED sequence
@@ -37,8 +37,8 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
   # lookup in rfamseq
   my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $name_or_nse);
 
-  # lookup in ENA
-  my ($ena_has_source_seq, $ena_has_exact_seq, $ena_md5) = Bio::Rfam::Utils::ena_nse_lookup_and_md5($name_or_nse);
+  # lookup in GenBank
+  my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse);
 
   # lookup in RNAcentral
   my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
@@ -47,15 +47,15 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
   my $passfail = "PASS";
   my $outstr   = "";
   # check if it fails for any of following reasons:
-  # 1) not in any of Rfamseq, ENA, or RNAcentral
+  # 1) not in any of Rfamseq, GenBank, or RNAcentral
   # 2) source seq exists in Rfamseq, but not subseq (start-end)
-  # 3) source seq exists in ENA, but not subseq (start-end)
+  # 3) source seq exists in GenBank, but not subseq (start-end)
   # 4) subseq appears to exist in Rfamseq, but md5 does not match
-  # 5) subseq appears to exist in ENA, but md5 does not match
+  # 5) subseq appears to exist in GenBank, but md5 does not match
   # 6) subseq appears to exist in RNAcentral, but md5 does not match
   #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
-  if((! $rfamseq_has_source_seq) && (! $ena_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
-    # 1) not in any of Rfamseq, ENA, or RNAcentral
+  if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
+    # 1) not in any of Rfamseq, GenBank, or RNAcentral
     $passfail = "FAIL";
     $outstr .= "NO-MATCHES";
   }
@@ -64,10 +64,10 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
     $passfail = "FAIL";
     $outstr .= "RFM:found-seq-but-not-subseq;";
   }
-  if(($ena_has_source_seq) && (! $ena_has_exact_seq)) { 
-    # 3) source seq exists in ENA, but not subseq (start-end)
+  if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) { 
+    # 3) source seq exists in GenBank, but not subseq (start-end)
     $passfail = "FAIL";
-    $outstr .= "ENA:found-seq-but-not-subseq;";
+    $outstr .= "GBK:found-seq-but-not-subseq;";
   }
   if($rfamseq_has_exact_seq) { 
     if($rfamseq_md5 ne $seed_md5) {
@@ -80,15 +80,15 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
       $nrfm_pass++;
     }        
   }
-  if($ena_has_exact_seq) { 
-    if($ena_md5 ne $seed_md5) {
-      # 5) subseq appears to exist in ENA, but md5 does not match
+  if($genbank_has_exact_seq) { 
+    if($genbank_md5 ne $seed_md5) {
+      # 5) subseq appears to exist in GenBank, but md5 does not match
       $passfail = "FAIL";
-      $outstr .= "ENA:md5-fail;";
+      $outstr .= "GBK:md5-fail;";
     }
     else { 
-      $outstr .= "ENA:md5-pass;";
-      $nena_pass++;
+      $outstr .= "GBK:md5-pass;";
+      $ngbk_pass++;
     }        
   }
   if($rnacentral_has_exact_seq) { 
@@ -109,7 +109,7 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
   if($passfail eq "FAIL") { $nfail++; }
 }
 print("nrfm_pass: $nrfm_pass\n");
-print("nena_pass: $nena_pass\n");
+print("ngbk_pass: $ngbk_pass\n");
 print("nrnc_pass: $nrnc_pass\n");
 print("nfail:     $nfail\n");
 
