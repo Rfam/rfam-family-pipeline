@@ -2308,6 +2308,9 @@ sub genbank_nse_lookup_and_md5 {
     $got_url = get($url);
     $attempt_ctr++;
   }
+  if($attempt_ctr > $nattempts) { 
+    die "ERROR trying to fetch from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+  }
 
   my $have_source_seq = 0;
   if((defined $got_url) && ($got_url =~ m/\>/)) { 
