@@ -2279,6 +2279,8 @@ sub genbank_nse_lookup_and_md5 {
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
+  printf("in genbank_nse_lookup_and_md5() nattempts: $nattempts, nseconds: $nseconds\n");
+
   # $nse will have end < start if it is negative strand, but we can't fetch from ENA
   # with an end coord less than start, so if we are negative strand, we need to fetch
   # the positive strand, and then revcomp it later.
@@ -2296,13 +2298,15 @@ sub genbank_nse_lookup_and_md5 {
   my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
   my $got_url = get($url);
 
-  # if NCBI is being hit by a bunch of requests, got_url will be undefined, 
-  # so we wait a few seconds and try again
+  # if NCBI is being hit by a bunch of requests, the get() command may fail in that 
+  # $got_url may be undefined or won't include a header line. If that happens
+  # we wait a few seconds ($nseconds) and try again (up to $nattempts) times.
   my $attempt_ctr = 1;
-  if((! defined $got_url) && ($attempt_ctr < $nattempts)) { 
+  while(((! defined $got_url) || ($got_url !~ m/^>/)) && 
+        ($attempt_ctr < $nattempts)) { 
     sleep($nseconds);
     $got_url = get($url);
-    $nattempts++;
+    $attempt_ctr++;
   }
 
   my $have_source_seq = 0;
@@ -2337,6 +2341,7 @@ sub genbank_nse_lookup_and_md5 {
       $md5 = md5_of_sequence_string($sqstring);
     }
   }
+  # printf("returning: have_source_seq: $have_source_seq have_sub_seq: $have_sub_seq, md5: $md5\n");
 
   return ($have_source_seq, $have_sub_seq, $md5);
 }
