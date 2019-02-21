@@ -2279,7 +2279,7 @@ sub genbank_nse_lookup_and_md5 {
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
-  printf("in genbank_nse_lookup_and_md5() nattempts: $nattempts, nseconds: $nseconds\n");
+  # printf("in genbank_nse_lookup_and_md5() nattempts: $nattempts, nseconds: $nseconds\n");
 
   # $nse will have end < start if it is negative strand, but we can't fetch from ENA
   # with an end coord less than start, so if we are negative strand, we need to fetch
