@@ -187,7 +187,7 @@ sub _read_stockholm {
     # the #=GS lines, rather than directly from the sequence lines...
 
     # sequence row
-    /^([^\#][\w\.\/\-]+)\s+([A-Za-z\.\-]+)\s*/ && do {
+    /^([^\#][\w\.?\/\-]+)\s+([A-Za-z\.\-]+)\s*/ && do {
       my $name = $1;
       my $seq  = $2;
 
@@ -400,30 +400,70 @@ sub _format_block_html {
   my $script         = '';
 
   my $ena_view = 'http://www.ebi.ac.uk/ena/data/view';
+  my $rnacentral_url = 'https://rnacentral.org/rna';
 
   ROW: for ( my $i = 0; $i < scalar @{$block->{labels}}; $i++ ) {
     my $label = $block->{labels}->[$i];
     my $seq   = $block->{sequences}->[$i];
     my $oe    = $i % 2 ? 'odd' : 'even'; 
-    my ( $rfamseq_acc ) = $label =~ m{^(\w+\.\d+)/(\d+)\-(\d+)$};
+    my ( $rfamseq_acc ) = $label =~ m{^(\w+\.?\d+)/(\d+)\-(\d+)$};
 
     # look up the sequence in the DB; retrieve the species for the sequence
     # and the bit score for the match. Note that we're taking the first 
     # match only. This might not be sensible...
-    my $rs = $self->schema->resultset('FullRegion')
+
+    my $rs;
+    my $bit_score = 0.0;
+    # look up rnacentral sequence in seed_region 
+    my $seq_tag = substr $rfamseq_acc, 0, 3;
+    
+    if ($seq_tag eq "URS"){
+
+            $rs = $self->schema->resultset('SeedRegion')
                           ->search( { 'me.rfamseq_acc' => $rfamseq_acc,
                                       rfam_acc    => $self->rfam_acc },
                                     { join => [ {'rfamseq_acc' => 'ncbi' } ] } )
                           ->first;
+      # git a random value to bit score
+      $bit_score = '0.0';
+    }
+    else{
+      $rs = $self->schema->resultset('FullRegion')
+                          ->search( { 'me.rfamseq_acc' => $rfamseq_acc,
+                                      rfam_acc    => $self->rfam_acc },
+                                    { join => [ {'rfamseq_acc' => 'ncbi' } ] } )
+                          ->first;
+      #get bit score
+      $bit_score = $rs->bit_score;
+    }
     unless ( defined $rs and defined $rs->rfamseq_acc ) {
       $self->_log->warn( "WARNING: sequence $rfamseq_acc is not found in the database" );
       $self->inc_ms_counter;
       next ROW;
     }
+
     my $species   = $rs->rfamseq_acc->ncbi->species;
-    my $bit_score = $rs->bit_score;
+    #my $bit_score = $rs->bit_score;
+    
     my $seq_start = $rs->seq_start;
     my $seq_end   = $rs->seq_end;
+
+    if ($seq_tag eq "URS"){
+
+    my @rfamseq_fields = split '_', $rfamseq_acc; 
+    my $urs_acc = $rfamseq_fields[0];
+    my $ncbi_id = $rfamseq_fields[1];
+
+    $alignment_key  .= qq(    <span class="alignment_nse alignment_label $oe">\n);
+    $alignment_key  .= qq(      <a class="ext" href="$rnacentral_url/$urs_acc/$ncbi_id">$label</a>\n);
+    $alignment_key  .= qq(    </span>\n);
+
+    $alignment_key  .= qq(    <span class="alignment_spe alignment_label $oe">\n);
+    $alignment_key  .= qq(      <a class="ext" href="$rnacentral_url/$urs_acc/$ncbi_id">$species</a>\n);
+    $alignment_key  .= qq(    </span>\n);
+  }
+
+  else{
 
     $alignment_key  .= qq(    <span class="alignment_nse alignment_label $oe">\n);
     $alignment_key  .= qq(      <a class="ext" href="$ena_view/$rfamseq_acc">$label</a>\n);
@@ -432,6 +472,8 @@ sub _format_block_html {
     $alignment_key  .= qq(    <span class="alignment_spe alignment_label $oe">\n);
     $alignment_key  .= qq(      <a class="ext" href="$ena_view/$rfamseq_acc">$species</a>\n);
     $alignment_key  .= qq(    </span>\n);
+ 
+ }
 
     $alignment_key  .= qq(    <span class="alignment_score">$bit_score</span>\n);
 

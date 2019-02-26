@@ -26,17 +26,29 @@ use Bio::Easel::SqFile;
 use Bio::Easel::Random;
 
 my $config = Bio::Rfam::Config->new;
-#my $rfamdb = $config->rfamlive;  #use this when converting query to DBIx class
 my $schema = $config->rfamlive;
 my $rfdbh    = $schema->storage->dbh;
 
+my $seq_type = $ARGV[0];
+
 my $query1 = qq(select rfam_acc from family;);
+my $query2 = '';
 
 #include: gene, leader, riboswitch exclude: cis-reg & lncRNA 
-my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%' or f.type like '%IRES%' or f.type like '%thermoregulator%' ) and (f.type not like '%lncRNA%' and f.type not like '%leader%' and f.type not like '%frameshift element%' and f.type not like 'Cis-reg;') and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
 
-#my $query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.type like '%riboswitch%' or f.type like '%leader%' and f.type not like 'Intron%' or (f.type not like 'Gene%lncRNA%' and f.type not like 'Cis-reg%') and f.rfam_acc = ? and fr.is_significant="1" group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+if ($seq_type eq 'full' || $seq_type eq 'FULL'){
+	$query2 = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%' or f.type like '%IRES%' or f.type like '%thermoregulator%' ) and (f.type not like '%lncRNA%' and f.type not like '%leader%' and f.type not like '%frameshift element%' and f.type not like 'Cis-reg;') and fr.is_significant="1" and fr.type='full' group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, rs.version, tx.species, tx.tax_string;);
+}
 
+elsif ($seq_type eq 'seed' || $seq_type eq 'SEED'){
+	$query2 = qq( select rfam_acc, rfam_id, f.type, 'seed', f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, '', group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS, rs.version, tx.species, tx.tax_string 
+from family f join seed_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join taxonomy tx using (ncbi_id) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc = ? and (f.type like '%riboswitch%' or f.type like 'Gene%' or f.type like '%IRES%' or f.type like '%thermoregulator%' ) and (f.type not like '%lncRNA%' and f.type not like '%leader%' and f.type not like '%frameshift element%' and f.type not like 'Cis-reg;') group by rfam_acc, rfam_id, f.type, 'seed', f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, '', rs.version, tx.species, tx.tax_string;);
+}
+# very basic check
+else{
+	print "\nWrong input!! Please type: full|FULL for full_region hits or seed|SEED seed region hits\n\n";
+	exit;
+}
 
 #my $query = qq( select rfam_acc, rfam_id, f.type, fr.type, f.description, rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score, group_concat(distinct concat(dl.db_id,":",dl.db_link)) as dbxrefs, group_concat(distinct concat("PMID:",fl.pmid)) as PMIDS from family f join full_region fr using (rfam_acc) join rfamseq rs using (rfamseq_acc) join database_link dl using (rfam_acc) join family_literature_reference fl using (rfam_acc) where f.rfam_acc =  'RF01888' group by rfam_acc, rfam_id, f.type, fr.type, f.description,rs.ncbi_id, fr.rfamseq_acc, fr.seq_start, fr.seq_end, fr.bit_score ;); 
 	
