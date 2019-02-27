@@ -50,12 +50,6 @@ __PACKAGE__->table("seed_region");
   extra: {unsigned => 1}
   is_nullable: 0
 
-=head2 md5
-
-  data_type: 'varchar'
-  is_nullable: 0
-  size: 32  
-
 =cut
 
 __PACKAGE__->add_columns(
@@ -72,8 +66,6 @@ __PACKAGE__->add_columns(
   },
   "seq_end",
   { data_type => "bigint", extra => { unsigned => 1 }, is_nullable => 0 },
-  "md5",
-  { data_type => "varchar", is_nullable => 0, size => 32 },
 );
 
 =head1 RELATIONS
