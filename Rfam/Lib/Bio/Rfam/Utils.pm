@@ -2279,8 +2279,6 @@ sub genbank_nse_lookup_and_md5 {
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
-  # printf("in genbank_nse_lookup_and_md5() nattempts: $nattempts, nseconds: $nseconds\n");
-
   # $nse will have end < start if it is negative strand, but we can't fetch from ENA
   # with an end coord less than start, so if we are negative strand, we need to fetch
   # the positive strand, and then revcomp it later.
@@ -2288,33 +2286,43 @@ sub genbank_nse_lookup_and_md5 {
   my $qend   = ($strand == 1) ? $end   : $start;
   my $qlen   = abs($start - $end) + 1;
 
-
   # initialize default values, which will change below if we have a valid subseq
-  my $successful_fetch = 0; # changed to '1' below if nec
-  my $have_sub_seq     = 0; # changed to '1' below if nec
+  my $successful_fetch = 0; # possibly changed to '1' below
+  my $have_source_seq  = 0; # possibly changed to '1' below
+  my $have_sub_seq     = 0; # possibly changed to '1' below
   my $sqstring = "";
   my $md5 = undef;
 
   my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
   my $got_url = get($url);
+  my $looks_like_rnacentral =  id_looks_like_rnacentral($name);
 
-  # if NCBI is being hit by a bunch of requests, the get() command may fail in that 
-  # $got_url may be undefined or won't include a header line. If that happens
-  # we wait a few seconds ($nseconds) and try again (up to $nattempts) times.
-  my $attempt_ctr = 1;
-  while(((! defined $got_url) || ($got_url !~ m/^>/)) && 
-        ($attempt_ctr < $nattempts)) { 
-    sleep($nseconds);
-    $got_url = get($url);
-    $attempt_ctr++;
+  if(! defined $got_url) { 
+    if(! $looks_like_rnacentral) { 
+      # if NCBI is being hit by a bunch of requests, the get() command
+      # may fail in that $got_url may be undefined. If that happens we
+      # wait a few seconds ($nseconds) and try again (up to
+      # $nattempts) times BUT we only do this for sequences that
+      # don't look like they are RNAcentral ids. For sequences that
+      # look like they are RNAcentral ids we do not do more attempts.
+      my $attempt_ctr = 1;
+      while((! defined $got_url) && ($attempt_ctr < $nattempts)) { 
+        sleep($nseconds);
+        $got_url = get($url);
+        $attempt_ctr++;
+      }
+      if($attempt_ctr > $nattempts) { 
+        die "ERROR trying to fetch $name from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+      }
+    }
   }
-  if($attempt_ctr > $nattempts) { 
-    die "ERROR trying to fetch from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+  elsif($got_url !~ m/^>/) { 
+    # this shouldn't happen, if the sequence doesn't exist then we $got_url should be undefined
+    die "ERROR in genbank_nse_lookup_and_md5() get() returned a value that is not a sequence"; 
   }
-
-  my $have_source_seq = 0;
-  if((defined $got_url) && ($got_url =~ m/\>/)) { 
-    # if we a sequence named $name exists in GenBank, $got_url will have a fasta header line
+  else { 
+    # if we get here: we know that $got_url is defined and starts with a ">",
+    # so we know that a sequence named $name exists in GenBank
     $have_source_seq = 1; 
 
     # the fetched sequence should have a header line with a name in this format:
@@ -2387,6 +2395,25 @@ sub rnacentral_md5_lookup {
   }
 
   return ($have_seq, $md5, $id);
+}
+
+#-------------------------------------------------------------------------------
+=head2 id_looks_like_rnacentral
+  Title    : id_looks_like_rnacentral
+  Incept   : EPN, Fri Feb 22 16:24:58 2019
+  Function : Returns '1' if $id 'looks like' a RNAcentral ID
+  Args     : $id: sequence name
+  Returns  : '1' if $id 'looks like' it is from RNAcetnral 
+           : '0' if it does not
+=cut
+
+sub id_looks_like_rnacentral { 
+  my ( $id ) = @_;
+
+  if($id =~ /^URS[0-9A-F]{10}/) { 
+    return 1; 
+  }
+  return 0;
 }
 
 #-------------------------------------------------------------------------------

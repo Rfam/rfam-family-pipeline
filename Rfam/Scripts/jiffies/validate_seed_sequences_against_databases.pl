@@ -21,6 +21,10 @@ my $rfamdb = $config->rfamlive;
 my $client = Bio::Rfam::SVN::Client->new({config => $config});
 my $seqDBObj = $config->rfamseqObj;
 
+# make *STDOUT file handle 'hot' so it automatically flushes whenever we print to it
+select *STDOUT;
+$| = 1;
+
 my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
 
@@ -28,8 +32,9 @@ my $nrfm_pass = 0;
 my $ngbk_pass = 0;
 my $nrnc_pass = 0;
 my $nfail = 0;
+my $nseq  = $familyObj->SEED->nseq;
 # look-up each SEED sequence
-for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
+for ( my $i = 0 ; $i < $nseq; $i++ ) {
   my $name_or_nse  = $familyObj->SEED->get_sqname($i);
   my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
   my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
@@ -108,6 +113,7 @@ for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
   
   if($passfail eq "FAIL") { $nfail++; }
 }
+print("nseq:      $nseq\n");
 print("nrfm_pass: $nrfm_pass\n");
 print("ngbk_pass: $ngbk_pass\n");
 print("nrnc_pass: $nrnc_pass\n");
