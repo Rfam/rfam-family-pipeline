@@ -19,11 +19,11 @@ def main():
     
     cmd = sys.argv[1]
     cpus = sys.argv[2]
-    jobname = sys.argv[3]
+    job_index = sys.argv[3]
 
     user = getpass.getuser()
-    job_name = "rfsearch-job-%s" % user
-    pod_name = "rfsearch-pod-%s" % user # check if a uuid is needed
+    job_name = "rfsearch-job-%s-%s" % (user, job_index)
+    pod_name = "rfsearch-pod-%s-%s" % (user, job_index) # check if a uuid is needed
     volume_name = "rfsearch-pod-storage-%s" % user
     pvc_name = "rfam-pvc-%s" % user
     
@@ -45,7 +45,7 @@ def main():
     	"    spec:\n"
     	"      containers:\n"
     	"      - name: %s\n"
-    	"        image: ikalvari/rfam-cloud:inpod-kubes\n"
+    	"        image: ikalvari/rfam-cloud:kubes\n"
     	"        resources:\n"
     	"          limits:\n"
     	"            cpu: 8\n" # this is the upper limit of the cpus to be used in the docker container
@@ -69,7 +69,7 @@ def main():
     # create a new k8s job yaml file
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
     fp = open(rfjob_manifest, 'w')
-    fp.write(rfam_k8s_job % (job_name, pod_name, user, jobname, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
+    fp.write(rfam_k8s_job % (job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
     
