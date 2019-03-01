@@ -182,7 +182,6 @@ sub mandatoryFiles {
   return $self->{_config}->{files}->{family_file};
 }
 
-
 =head2 excluded_files
 
   Title    : excluded_files
@@ -231,7 +230,8 @@ sub rfamlive {
   my $self = shift;
   
   if($self->location ne 'JFRC' && 
-     $self->location ne 'EBI') { 
+     $self->location ne 'EBI' &&
+     $self->location ne '') { 
     return undef; 
   }
   
@@ -462,6 +462,15 @@ sub ignorableQC {
   return $self->{'_config'}->{curation}->{ignorableQC};
   
 }
+
+sub proxy {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  } 
+  return $self->{proxy};
+}
+
 
 =head2 binLocation
 

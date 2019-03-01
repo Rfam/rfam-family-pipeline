@@ -104,6 +104,10 @@ sub submit_nonmpi_job {
     else                               { $submit_cmd .= ""; }
     $submit_cmd .= " -N $jobname -o /dev/null -e $errPath $batch_opt -b y -cwd -V \"$cmd\" > /dev/null"; 
   }
+  # local command
+  elsif($location eq ""){
+    $submit_cmd = $cmd
+  }
   else { 
     die "ERROR unknown location $location in submit_nonmpi_job()";
   }
