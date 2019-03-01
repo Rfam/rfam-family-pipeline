@@ -1,8 +1,8 @@
 # Running the Rfam family-building-pipeline locally using Docker
 1. Download and install [docker](https://docs.docker.com/install) for your favourite OS
-2. Clone the rfam-cloud branch from GitHub: 
+2. Clone the rfam-family-pipeline repository from GitHub: 
 ```
-git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git
+git clone https://github.com/Rfam/rfam-family-pipeline.git
 ```
 3. Go to the rfam-family-pipeline directory and build a docker image using the Dockerfile:
 ```
@@ -29,13 +29,18 @@ docker container cp CONTAINER_ID:/workdir/within/container /path/to/local/dir
 docker run -i -t rfam-local:latest -v /path/to/local/workdir:/workdir /bin/bash
 ```
 
+
+**Note:** Update `Rfam/Conf/rfam.conf` to provide a local location of the sequence database
+and `Rfam/Conf/rfam_local.conf` to establish a connection with the public [MySQL](https://rfam.readthedocs.io/en/latest/database.html) database.
+
+
 ## For Developers:
 To easily test any changes your make to the code, mount your local directory to the rfam-family-pipeline directory in the docker container.
 ```
-docker run -i -t rfam-local:latest -v /path/to/local/rfam-family-pipeline:/Rfam/rfam-family-pipeline /bin/bash
+docker run -i -t rfam-local:latest -v /path/to/local/rfam-family-pipeline:/Rfam/rfam-family-pipeline bash
 ```
 
 :exclamation: You can also mount a directory on your machine to the **/workdir** inside the container to have any testing output generated directly on your local machine:
 ```
-docker run -i -t rfam-local:latest -v /path/to/local/rfam-family-pipeline:/Rfam/rfam-family-pipeline -v /path/to/local/dir:/workdir /bin/bash
+docker run -i -t rfam-local:latest -v /path/to/local/rfam-family-pipeline:/Rfam/rfam-family-pipeline -v /path/to/local/dir:/workdir bash
 ``` 
