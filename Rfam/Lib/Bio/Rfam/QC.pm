@@ -1158,20 +1158,20 @@ sub checkSEEDSeqs {
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in Rfamseq, but md5 does not match\n";
       }
     }        
-  }
-  if($genbank_has_exact_seq) { 
-    if($genbank_md5 ne $seed_md5) {
-      # 5) subseq appears to exist in GenBank, but md5 does not match
-      $error = 1;
-      warn "SEED sequence $name_or_nse fails validation; it appears to exist in GenBank, but md5 does not match\n";
+    if($genbank_has_exact_seq) { 
+      if($genbank_md5 ne $seed_md5) {
+        # 5) subseq appears to exist in GenBank, but md5 does not match
+        $error = 1;
+        warn "SEED sequence $name_or_nse fails validation; it appears to exist in GenBank, but md5 does not match\n";
+      }
     }
-  }
-  if($rnacentral_has_exact_seq) { 
-    if($rnacentral_md5 ne $seed_md5) {
-      # 6) subseq appears to exist in RNAcentral, but md5 does not match
-      #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
-      $error = 1;
-      warn "SEED sequence $name_or_nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n";
+    if($rnacentral_has_exact_seq) { 
+      if($rnacentral_md5 ne $seed_md5) {
+        # 6) subseq appears to exist in RNAcentral, but md5 does not match
+        #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
+        $error = 1;
+        warn "SEED sequence $name_or_nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n";
+      }
     }
   }
 
@@ -1622,7 +1622,9 @@ sub essential {
     $masterError = 1;
   }
   
-  $error = checkScoresSeqs($newFamily, $seqDBObj);
+  # TEMPORARY: suspending check that all SCORES seqs (full hits) are in Rfamseq
+  # TODO: uncomment this to reinstate check 
+  # $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
