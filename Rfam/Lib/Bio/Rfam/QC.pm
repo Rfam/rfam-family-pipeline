@@ -1083,9 +1083,15 @@ sub ssStats {
 =head2 checkSEEDSeqs
 
   Title    : checkSEEDSeqs
-  Incept   : finnr, Aug 5, 2013 10:32:26 AM
-  Usage    : Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj)
-  Function : Checks that all SEED sequencs are valid
+  Incept   : EPN, Fri Mar  1 18:04:58 2019
+  Usage    : Bio::Rfam::QC::NEWcheckSEEDSeqs($familyObj, $seqDBObj)
+  Function : Checks that all SEED sequencs are valid based on md5
+           : To be valid, each SEED sequence must exist and 
+           : (be identical to) the same (sub)sequence in one
+           : or more of: 
+           : - rfamseq
+           : - GenBank
+           : - RNAcentral
   Args     : Bio::Rfam::Family object, Bio::Rfam::SeqDB object
   Returns  : 1 on error, 0 on successully passing check
   
@@ -1101,33 +1107,78 @@ sub checkSEEDSeqs {
 
   my $error = 0;
 
-  my @seedSeqs;
-  for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
-    my $nse     = $familyObj->SEED->get_sqname($i);
-    my $seedSeq = $familyObj->SEED->get_sqstring_unaligned($i);
-    my ( $is_nse, $name, $start, $end ) = Bio::Rfam::Utils::nse_breakdown($nse);
-    push( @seedSeqs, [ $nse, $start, $end, $name, $seedSeq ] );
-  }
-
-  #This next bit is a little inefficient
-  my $seqDBSeqs = $seqDBObj->fetch_subseqs( \@seedSeqs, -1 );
-
-  #Make RNA (need to do this bc currently RFAMSEQ is DNA and seed is read as RNA (digitized Easel MSA))
-  $seqDBSeqs =~ s/T/U/g;
-
-  #now make array of alternative head/sequence
-  my @s = split( /\n/, $seqDBSeqs );
-
-  for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
-    if ( $s[ ( $i * 2 ) + 1 ] ne $seedSeqs[$i]->[4] ) {
+  my $nrfm_pass = 0;
+  my $ngbk_pass = 0;
+  my $nrnc_pass = 0;
+  my $nfail = 0;
+  my $nseq  = $familyObj->SEED->nseq;
+  my @fail_A = ();
+  # look-up each SEED sequence
+  for ( my $i = 0 ; $i < $nseq; $i++ ) {
+    my $name_or_nse  = $familyObj->SEED->get_sqname($i);
+    my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
+    my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
+    
+    # lookup in rfamseq
+    my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $name_or_nse);
+    
+    # lookup in GenBank, retry up to 200 times if fetch fails, wait 3 seconds between tries
+    my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse, 200, 3);
+    
+    # lookup in RNAcentral
+    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
+    
+    # check if it fails for any of following reasons:
+    # 1) not in any of Rfamseq, GenBank, or RNAcentral
+    # 2) source seq exists in Rfamseq, but not subseq (start-end)
+    # 3) source seq exists in GenBank, but not subseq (start-end)
+    # 4) subseq appears to exist in Rfamseq, but md5 does not match
+    # 5) subseq appears to exist in GenBank, but md5 does not match
+    # 6) subseq appears to exist in RNAcentral, but md5 does not match
+    #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
+    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
+      # 1) not in any of Rfamseq, GenBank, or RNAcentral
       $error = 1;
-      warn "The sequence in the SEED, "
-        . $seedSeqs[$i]->[0]
-        . " does not match the database.\n";
-      warn "SEED:" . $seedSeqs[$i]->[4] . "\n";
-      warn "DB  :" . $s[ ( $i * 2 ) + 1 ] . "\n\n";
+      warn "SEED sequence $name_or_nse fails validation; it exists in none of: Rfamseq, GenBank, RNAcentral\n"
+    }
+    if(($rfamseq_has_source_seq) && (! $rfamseq_has_exact_seq)) { 
+      # 2) source seq exists in Rfamseq, but not subseq (start-end)
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; its source sequence exists in Rfamseq, but specific range subsequence does not\n";
+    }
+    if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) { 
+      # 3) source seq exists in GenBank, but not subseq (start-end)
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; its source sequence exists in GenBank, but specific range subsequence does not\n";
+    }
+    if($rfamseq_has_exact_seq) { 
+      if($rfamseq_md5 ne $seed_md5) {
+        # 4) subseq appears to exist in Rfamseq, but md5 does not match
+        $error = 1;
+        warn "SEED sequence $name_or_nse fails validation; it appears to exist in Rfamseq, but md5 does not match\n";
+      }
+    }        
+  }
+  if($genbank_has_exact_seq) { 
+    if($genbank_md5 ne $seed_md5) {
+      # 5) subseq appears to exist in GenBank, but md5 does not match
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; it appears to exist in GenBank, but md5 does not match\n";
     }
   }
+  if($rnacentral_has_exact_seq) { 
+    if($rnacentral_md5 ne $seed_md5) {
+      # 6) subseq appears to exist in RNAcentral, but md5 does not match
+      #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n";
+    }
+  }
+
+  if($error) { 
+    warn "script Rfam/Scripts/jiffies/validate_seed_sequences_against_database.pl can provide more information";
+  }
+
   return $error;
 }
 
@@ -1571,7 +1622,6 @@ sub essential {
     $masterError = 1;
   }
   
-  #TODO - remove this commented out line, once the solution has been found.
   $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
