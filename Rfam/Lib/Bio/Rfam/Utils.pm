@@ -90,7 +90,10 @@ sub submit_nonmpi_job {
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
   elsif($location eq "CLOUD"){
-    # develop code here to create kubernetes jobs
+    # temporarily minimize memory to 6GB only to work with the test cloud
+    if ($reqMb >= 24000){
+      $regMb = 6000;
+    }
     $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $reqMb $jobname";
   }
   elsif($location eq "JFRC") { 
