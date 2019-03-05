@@ -6,6 +6,7 @@ use Getopt::Long;
 use File::stat;
 use Data::Printer;
 use File::Copy;
+use File::Spec;
 use Carp;
 
 use Bio::Rfam::Config;
@@ -137,6 +138,9 @@ my $user  = getpwuid($<);
 if (! defined $user || length($user) == 0) { 
   die "FATAL: failed to run [getlogin or getpwuid($<)]!\n[$!]";
 }
+
+# get the bsolute path of the working directory
+my $workdir = File::Spec->rel2abs();
 
 # setup variables 
 my $io     = Bio::Rfam::FamilyIO->new;
