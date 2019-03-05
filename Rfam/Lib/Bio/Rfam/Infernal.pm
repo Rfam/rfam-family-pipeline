@@ -129,7 +129,12 @@ sub cmcalibrate_wrapper {
     }
     else { 
       my $gbPerThread = 3.0;
-      my $requiredMb = $nproc * $gbPerThread * 1000.; 
+      my $requiredMb = $nproc * $gbPerThread * 1000.;
+      
+      # if the job is run in the cloud, assign the job an index
+      if ($config->location eq "CLOUD"){
+	      $jobname='1';
+      }
       Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
   }
