@@ -60,7 +60,7 @@ def main():
     	"        imagePullPolicy: IfNotPresent\n"
     	"        volumeMounts:\n"
 		"        - name: %s\n" # this one must match the volume name of the pvc
-		"          mountPath: /workdir/CLOUD_TEST\n"
+		"          mountPath: /workdir\n"
 		"      volumes:\n"
 		"      - name: %s\n"
 		"        persistentVolumeClaim:\n"
@@ -74,10 +74,10 @@ def main():
     fp.write(rfam_k8s_job % (job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
-    print rfam_k8s_job %(job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name)
+    #print rfam_k8s_job %(job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name)
     
     # this will be generated
-    #k8s_api = utils.create_from_yaml(k8s_client, rfjob_manifest)
+    k8s_api = utils.create_from_yaml(k8s_client, rfjob_manifest)
 
     # create unique namespace for each user
     #deps = k8s_api.read_namespaced_deployment(job_name, "default")
