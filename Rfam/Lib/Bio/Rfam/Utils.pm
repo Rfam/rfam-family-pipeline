@@ -90,7 +90,6 @@ sub submit_nonmpi_job {
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
   elsif($location eq "CLOUD"){
-
     # develop code here to create kubernetes jobs
     $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $jobname";
   }
