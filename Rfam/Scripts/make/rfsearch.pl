@@ -607,15 +607,15 @@ if($do_calibrate) {
   my $calibrate_start_time = time();
 #  Calibration prediction time not currently used, since we can't accurately predict search time anyway
   my $predicted_minutes = Bio::Rfam::Infernal::cmcalibrate_wrapper($config, 
-                                                                  "c.$$",                 # job name
-                                                                   "",                    # options for cmcalibrate, NOTE: we don't allow ANY 
-                                                                   "CM",                  # path to CM file
-                                                                   $calibrateO,           # path to output file 
-                                                                   $calibrate_errO,       # path to error output file 
-                                                                   $ncpus_cmcalibrate,    # number of processors
-                                                                   $q_opt,                # queue to use, "" for default, ignored if location eq "EBI"
-                                                                   (! $calibrate_nompi),  # use MPI? 
-                                                                   ($do_all_local));      # run job locally?
+                                                                  "c.$$",                 		# job name
+                                                                   "",                    		# options for cmcalibrate, NOTE: we don't allow ANY 
+                                                                   File::Spec->rel2abs("CM"), 		# absolute path to CM file
+                                                                   File::Spec->rel2abs($calibrateO),     # path to output file 
+                                                                   File::Spec->rel2abs($calibrate_errO),# path to error output file 
+                                                                   $ncpus_cmcalibrate,    		# number of processors
+                                                                   $q_opt,                		# queue to use, "" for default, ignored if location eq "EBI"
+                                                                   (! $calibrate_nompi),  		# use MPI? 
+                                                                   ($do_all_local));      		# run job locally?
   my @jobnameA = ("c.$$");
   my @outnameA = ("c.$$.out");
   my @errnameA = ("$calibrate_errO"); 
