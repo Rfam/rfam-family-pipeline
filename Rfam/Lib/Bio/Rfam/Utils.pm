@@ -482,7 +482,8 @@ sub wait_for_cluster_light {
       $ncluster_check++;
       if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
       elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
-      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods`);} # change command to get the pods of a specific namespace
+      # change command to get the backend jobs of a specific user
+      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend`);} # change command to get the backend jobs of a specific user
       # parse job log
       for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
       foreach $line (@infoA) { 
@@ -526,6 +527,7 @@ sub wait_for_cluster_light {
               $i = $n;
               # check if job is in error status, if it is, then exit
               if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
+              if (($location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed")){ die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
               if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
             }
           }
