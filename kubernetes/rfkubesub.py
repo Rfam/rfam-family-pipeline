@@ -19,7 +19,8 @@ def main():
     
     cmd = sys.argv[1]
     cpus = int(sys.argv[2])
-    job_index = sys.argv[3]
+    memory = sys.argv[3]
+    job_index = sys.argv[4]
 
     #convert to milicores
     cpus = cpus * 1000
@@ -50,9 +51,11 @@ def main():
     	"        image: ikalvari/rfam-cloud:kubes\n"
     	"        resources:\n"
     	"          limits:\n"
-    	"            cpu: \"8000m\"\n" # this is the upper limit of the cpus to be used in the docker container
+    	"            cpu: \"8000m\"\n" # maximum number of cpus to be used in the docker container
+        "            memory: \"24Gi\"\n" # maximum memory to be used in the docker container
     	"          requests:\n"
     	"            cpu: \"%sm\"\n"
+        "            memory: \"%sMi\"\n"
         #"        args:\n"
         #"        - -cpus\n"
         #"        - \"%s\"\n"
@@ -71,7 +74,7 @@ def main():
     # create a new k8s job yaml file
     rfjob_manifest = os.path.join("/tmp", "rfjob.yaml") # does not need to be deleted 
     fp = open(rfjob_manifest, 'w')
-    fp.write(rfam_k8s_job % (job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name))
+    fp.write(rfam_k8s_job % (job_name, pod_name, user, job_name, pod_name, cpus, memory, cmd, volume_name, volume_name, pvc_name))
     fp.close()
     
     #print rfam_k8s_job %(job_name, pod_name, user, job_name, pod_name, cpus, cmd, volume_name, volume_name, pvc_name)
