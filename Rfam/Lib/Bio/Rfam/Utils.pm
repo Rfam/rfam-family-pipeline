@@ -91,7 +91,7 @@ sub submit_nonmpi_job {
   }
   elsif($location eq "CLOUD"){
     # develop code here to create kubernetes jobs
-    $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $jobname";
+    $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $reqMb $jobname";
   }
   elsif($location eq "JFRC") { 
     my $batch_opt = "";
