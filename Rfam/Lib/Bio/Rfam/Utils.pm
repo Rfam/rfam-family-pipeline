@@ -92,7 +92,7 @@ sub submit_nonmpi_job {
   elsif($location eq "CLOUD"){
     # temporarily minimize memory to 6GB only to work with the test cloud
     if ($reqMb >= 24000){
-      $regMb = 6000;
+      $reqMb = 6000;
     }
     $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $reqMb $jobname";
   }
