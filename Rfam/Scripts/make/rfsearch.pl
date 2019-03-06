@@ -607,7 +607,7 @@ if($do_calibrate) {
   my $calibrate_start_time = time();
 #  Calibration prediction time not currently used, since we can't accurately predict search time anyway
   my $predicted_minutes = Bio::Rfam::Infernal::cmcalibrate_wrapper($config, 
-                                                                  "c.$$",                 		# job name
+                                                                  "c-$$",                 		# job name
                                                                    "",                    		# options for cmcalibrate, NOTE: we don't allow ANY 
                                                                    File::Spec->rel2abs("CM"), 		# absolute path to CM file
                                                                    File::Spec->rel2abs($calibrateO),     # path to output file 
@@ -616,8 +616,8 @@ if($do_calibrate) {
                                                                    $q_opt,                		# queue to use, "" for default, ignored if location eq "EBI"
                                                                    (! $calibrate_nompi),  		# use MPI? 
                                                                    ($do_all_local));      		# run job locally?
-  my @jobnameA = ("c.$$");
-  my @outnameA = ("c.$$.out");
+  my @jobnameA = ("c-$$");
+  my @outnameA = ("c-$$.out");
   my @errnameA = ("$calibrate_errO"); 
   #$calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@jobnameA, \@outnameA, "[ok]", "cmcalibrate-mpi", $logFH, 
                                                                 #sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
