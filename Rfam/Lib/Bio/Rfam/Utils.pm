@@ -416,7 +416,7 @@ sub wait_for_cluster_light {
   my $i;
   if($extra_note ne "") { $extra_note = "  " . $extra_note; }
 
-  # sanity check
+  # sanity check - limit this to EBI and JFRC clusters only
   if($location ne "CLOUD"){
     if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
     if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
