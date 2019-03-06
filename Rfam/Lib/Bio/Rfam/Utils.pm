@@ -703,6 +703,29 @@ sub format_time_string {
 
 #-------------------------------------------------------------------------------
 
+=head2 delete_completed_k8s_jobs
+
+  Title    : delete_completed_k8s_jobs()
+  Incept   : IK, Wed Mar 6 20:08:10 2019
+  Usage    : delete_completed_k8s_jobs($user, $tier)
+  Function : Delete all k8s jobs of a specific
+           : user. 
+  Args     : $user: user id
+           : $tier: backend/frontend
+  Returns  : void
+
+=cut
+
+sub delete_completed_k8s_jobs { 
+  my ($user, $tier) = @_;
+
+  my $cmd = "kubectl delete jobs --selector=user=$user --selector=tier=$tier";
+  run_local_command($cmd);
+  
+}
+
+#-------------------------------------------------------------------------------
+
 =head2 concatenate_files
 
   Title    : concatenate_files()
