@@ -417,9 +417,10 @@ sub wait_for_cluster_light {
   if($extra_note ne "") { $extra_note = "  " . $extra_note; }
 
   # sanity check
-  if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
-  if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
-
+  if($location ne "CLOUD"){
+    if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
+    if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
+  }
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
   if($location eq "EBI") { 
     if(length($username) > 7) { 
@@ -516,7 +517,9 @@ sub wait_for_cluster_light {
           }
           #printf("\tjobname: $jobname uname: $uname status: $status\n");
           # no need to do this for CLOUD 
-          if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
+          if ($location ne "CLOUD"){
+            if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
+          }
           # look through our list of jobs and see if this one matches
           for($i = 0; $i < $n; $i++) { 
             #printf("\t\tsuccess: %d\tininfo: %d\tmatch: %d\n", $successA[$i], $ininfoA[$i], ($jobnameAR->[$i] eq $jobname) ? 1 : 0);
