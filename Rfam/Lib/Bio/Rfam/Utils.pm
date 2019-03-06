@@ -539,11 +539,12 @@ sub wait_for_cluster_light {
                   if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
                   if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
               }
+	    }
             else{
               if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  ((index $jobnameAR->[$i], $jobname)!=-1) && # jobname match
-                 ($status eq "Completed") { # look for a substring if on CLOUD - change this to ne if eq doesn't work
+                 ($status ne "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
                   $ininfoA[$i] = 1; 
                   $i = $n;
               # check if job is in error status, if it is, then exit
@@ -570,7 +571,7 @@ sub wait_for_cluster_light {
       # sanity check
       if(($runningA[$i] + $waitingA[$i] + $successA[$i]) != 1) { 
         die "wait_for_cluster_light() internal error, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
-      }
+      } 
       if($successA[$i] == 0) { 
         # if err file exists
         #    if output file exists
@@ -590,7 +591,7 @@ sub wait_for_cluster_light {
             while((! -s $outnameAR->[$i]) && ($nsleep < 20)) { 
               sleep(60.);
               $nsleep++;
-            }
+            } 
           }
           if(-e $outnameAR->[$i]) { 
             if(-s $outnameAR->[$i]) { 
@@ -650,7 +651,7 @@ sub wait_for_cluster_light {
             die "wait_for_cluster_light() internal error 2, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
           }
         }
-      }
+	}
     } # end of 'for($i = 0; $i < $n; $i++)'
     }
     if($nwaiting > 0) { $max_wait_secs = time() - $start_time; } 
