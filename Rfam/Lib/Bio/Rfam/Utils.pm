@@ -539,6 +539,7 @@ sub wait_for_cluster_light {
                   if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
                   if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
               }
+	    }
             else{
               if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
