@@ -564,8 +564,9 @@ sub wait_for_cluster_light {
 
     # now go through each job and check whether its error and output files exist, for those jobs
     # that our most recent cluster check revealed should be finished (true if $finishedA[$i] is '1')
-    # make sure they finished successfully
-    for($i = 0; $i < $n; $i++) { 
+    # make sure they finished successfully - Skip this if on CLOUD
+    if ($location ne "CLOUD"){
+    for($i = 0; $i < $n; $i++){ 
       # sanity check
       if(($runningA[$i] + $waitingA[$i] + $successA[$i]) != 1) { 
         die "wait_for_cluster_light() internal error, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
@@ -651,7 +652,7 @@ sub wait_for_cluster_light {
         }
       }
     } # end of 'for($i = 0; $i < $n; $i++)'
-
+    }
     if($nwaiting > 0) { $max_wait_secs = time() - $start_time; } 
     $minutes_elapsed = (time() - $start_time) / 60;
     if($program ne "") { 
@@ -670,7 +671,6 @@ sub wait_for_cluster_light {
       $ncycle_tot++;
     }
   }
-
   return $max_wait_secs;
   # The only way we'll get here is if all jobs are finished 
   # and have $success_string in output file, if not, we'll have die'd earlier
