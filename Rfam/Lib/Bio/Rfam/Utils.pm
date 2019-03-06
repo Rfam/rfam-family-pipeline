@@ -544,7 +544,7 @@ sub wait_for_cluster_light {
               if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  ((index $jobnameAR->[$i], $jobname)!=-1) && # jobname match
-                 ($status eq "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
+                 ($status ne "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
                   $ininfoA[$i] = 1; 
                   $i = $n;
               # check if job is in error status, if it is, then exit
