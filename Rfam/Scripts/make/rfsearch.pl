@@ -1056,11 +1056,11 @@ sub submit_or_run_cmsearch_jobs {
 
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
     $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 0..$ndbfiles-1
-    $jobnameAR->[$idx] = $prefix . "$$.$file_idx";  
-    $tblOAR->[$idx]    = $prefix . "$$.$file_idx.tbl";
-    $cmsOAR->[$idx]    = $prefix . "$$.$file_idx.cmsearch";
-    $errOAR->[$idx]    = $prefix . "$$.$file_idx.err";
-    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . $tblOAR->[$idx] . " " . $searchopts, $cmfile, $dbfileAR->[$idx], $cmsOAR->[$idx], $errOAR->[$idx], $ssopt_str, $q_opt, $do_local, $gbPerThread);  
+    $jobnameAR->[$idx] = $prefix . "$$-$file_idx";  
+    $tblOAR->[$idx]    = $prefix . "$$-$file_idx.tbl";
+    $cmsOAR->[$idx]    = $prefix . "$$-$file_idx.cmsearch";
+    $errOAR->[$idx]    = $prefix . "$$-$file_idx.err";
+    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . File::Spec->rel2abs($tblOAR->[$idx]) . " " . $searchopts, File::Spec->rel2abs($cmfile), $dbfileAR->[$idx], File::Spec->rel2abs($cmsOAR->[$idx]), File::Spec->rel2abs($errOAR->[$idx]), $ssopt_str, $q_opt, $do_local, $gbPerThread);  
   }
 }
 
