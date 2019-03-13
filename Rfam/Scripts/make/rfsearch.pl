@@ -872,6 +872,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my @rev_cmsOA    = (); # names of cmsearch output files for reversed searches
   my @rev_errOA    = (); # names of error files for reversed searches
 
+  # before doing this, clean up completed ones
+  Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+
   submit_or_run_cmsearch_jobs($config, $ndbfiles, "s-",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
     submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs-", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
