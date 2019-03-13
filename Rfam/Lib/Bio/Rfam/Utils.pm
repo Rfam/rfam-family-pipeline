@@ -417,10 +417,10 @@ sub wait_for_cluster_light {
   if($extra_note ne "") { $extra_note = "  " . $extra_note; }
 
   # sanity check - limit this to EBI and JFRC clusters only
-  if($location ne "CLOUD"){
-    if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
-    if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
-  }
+  
+  if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
+  if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
+  
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
   if($location eq "EBI") { 
     if(length($username) > 7) { 
@@ -488,13 +488,16 @@ sub wait_for_cluster_light {
       $ncluster_check++;
       if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
       elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
-      # change command to get the backend jobs of a specific user
-      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend`);} # change command to get the backend jobs of a specific user
+      # Fetch all running jobs of a specific user
+      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend --field-selector status.phase=Running`);} 
+      
+      # initialize array
+      for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
       
       # parse job log
-      for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
-      foreach $line (@infoA) { 
-        if($line =~ m/^\s*\d+\s+/) { 
+      foreach $line (@infoA) {
+        if ($location ne "CLOUD"){
+        if($line =~ m/^\s*\d+\s+/) {   
           $line =~ s/^\s*//;
           @elA = split(/\s+/, $line);
           if($location eq "JFRC") { 
@@ -512,24 +515,14 @@ sub wait_for_cluster_light {
             else                 { $jobname = $elA[5]; }
             #print STDERR ("uname: $uname status: $status; jobname: $jobname\n");
           }
-          elsif($location eq "CLOUD"){
-          # NAME                                            READY   STATUS              RESTARTS   AGE
-          # rfam-dev-entry-pod-deployment-689f678b4-58g6m   1/1     Running             0          24h
-          # rfsearch-job-ikalvari-m5vxz                     0/1     Completed           0          4d
-          # rfsearch-job-root-hzc28                         0/1     ContainerCreating   0          19m
-
-          ($jobname, $status) = ($elA[0], $elA[2]);
-
-          }
+          
           #printf("\tjobname: $jobname uname: $uname status: $status\n");
           # no need to do this for CLOUD 
-          if ($location ne "CLOUD"){
-            if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
-          }
+          if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
+          
           # look through our list of jobs and see if this one matches
-          for($i = 0; $i < $n; $i++) { 
+          for($i = 0; $i < $n; $i++) { #5
             #printf("\t\tsuccess: %d\tininfo: %d\tmatch: %d\n", $successA[$i], $ininfoA[$i], ($jobnameAR->[$i] eq $jobname) ? 1 : 0);
-            if ($location ne "CLOUD"){
               if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  ($jobnameAR->[$i] eq $jobname)) { # jobname match
@@ -539,9 +532,23 @@ sub wait_for_cluster_light {
                   if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
                   if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
               }
-	    }
-            else{
-              if((! $successA[$i]) &&              # job didn't successfully complete already 
+          } # EBI/JFRC for loop
+        } # first line check here
+      } # EBI/JFRC location if
+      # work on CLOUD JOBS
+      else{
+          $line =~ s/^\s*//;
+          @elA = split(/\s+/, $line);
+          # NAME                                            READY   STATUS              RESTARTS   AGE
+          # rfam-dev-entry-pod-deployment-689f678b4-58g6m   1/1     Running             0          24h
+          # rfsearch-job-ikalvari-m5vxz                     0/1     Completed           0          4d
+          # rfsearch-job-root-hzc28                         0/1     ContainerCreating   0          19m
+
+          ($jobname, $status) = ($elA[0], $elA[2]);
+
+          # check if any of the running jobs matches those in the job array
+          for($i = 0; $i < $n; $i++) { #5
+            if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  (index($jobnameAR->[$i], $jobname)!=-1) && # jobname match
                  ($status ne "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
@@ -549,11 +556,11 @@ sub wait_for_cluster_light {
                   $i = $n;
               # check if job is in error status, if it is, then exit
               if (($location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed")){ die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
-            }
-          }
-          }
-        }
-      }
+            } #internal if
+          } # for loop
+      } # cloud segment else
+    } # parse job log loop
+
       # for any job not still in the queue, it should have successfully finished
       for($i = 0; $i < $n; $i++) {
         $finishedA[$i] = ($ininfoA[$i] == 0) ? 1 : 0; 
@@ -566,7 +573,6 @@ sub wait_for_cluster_light {
     # now go through each job and check whether its error and output files exist, for those jobs
     # that our most recent cluster check revealed should be finished (true if $finishedA[$i] is '1')
     # make sure they finished successfully - Skip this if on CLOUD
-    if ($location ne "CLOUD"){
     for($i = 0; $i < $n; $i++){ 
       # sanity check
       if(($runningA[$i] + $waitingA[$i] + $successA[$i]) != 1) { 
@@ -593,8 +599,8 @@ sub wait_for_cluster_light {
               $nsleep++;
             } 
           }
-          if(-e $outnameAR->[$i]) { 
-            if(-s $outnameAR->[$i]) { 
+          if(-e $outnameAR->[$i]) { # check if output file exists
+            if(-s $outnameAR->[$i]) { # check if output file not empty
               # check for success string in tail output, if it's not there and $finishedA[$i] is 1 (qstat/bjobs indicated this job should be finished) 
               # then wait a minute and check again (up to 10 times) 
               my $ncheck = 0;
@@ -643,7 +649,8 @@ sub wait_for_cluster_light {
             }
           }
         } # end of 'if(-e $errnameAR->[$i])'
-        else { # err file doesn't exist yet, job is waiting (or failed)
+        else { # err file doesn't exist yet, job is waiting (or failed) or job is running on cloud
+          if ($location ne "CLOUD"){
           if($finishedA[$i] == 1) { 
             die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output ERROR file $errnameAR->[$i] does not exist\n";
           }
@@ -651,9 +658,62 @@ sub wait_for_cluster_light {
             die "wait_for_cluster_light() internal error 2, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
           }
         }
-	}
-    } # end of 'for($i = 0; $i < $n; $i++)'
-    }
+        # re-do outfile checks because on CLOUD
+        else{ # running on Cloud
+          if(-e $outnameAR->[$i]) { # check if output file exists
+            if(-s $outnameAR->[$i]) { # check if output file not empty
+              # check for success string in tail output, if it's not there and $finishedA[$i] is 1 (qstat/bjobs indicated this job should be finished) 
+              # then wait a minute and check again (up to 10 times) 
+              my $ncheck = 0;
+              while(($ncheck == 0) || ($finishedA[$i] == 1 && $ncheck < 20 && $successA[$i] == 0)) { # if finishedA[$i] is 1, we'll stay in this loop until we've found the $success_string or checked for it 10 times
+                my $tail= `tail $outnameAR->[$i]`;
+                foreach $line (split ('\n', $tail)) { 
+                  if($line =~ m/\Q$success_string/) {
+                    $successA[$i] = 1; 
+                    $nsuccess++;
+                    if($runningA[$i] == 1) { $runningA[$i] = 0; $nrunning--; }
+                    if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; }
+                    #printf("\tjob %2d finished successfully!\n", $i);
+                    last;
+                  }
+                }
+                $ncheck++;
+                if($successA[$i] == 0) { # didn't find $success_string
+                  sleep(60.);
+                }
+              }
+              if($successA[$i] == 0) { # we didn't find the $success_string in the output
+                if($finishedA[$i] == 1) { # if our cluster check revealed this job should be finished, then we waited 20 minutes and it still didn't have success, so die
+                  die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but tail of expected output file $outnameAR->[$i] does not contain: $success_string\n"; 
+                }
+              }
+            } #end of 'if(-s $outnameAR->[$i])'
+            else { # $outfile exists but is empty, job is running or failed
+              if($finishedA[$i] == 1) { 
+                die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] is empty\n";
+              }
+              elsif($runningA[$i] == 0) { 
+                $runningA[$i] = 1; 
+                $nrunning++;
+                if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; }
+              }
+            }
+          } # end of 'if(-e $outnameAR->[$i])'
+          else { # outfile doesn't exist, but errfile does, job is running or failed
+            if($finishedA[$i] == 1) { 
+              die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] does not exist\n";
+            }
+            elsif($runningA[$i] == 0) { 
+              $runningA[$i] = 1; 
+              $nrunning++;
+              if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; } 
+            }
+          }
+        }
+        }
+	   }
+  } # end of 'for($i = 0; $i < $n; $i++)'
+
     if($nwaiting > 0) { $max_wait_secs = time() - $start_time; } 
     $minutes_elapsed = (time() - $start_time) / 60;
     if($program ne "") { 
