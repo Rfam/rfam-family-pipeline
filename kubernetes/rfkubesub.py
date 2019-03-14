@@ -37,6 +37,7 @@ def main():
     	"  name: %s\n"
     	"spec:\n"
         #"  activeDeadlineSeconds: 30\n"
+        "  ttlSecondsAfterFinished: 10\n"
     	"  template:\n"
     	"    metadata:\n"
     	"      name: %s\n" 
