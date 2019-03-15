@@ -902,6 +902,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $all_cmsO     = "searchout";
   my $all_rev_cmsO = "revsearchout";
 
+  # clean up completed ones
+  Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+
   if(! $do_all_local && $config->location ne "CLOUD"){ 
     # if we ran jobs on the cluster, first create the concatenated error file, if it's not empty we'll die before creating TBLOUT
     Bio::Rfam::Utils::concatenate_files(\@all_errOA, $all_errO, (! $do_dirty)); # '1' says delete original files after concatenation, unless -dirty
