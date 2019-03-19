@@ -1398,12 +1398,15 @@ sub writeTbloutDependentFiles
 
   my $tblI = $famObj->TBLOUT->fileLocation;
   my $rtblI = "REVTBLOUT";
+  my $stblI = "SEEDTBLOUT";
 
   # output files
   my $outlistO = "outlist";
   my $speciesO = "species";
   my $revoutO  = "revoutlist";
   my $revspcO  = "revspecies";
+  my $seedoutO = "seedoutlist";
+
   my $rinO     = "rin.dat";
   my $rincO    = "rinc.dat";
 
@@ -1411,7 +1414,7 @@ sub writeTbloutDependentFiles
   my $prv_bits   = 99999.00;    # previous bit score seen
   my $prv_evalue = 0.;          # previous E-value seen
   my %kingdomCounts;            # counts of hits in each kingdom
-  my $printed_thresh;     # TRUE if threshold has already been printed
+  my $printed_thresh = 0;       # TRUE if threshold has already been printed
   my $outline;                  # dividing line
 
   # create nse HAA in msa for overlap checking
@@ -1430,8 +1433,10 @@ sub writeTbloutDependentFiles
   my $spcFH; 
   my $revoutFH; 
   my $revspcFH; 
-  open($outFH, "> $outlistO") || die "FATAL: failed to open $outlistO)\n[$!]";
-  open($spcFH, "> $speciesO") || die "FATAL: failed to open $speciesO\n[$!]\n";   
+  my $seedoutFH;
+  open($outFH,     "> $outlistO") || die "FATAL: failed to open $outlistO)\n[$!]";
+  open($spcFH,     "> $speciesO") || die "FATAL: failed to open $speciesO\n[$!]\n";   
+  open($seedoutFH, "> $seedoutO") || die "FATAL: failed to open $seedoutO\n[$!]\n";   
   open(RIN,"> $rinO") || die "FATAL: failed to open $rinO\n[$!]\n";   
   printf RIN "bits\ttype\ttax\n";
   open(RINc,"> $rincO") || die "FATAL: failed to open rincO\n[$!]\n";   
@@ -1489,12 +1494,98 @@ sub writeTbloutDependentFiles
     close($revspcFH) if(defined($revspcFH));
   }
 
+  # parse SEEDTBLOUT
+  $nlines_cur = 0;
+  $printed_thresh = 0;
+  if(-s $stblI) { 
+    my @seed_outAA = (); # we'll fill this with data for seedoutlist
+    open(STBL, "grep -v ^'#' $stblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
+    while ($tblline = <STBL>) {
+      # extract data from this SEEDTBLOUT line into variables we'll print out using processTbloutLine() subroutine
+      my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, undef, undef, undef, undef, undef) = 
+          processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); # '0, 0' says: this is not a reversed search and don't require tax info
+
+      # print out threshold line if nec
+      if (($bits < $ga) && ($ga <= $prv_bits)) {
+        $outline = _commentLineForOutlistOrSpecies (" CURRENT THRESHOLD: $ga BITS ");
+        push(@{$seed_outAA[$nlines_cur]}, ($outline));
+        $printed_thresh=1;
+        $nlines_cur++;
+      }
+      if ( $rev_evalue ne "" && $evalue > $rev_evalue && $prv_evalue <= $rev_evalue) {
+        $outline = _commentLineForOutlistOrSpecies(" BEST REVERSED HIT E-VALUE: $rev_evalue ");
+        push(@{$seed_outAA[$nlines_cur]}, ($outline));
+        $nlines_cur++;
+      }
+      $prv_bits = $bits;
+      $prv_evalue = $evalue;
+
+      push(@{$seed_outAA[$nlines_cur]}, ($bits, $evalue, "SEED", $name, "?", $start, $end, $strand, $qstart, $qend, $trunc, "-", "-"));
+
+      # update the seedseq_overlap_*H hashes for the SEED seq this hit is to
+      if($strand eq "+") { 
+        my $seed_idx = $seedmsa->get_sqidx($name);
+        if($seed_idx == -1) { croak "FATAL: could not find sequence $name read from SEEDTBLOUT in SEED alignment"; }
+        my $hit_len  = abs($end - $start) + 1;
+        my $seed_len = (length($seedmsa->get_sqstring_unaligned($seed_idx)));
+        my $is_full_length = ($hit_len == $seed_len) ? 1 : 0;
+        if($is_full_length) { 
+          $seedseq_overlap_above_gaH{$name} = $name; 
+        }
+        else { 
+          my $overlapExtent = $hit_len / $seed_len;
+          my $nse = $name . "/" . $start . "-" . $end;
+          if($overlapExtent > 0.1) { 
+            if($bits >= $ga) { 
+              if(! exists $seedseq_overlap_above_gaH{$name}) { 
+                $seedseq_overlap_above_gaH{$name} = $nse;
+              }
+            }
+            else { # bits < $ga
+              if(! exists $seedseq_overlap_below_gaH{$name}) { 
+                $seedseq_overlap_below_gaH{$name} = $nse; 
+                $seedseq_overlap_below_ga_scH{$name} = $bits; 
+              }
+            }
+          }
+        }
+      }
+
+      $nlines_cur++;
+      if($nlines_cur % $chunksize == 0) { 
+        writeOutlistOrSpeciesChunk($seedoutFH, \@seed_outAA, 1);
+        @seed_outAA = ();
+        $nlines_cur = 0;
+      }
+    } # closes 'while($tblline'
+
+    if (! $printed_thresh) { 
+      $outline = _commentLineForOutlistOrSpecies(" CURRENT THRESHOLD: $ga BITS ");
+      push(@{$seed_outAA[$nlines_cur]}, ($outline));
+      $nlines_cur++;
+    }
+    if ($rev_evalue eq "") { 
+      if(-e $rtblI) { $outline = _commentLineForOutlistOrSpecies(" NO REVERSED HITS (NO HITS FOUND IN REVERSED DB) "); }
+      else          { $outline = _commentLineForOutlistOrSpecies(" NO REVERSED HITS (NO REVERSED SEARCH PERFORMED) "); }
+      push(@{$seed_outAA[$nlines_cur]}, ($outline));
+      $nlines_cur++;
+    }
+    
+    if ($nlines_cur > 0) { 
+      writeOutlistOrSpeciesChunk($seedoutFH, \@seed_outAA, 1);
+    }
+    close($seedoutFH) if(defined($seedoutFH));
+  }
+
   # parse TBLOUT
   my @outAA = (); # we'll fill these with data for outlist
   my @spcAA = (); # we'll fill these with data for species
   my $have_all_tax_info   = 1;  # set to FALSE if we fail to find a tax string
   my $zero_hits_above_thr = 1;  # set to FALSE if we have >= 1 hit above thr
   $nlines_cur = 0;
+  $prv_bits   = 99999.00;    # previous bit score seen
+  $prv_evalue = 0.;          # previous E-value seen
+  $printed_thresh = 0;
   my $nlines_tot = 0;
   open(TBL, "grep -v ^'#' $tblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
   while ($tblline = <TBL>) {
@@ -1512,21 +1603,8 @@ sub writeTbloutDependentFiles
     my $seqLabel = 'FULL';
     my $nse = $name . "/" . $start . "-" . $end;
     my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
-    if ($seed_seq ne "") { 
-      if ($overlapExtent > 0.1) {
-        $seqLabel = 'SEED';
-        if($bits >= $ga) { 
-          if(! exists $seedseq_overlap_above_gaH{$seed_seq}) { 
-            $seedseq_overlap_above_gaH{$seed_seq} = $nse; 
-          }
-        }
-        else { # bits < $ga
-          if(! exists $seedseq_overlap_below_gaH{$seed_seq}) { 
-            $seedseq_overlap_below_gaH{$seed_seq} = $nse; 
-            $seedseq_overlap_below_ga_scH{$seed_seq} = $bits; 
-          }
-        }
-      }
+    if (($seed_seq ne "") && ($overlapExtent > 0.1)) {
+      $seqLabel = 'SEED';
     }
     if (($bits < $ga) && ($seqLabel ne 'SEED')) {
       $seqLabel = 'NOT';
@@ -1565,7 +1643,7 @@ sub writeTbloutDependentFiles
   } # closes 'while($tblline = <TBL>)'
 
   # if we haven't printed the threshold yet, do it
-  if (! defined $printed_thresh) {
+  if (! $printed_thresh) { 
     $outline = _commentLineForOutlistOrSpecies(" CURRENT THRESHOLD: $ga BITS ");
     push(@{$outAA[$nlines_cur]}, ($outline));
     push(@{$spcAA[$nlines_cur]}, ($outline));
@@ -1599,13 +1677,12 @@ sub writeTbloutDependentFiles
   if($require_tax) { 
     # for each SEED sequence, determine which of the following 5 cases applies:
     #
-    # 0)     exact hit to SEED exists >= GA (this is good)
-    # 1) non-exact hit to SEED exists >= GA (this might be okay)
-    # 2)     exact hit to SEED exists <  GA 
-    # 3) non-exact hit to SEED exists <  GA
-    # 4) no        hit to SEED exists at all 
+    # 0)             full-length hit to SEED exists >= GA (this is good)
+    # 1) partial (>0.1 fraction) hit to SEED exists >= GA (this might be okay)
+    # 2)             full-length hit to SEED exists <  GA 
+    # 3) partial (>0.1 fraction) hit to SEED exists <  GA
+    # 4) no hit (>0.1 fraction) to SEED exists at all 
     #
-    # where 'hit to SEED' means a hit overlaps more than 10% coverage with the SEED seq
     # We warn the user about cases 1-4. (Case 2 is probably okay though.)
     for ($idx = 0; $idx < $seedmsa->nseq; $idx++) { 
       my $n = $seedmsa->get_sqname($idx);
