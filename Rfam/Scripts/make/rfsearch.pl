@@ -5,7 +5,6 @@ use Cwd;
 use Getopt::Long;
 use File::stat;
 use Data::Printer;
-use Data::Dumper qw(Dumper);
 use File::Copy;
 use File::Spec;
 use Carp;
@@ -145,8 +144,6 @@ my $workdir = File::Spec->rel2abs();
 
 # setup variables 
 my $io     = Bio::Rfam::FamilyIO->new;
-
-print Dumper($config->rfamlive);
 
 # determine if we'll udpate the DESC file at the end of the script
 my $dbconfig = undef;     # db info from config, defined if neither -dbfile nor -dbdir used on cmd line
@@ -942,18 +939,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $require_tax = 0;
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
   
-  # print Dumper($config);
-  #print Dumper($famObj);
-  print Dumper($config->rfamlive);
-  #print Dumper($famObj->SEED);
-  #print Dumper($famObj->DESC->CUTGA);
-  #print Dumper($config->RPlotScriptPath);
-  #print Dumper($require_tax);
-  #print Dumper($logFH);
-
-
   $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
-  # End of block for submitting/running and processing cmsearch jobs
+  
+ # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
 }
 # update DESC
