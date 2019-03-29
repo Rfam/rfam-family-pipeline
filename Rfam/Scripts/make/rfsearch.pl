@@ -5,6 +5,7 @@ use Cwd;
 use Getopt::Long;
 use File::stat;
 use Data::Printer;
+use Data::Dumper qw(Dumper);
 use File::Copy;
 use File::Spec;
 use Carp;
@@ -144,6 +145,8 @@ my $workdir = File::Spec->rel2abs();
 
 # setup variables 
 my $io     = Bio::Rfam::FamilyIO->new;
+
+print Dumper($config->rfamlive);
 
 # determine if we'll udpate the DESC file at the end of the script
 my $dbconfig = undef;     # db info from config, defined if neither -dbfile nor -dbdir used on cmd line
@@ -435,8 +438,6 @@ Bio::Rfam::Utils::log_output_progress_column_headings($logFH, "per-stage progres
 my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
 # we also run everything locally is if location is set to the empty string or to 'docker'
 if($config->location eq "")       { $do_all_local = 1; } 
-if($config->location eq "docker") { $do_all_local = 1; }
-#if($config->location eq "CLOUD")  { $do_all_local = 1; } # don't use MPI in the Cloud
 if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
 ###########################################################################################################
@@ -873,7 +874,7 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my @rev_errOA    = (); # names of error files for reversed searches
 
   # before doing this, clean up completed ones
-  Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+  #Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
 
   submit_or_run_cmsearch_jobs($config, $ndbfiles, "s-",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
@@ -903,7 +904,7 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $all_rev_cmsO = "revsearchout";
 
   # clean up completed ones
-  Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+  #Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
 
   if(! $do_all_local && $config->location ne "CLOUD"){ 
     # if we ran jobs on the cluster, first create the concatenated error file, if it's not empty we'll die before creating TBLOUT
@@ -940,8 +941,18 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   # write TBLOUT-dependent files
   my $require_tax = 0;
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
-  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
+  
+  # print Dumper($config);
+  #print Dumper($famObj);
+  print Dumper($config->rfamlive);
+  #print Dumper($famObj->SEED);
+  #print Dumper($famObj->DESC->CUTGA);
+  #print Dumper($config->RPlotScriptPath);
+  #print Dumper($require_tax);
+  #print Dumper($logFH);
 
+
+  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
   # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
 }
