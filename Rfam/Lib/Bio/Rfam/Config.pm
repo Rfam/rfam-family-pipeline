@@ -231,7 +231,8 @@ sub rfamlive {
   
   if($self->location ne 'JFRC' && 
      $self->location ne 'EBI' &&
-     $self->location ne '') { 
+     $self->location ne '' &&
+     $self->location ne 'CLOUD') { 
     return undef; 
   }
   
