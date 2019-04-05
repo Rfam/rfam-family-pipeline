@@ -58,7 +58,8 @@ cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
-cpan -f install SVN::Client
+cpan -f install SVN::Client && \
+cpan -f install File::Spec
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
