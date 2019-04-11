@@ -106,7 +106,7 @@ if ( $upFamilyObj->DESC->AC ne $oldFamilyObj->DESC->AC ) {
 "\n***** Accession error, your local copy does not match the SVN repository *****\n\n";
 }
 
-#Check the desc accessions are the same
+#Check the desc IDs are the same
 if ( $upFamilyObj->DESC->ID ne $oldFamilyObj->DESC->ID ) {
   die
 "\n***** Identifier error, your local copy does not match the SVN repository. "
