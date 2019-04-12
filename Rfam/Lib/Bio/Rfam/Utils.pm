@@ -2278,7 +2278,7 @@ sub genbank_nse_lookup_and_md5 {
   
   my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
   if(! $is_nse) { 
-    die "ERROR, in ena_nse_lookup_and_md5() $nse not in name/start-end format.\n";
+    die "ERROR, in genbank_nse_lookup_and_md5() $nse not in name/start-end format.\n";
   }
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }

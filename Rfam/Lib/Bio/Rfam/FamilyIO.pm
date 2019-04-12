@@ -1396,6 +1396,8 @@ sub writeTbloutDependentFiles
 
   if (! defined $famObj->TBLOUT->fileLocation) { die "TBLOUT's fileLocation not set"; }
 
+  printf("in writeTbloutDependentFiles\n");
+
   my $tblI = $famObj->TBLOUT->fileLocation;
   my $rtblI = "REVTBLOUT";
   my $stblI = "SEEDTBLOUT";
@@ -1442,7 +1444,7 @@ sub writeTbloutDependentFiles
   open(RINc,"> $rincO") || die "FATAL: failed to open rincO\n[$!]\n";   
   printf RINc "cnt\ttax\n";
     
-  # parse TBLOUT to get tbloutHAR, a hash of arrays:
+  # parse TBLOUT to get tbloutHA, a hash of arrays:
   my %tbloutHA; # hash of arrays, key is source sequence name of hit, value is array of scalars
                 # of form: "<start>:<end>:<bitscore>"
   parseTbloutForOverlapCheck("TBLOUT", \%tbloutHA);
@@ -1587,10 +1589,11 @@ sub writeTbloutDependentFiles
   $prv_evalue = 0.;          # previous E-value seen
   $printed_thresh = 0;
   my $nlines_tot = 0;
-  open(TBL, "grep -v ^'#' $tblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
+  open(TBL, "cat $stblI $tblI | grep -v ^'#' | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
   while ($tblline = <TBL>) {
     my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString, $got_tax) = 
-        processTbloutLine($tblline, $sthDesc, $sthTax, 0, $require_tax); #'0' says: no this is not a reversed search 
+        ###processTbloutLine($tblline, $sthDesc, $sthTax, 0, $require_tax); #'0' says: no this is not a reversed search 
+        processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); #'0, 0' says: no this is not a reversed search, taxonomy info is not required
 
     # determine if this hit overlaps with any other hits on opposite strand
     my $overlap_str = _outlist_species_get_overlap_string(\%tbloutHA, $name, $start, $end, $bits, 0); # '0' says this is not a reversed hit
@@ -1602,11 +1605,10 @@ sub writeTbloutDependentFiles
     # determine seqLabel
     my $seqLabel = 'FULL';
     my $nse = $name . "/" . $start . "-" . $end;
-    my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
-    if (($seed_seq ne "") && ($overlapExtent > 0.1)) {
+    if($seedmsa->get_sqidx($name) != -1) { 
       $seqLabel = 'SEED';
     }
-    if (($bits < $ga) && ($seqLabel ne 'SEED')) {
+    elsif ($bits < $ga) { 
       $seqLabel = 'NOT';
     }
 
