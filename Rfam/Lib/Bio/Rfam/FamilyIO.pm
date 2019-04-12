@@ -1338,21 +1338,23 @@ sub makeAndWriteScores {
         croak "ERROR invalid truncation string $tstr";
       }
 
-      if ($type eq "SEED") {
+      if ($type eq "SEED-DB") {
         $stype = "seed";
       } elsif ($type eq "FULL") {
         $stype = "full";
-      } else {
+      } elsif ($type ne "SEED-MSA") { 
         croak "ERROR invalid type $type";
       }
 
-      push(@{$scoresAA[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
-      if ($start <= $end) {
-        $nres += ($end - $start + 1);
-      } else {
-        $nres += ($start - $end + 1);
+      if($type ne "SEED-MSA") { # skip hits in outlist that are to SEED alignment seqs
+        push(@{$scoresAA[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
+        if ($start <= $end) {
+          $nres += ($end - $start + 1);
+        } else {
+          $nres += ($start - $end + 1);
+        }
+        $n++;
       }
-      $n++;
     }
   }
   close(OL);
@@ -1604,11 +1606,19 @@ sub writeTbloutDependentFiles
 
     # determine seqLabel
     my $seqLabel = 'FULL';
-    my $nse = $name . "/" . $start . "-" . $end;
     if($seedmsa->get_sqidx($name) != -1) { 
-      $seqLabel = 'SEED';
+      $seqLabel = 'SEED-MSA';
     }
-    elsif ($bits < $ga) { 
+    else { 
+      my $nse = $name . "/" . $start . "-" . $end;
+      my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
+      if ($seed_seq ne "") { 
+        if ($overlapExtent > 0.1) {
+          $seqLabel = 'SEED-DB';
+        }
+      }
+    }
+    if (($bits < $ga) && ($seqLabel = "FULL")) { 
       $seqLabel = 'NOT';
     }
 
