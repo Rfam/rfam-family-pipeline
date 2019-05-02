@@ -170,6 +170,9 @@ sub submit_mpi_job {
     if($queue ne "") { $queue_opt = "-l $queue=true "; }
     $submit_cmd = "qsub -N $jobname -e $errPath -o /dev/null -b y -cwd -V -pe impi $nproc " . $queue_opt . "\"mpirun -np $nproc $cmd\" > /dev/null";
   }
+  elsif ($location eq "CLOUD"){
+  	die "ERROR MPI is unavailable on CLOUD. Please launch rfsearch again using -cnompi option";
+  }
   else { 
     die "ERROR unknown location $location in submit_mpi_job()";
   }
