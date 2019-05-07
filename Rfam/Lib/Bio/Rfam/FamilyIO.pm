@@ -1392,13 +1392,10 @@ sub makeAndWriteScores {
 
 =cut
 
-sub writeTbloutDependentFiles
- {
+sub writeTbloutDependentFiles {
   my ($self, $famObj, $rfdbh, $seedmsa, $ga, $RPlotScriptPath, $require_tax, $logFH) = @_;
 
   if (! defined $famObj->TBLOUT->fileLocation) { die "TBLOUT's fileLocation not set"; }
-
-  printf("in writeTbloutDependentFiles\n");
 
   my $tblI = $famObj->TBLOUT->fileLocation;
   my $rtblI = "REVTBLOUT";
@@ -1429,8 +1426,9 @@ sub writeTbloutDependentFiles
   my %seedseq_overlap_below_ga_scH = (); # key: SEED sequence, score of best hit   <  GA that overlaps with it
 
   # Prepare the queries for execution.
-  my $sthDesc = $rfdbh->prepare_seqaccToDescription();
-  my $sthTax  = $rfdbh->prepare_seqaccToSpeciesTaxStringAndID();
+  my $sthDesc    = $rfdbh->prepare_seqaccToDescription();
+  my $sthTax     = $rfdbh->prepare_seqaccToSpeciesTaxStringAndID();
+  my $sthTaxSeed = $rfdbh->prepare_taxIDToSpeciesAndTaxString();
 
   # open OUTPUT files
   my $outFH; 
@@ -1624,6 +1622,9 @@ sub writeTbloutDependentFiles
       if(defined $seed_name) { 
         $seed_name = Bio::Rfam::Utils::strip_version($seed_name);
         $ncbiId = (defined $seed_taxid_H{$seed_name}) ? $seed_taxid_H{$seed_name} : "-";
+        if((defined $sthTaxSeed) && ($ncbiId ne "-")) { 
+          ($species, $shortSpecies, $taxString) = fetchSpeciesAndTaxString($sthTaxSeed, $ncbiId);
+        }
       }
     }
     else { 
@@ -1979,6 +1980,51 @@ sub fetchSpeciesTaxStringAndID {
   }
 
   return ($species, $shortSpecies, $taxString, $ncbiId);
+}
+
+=head2 fetchSpeciesAndTaxString
+
+    Title    : fetchSpeciesAndTaxString
+    Incept   : EPN, Tue May  7 15:54:18 2019
+    Usage    : fetchSpeciesAndTaxString($sthTaxSeed, $ncbiId)
+    Function : Fetch a species string and tax string, from RfamLive 
+             : given a DBI statement handle ($sthTaxSeed) for 
+             : executing queries with a single bind value: ncbiId.
+    Args     : $sthTaxSeed:  prepared database query for fetching tax info ($rfdbh->prepare_taxIDToSpeciesAndTaxString())
+             : $ncbiId:      NCBI taxid
+    Returns  : list of:
+             : $species:      species string
+             : $shortSpecies: short version of $species
+             : $taxString:    taxonomy string
+    Dies     : if $sthTaxSeed or $ncbiId is not defined
+
+=cut
+
+sub fetchSpeciesAndTaxString { 
+  my ($sthTaxSeed, $ncbiId) = @_;
+
+  if(! defined $sthTaxSeed) { die "ERROR, fetchSpeciesAndTaxString, sthTaxSee is undefined"; }
+  if(! defined $ncbiId)     { die "ERROR, fetchSpeciesAndTaxString, ncbiId is undefined"; }
+
+  my ($species, $shortSpecies, $taxString);
+
+  $sthTaxSeed->execute($ncbiId);
+  my $rfres = $sthTaxSeed->fetchall_arrayref;
+  if(defined $rfres) { 
+    foreach my $row (@{$rfres}) {
+      if (scalar(@{$row}) < 3) { die "ERROR problem fetching tax info for ncbi taxid $ncbiId"; }
+      $species       .= $row->[0];
+      $shortSpecies  .= $row->[1];
+      $taxString     .= $row->[2];
+    }
+  }
+  else { 
+    $species = "-";
+    $shortSpecies = "-";
+    $taxString = "-";
+  }
+
+  return ($species, $shortSpecies, $taxString);
 }
 
 # append chunk of lines to 'outlist' or 'species' file 

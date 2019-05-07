@@ -125,6 +125,30 @@ sub prepare_seqaccToSpeciesTaxStringAndID {
   return( $sth );
 }
 
+
+=head2 prepare_taxIDToSpeciesAndTaxString
+
+  Title    : prepare_taxIDToSpeciesAndTaxString
+  Incept   : EPN, Tue May  7 15:49:18 2019
+  Usage    : $rfamdb->prepare_taxIDToSpeciesAndTaxString( )
+  Function : Returns a DBI statement handle for executing queries. This statement
+           : has one bind value: ncbi_id.
+  Args     : none
+  Returns  : DBI statement handle
+  
+=cut
+
+sub prepare_taxIDToSpeciesAndTaxString {
+  my ($self) = @_;
+  
+  my $dbh = $self->storage->dbh;
+  my $sth = $dbh->prepare("SELECT t.species, t.align_display_name, t.tax_string
+                            FROM taxonomy t
+                            WHERE ( t.ncbi_id = ? )");
+
+  return( $sth );
+}
+
 =head2 prepare_nseFamilyToBitscore
 
   Title    :  prepare_nseFamilyToBitscore
