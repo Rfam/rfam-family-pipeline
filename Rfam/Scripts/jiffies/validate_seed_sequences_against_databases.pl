@@ -35,21 +35,30 @@ my $nfail = 0;
 my $nseq  = $familyObj->SEED->nseq;
 # look-up each SEED sequence
 for ( my $i = 0 ; $i < $nseq; $i++ ) {
-  my $name_or_nse  = $familyObj->SEED->get_sqname($i);
+  my $nse = $familyObj->SEED->get_sqname($i);
+  # name must be in name/start-end format
+  my ($nse_valid, $name, $start, $end, undef) = Bio::Rfam::Utils::nse_breakdown($nse);
+  if(! $nse_valid) { 
+    die "ERROR, each seed sequence must be in name/start-end format, sequence " . ($i+1) . " ($nse) is not"; 
+  }
+
   my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
   my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
 
   # lookup in rfamseq
-  my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $name_or_nse);
+  my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $nse);
 
   # lookup in GenBank, retry up to 200 times if fetch fails, wait 3 seconds between tries
-  my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse, 200, 3);
+  my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($nse, 200, 3);
 
   # lookup in RNAcentral
   my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
 
   # output
   my $passfail = "PASS";
+  my $pass_rfm = 0;
+  my $pass_gbk = 0;
+  my $pass_rnc = 0;
   my $outstr   = "";
   # check if it fails for any of following reasons:
   # 1) not in any of Rfamseq, GenBank, or RNAcentral
@@ -58,6 +67,7 @@ for ( my $i = 0 ; $i < $nseq; $i++ ) {
   # 4) subseq appears to exist in Rfamseq, but md5 does not match
   # 5) subseq appears to exist in GenBank, but md5 does not match
   # 6) subseq appears to exist in RNAcentral, but md5 does not match
+  # 7) subseq only exists in RNAcentral, but is not in URS_taxid format
   #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
   if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
     # 1) not in any of Rfamseq, GenBank, or RNAcentral
@@ -83,6 +93,7 @@ for ( my $i = 0 ; $i < $nseq; $i++ ) {
     else { 
       $outstr .= "RFM:md5-pass;";
       $nrfm_pass++;
+      $pass_rfm = 1;
     }        
   }
   if($genbank_has_exact_seq) { 
@@ -94,6 +105,7 @@ for ( my $i = 0 ; $i < $nseq; $i++ ) {
     else { 
       $outstr .= "GBK:md5-pass;";
       $ngbk_pass++;
+      $pass_gbk = 1;
     }        
   }
   if($rnacentral_has_exact_seq) { 
@@ -104,12 +116,24 @@ for ( my $i = 0 ; $i < $nseq; $i++ ) {
       $outstr .= "RNC:md5-fail;";
     }
     else { 
-      $outstr .= "RNC:md5-pass;";
-      $nrnc_pass++;
+      # if the sequence *only* exists in RNAcentral verify that it 
+      # has the proper name format URS_taxid
+      if((! $pass_rfm) && (! $pass_gbk)) { 
+        my ($is_rnacentral_taxid, undef, undef) = Bio::Utils::rnacentral_urs_taxid_breakdown($name);
+        if($is_rnacentral_taxid) { 
+          $outstr .= "RNC:md5-id-pass;";
+          $nrnc_pass++;
+          $pass_rnc = 1;
+        }
+        else { 
+          $passfail = "FAIL";
+          $outstr .= "RNC:id-fail;";
+        }
+      }
     }
   }
 
-  printf("%-30s  $passfail  $outstr\n", $name_or_nse);
+  printf("%-30s  $passfail  $outstr\n", $nse);
   
   if($passfail eq "FAIL") { $nfail++; }
 }

@@ -1501,6 +1501,8 @@ sub writeTbloutDependentFiles
   # parse SEEDTBLOUT
   $nlines_cur = 0;
   $printed_thresh = 0;
+  my @seed_name_A  = (); # array of sequences with hits in SEEDTBLOUT
+  my %seed_taxid_H = (); # taxid for each seq in @seed_name_AR
   if(-s $stblI) { 
     my @seed_outAA = (); # we'll fill this with data for seedoutlist
     open(STBL, "grep -v ^'#' $stblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
@@ -1508,6 +1510,14 @@ sub writeTbloutDependentFiles
       # extract data from this SEEDTBLOUT line into variables we'll print out using processTbloutLine() subroutine
       my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, undef, undef, undef, undef, undef) = 
           processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); # '0, 0' says: this is not a reversed search and don't require tax info
+
+      if(! exists $seed_taxid_H{$name}) { 
+        my ($validated, $seed_name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($name);
+        if(! $validated) { die "ERROR in writeTbloutDependentFiles() seed sequence $name read from $stblI is not in valid name/start-end format"; }
+        $seed_name = Bio::Rfam::Utils::strip_version($seed_name);
+        push(@seed_name_A, $seed_name);
+        $seed_taxid_H{$seed_name} = "";
+      }
 
       # print out threshold line if nec
       if (($bits < $ga) && ($ga <= $prv_bits)) {
@@ -1579,6 +1589,8 @@ sub writeTbloutDependentFiles
       writeOutlistOrSpeciesChunk($seedoutFH, \@seed_outAA, 1);
     }
     close($seedoutFH) if(defined($seedoutFH));
+    
+    Bio::Rfam::Utils::genbank_lookup_taxids(\@seed_name_A, \%seed_taxid_H);
   }
 
   # parse TBLOUT
@@ -1608,6 +1620,11 @@ sub writeTbloutDependentFiles
     my $seqLabel = 'FULL';
     if($seedmsa->get_sqidx($name) != -1) { 
       $seqLabel = 'SEED-MSA';
+      my (undef, $seed_name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($name);
+      if(defined $seed_name) { 
+        $seed_name = Bio::Rfam::Utils::strip_version($seed_name);
+        $ncbiId = (defined $seed_taxid_H{$seed_name}) ? $seed_taxid_H{$seed_name} : "-";
+      }
     }
     else { 
       my $nse = $name . "/" . $start . "-" . $end;
@@ -2026,7 +2043,7 @@ sub writeOutlistOrSpeciesChunk {
     }
     else { 
       if($is_outlist) { 
-        printf $fh ("%*s  %*s  %*s  %-*s  %*s  %*s  %*s  %*s  %*s  %*s  %*s  %-*s  %-s\n", 
+        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %*s  %*s  %*s  %*s  %*s  %-*s  %-s\n", 
                     $widthA[0], $aR->[0], 
                     $widthA[1], $aR->[1], 
                     $widthA[2], $aR->[2], 
@@ -2042,7 +2059,7 @@ sub writeOutlistOrSpeciesChunk {
                     $aR->[12]); # final column doesn't need to be fixed-width, just flush left
       }
       else { # species line
-        printf $fh ("%*s  %*s  %*s  %-*s  %*s  %*s  %-*s  %-s\n",
+        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %-*s  %-s\n",
                     $widthA[0], $aR->[0], 
                     $widthA[1], $aR->[1], 
                     $widthA[2], $aR->[2], 

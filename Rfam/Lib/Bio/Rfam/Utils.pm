@@ -2107,6 +2107,7 @@ sub numLinesInFile {
 # rfamseq_nse_lookup_and_md5: fetch a sequence in Rfamseq and calculate its md5
 # ena_nse_lookup_and_md5:     fetch a sequence from ENA and calculate its md5
 # genbank_nse_lookup_and_md5: fetch a sequence from NCBI's GenBank and calculate its md5
+# genbank_lookup_taxids:      fetch taxids for a list of sequences from NCBI's GenBank
 # rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
 #-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
@@ -2299,7 +2300,7 @@ sub genbank_nse_lookup_and_md5 {
 
   my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
   my $got_url = get($url);
-  my $looks_like_rnacentral =  id_looks_like_rnacentral($name);
+  my $looks_like_rnacentral = id_looks_like_rnacentral($name);
 
   if(! defined $got_url) { 
     if(! $looks_like_rnacentral) { 
@@ -2362,6 +2363,71 @@ sub genbank_nse_lookup_and_md5 {
 }
 
 #-------------------------------------------------------------------------------
+=head2 genbank_lookup_taxids
+  Title    : genbank_lookup_taxids
+  Incept   : EPN, Tue Apr 30 20:35:00 2019
+  Function : Looks up sequences in GenBank and parses their taxids.
+  Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
+           : $taxid_HR:  ref to hash of taxids, key is seq name, filled here
+           : $nattempts: number of attempts to make to fetch the sequence
+           :             (if this is being run in parallel it can cause failure
+           :              due (presumably) to overloading NCBI in some way.)
+           :             can be undef, in which case set to '1' 
+           : $nseconds:  number of seconds to wait between attempts
+           :             can be undef, in which case set to '3'
+  Returns  : void, fills %{$taxid_HR}
+  Dies     : if @{$name_AR} is empty upon entering
+           : if something goes wrong parsing curl results
+=cut
+
+sub genbank_lookup_taxids {
+  my ( $name_AR, $taxid_HR, $nattempts, $nseconds ) = @_;
+  
+  if(! defined $nattempts) { $nattempts = 1; }
+  if(! defined $nseconds)  { $nseconds  = 3; }
+
+  if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
+    die "ERROR in genbank_lookup_taxids undefined or empty input name array"; 
+  }
+  %{$taxid_HR} = ();
+  $taxid_HR->{$name_AR->[0]} = "";
+  my $name_str = $name_AR->[0];
+  for(my $i = 1; $i < scalar(@{$name_AR}); $i++) { 
+    $name_str .= "," . $name_AR->[$i];
+    $taxid_HR->{$name_AR->[$i]} = "";
+  }
+
+  my $curl_cmd = sprintf("curl -s \"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=xml\"", $name_str);
+  my $curl_output = `$curl_cmd | grep -e TSeq_accver -e TSeq_taxid`;
+
+  # example 
+  # <TSeq_accver>AAFR03033448.1</TSeq_accver>
+  # <TSeq_taxid>13616</TSeq_taxid>
+  # <TSeq_accver>AANN01289908.1</TSeq_accver>
+  # <TSeq_taxid>9365</TSeq_taxid>
+  my @curl_A = split(/\n/, $curl_output);
+  my $acc    = undef;
+  my $taxid  = undef;
+  foreach my $curl_line (@curl_A) { 
+    if($curl_line =~ /\<TSeq\_accver\>(.+)\<\/TSeq\_accver\>/) { 
+      $acc = Bio::Rfam::Utils::strip_version($1);
+    }
+    if($curl_line =~ /\<TSeq\_taxid\>(.+)\<\/TSeq\_taxid\>/) { 
+      $taxid = $1;
+      if(! defined $acc) { 
+        die "ERROR in genbank_lookup_taxids problem parsing curl output, read taxid $taxid but have not yet read an accession version"; 
+      }
+      if(! exists $taxid_HR->{$acc}) { 
+        die "ERROR in genbank_lookup_taxids problem parsing curl output, read taxid $taxid for accession $acc which is not in input array of accessions"; 
+      }
+      $taxid_HR->{$acc} = $taxid;
+    }
+  }
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
 =head2 rnacentral_md5_lookup
   Title    : rnacentral_md5_lookup
   Incept   : EPN, Tue Nov 27 11:33:59 2018
@@ -2418,6 +2484,54 @@ sub id_looks_like_rnacentral {
     return 1; 
   }
   return 0;
+}
+
+#-------------------------------------------------------------------------------
+=head2 rnacentral_urs_taxid_breakdown
+
+  Title    : rnacentral_urs_taxid_breakdown
+  Incept   : EPN, Tue May  7 14:08:46 2019
+  Usage    : rnacentral_urs_taxid_breakdown($rnacentral_id)
+  Function : Checks if $rnacentral_id is of format "URS_taxid",
+           : where URS matches /^URS[0-9A-F]{10}/ and taxid is
+           : an integer, and breaks it down into $urs, $taxid 
+           : (see 'Returns' section)
+  Args     : <sqname>: seqname, possibly of format "URS_taxid"
+  Returns  : 3 values:
+           :   '1' if <sqname> is of "URS_taxid" format, else '0'
+           :   $urs:   the URS part of <sqname>, undef if <sqname> does not match URS_taxid
+	   :   $taxid: the taxid part of <sqname>, undef if <sqname> does not match URS_taxid
+=cut
+
+sub rnacentral_urs_taxid_breakdown {
+  my ($sqname) = $_[0];
+  
+  my $urs;    # URS id
+  my $taxid;  # taxid
+  
+  if($sqname =~ /^(URS[0-9A-F]{10})\_(\d+)$/) { 
+    ($urs, $taxid) = ($1,$2);
+    return(1, $urs, $taxid);
+  }
+  return (0, undef, undef);
+}
+
+#-------------------------------------------------------------------------------
+=head2 strip_version
+  Title    : strip_version
+  Incept   : EPN, Tue Apr 30 21:09:22 2019
+  Function : Removes a version from an accession.version string
+  Args     : $accver: accession.version
+  Returns  : $accver with version removed, if $accver not in the 
+           : correct format, just returns what is passed in
+=cut
+
+sub strip_version { 
+  my ( $accver ) = @_;
+
+  $accver =~ s/\.\d+$//;
+
+  return $accver;
 }
 
 #-------------------------------------------------------------------------------
