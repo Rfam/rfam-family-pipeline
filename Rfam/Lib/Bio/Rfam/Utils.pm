@@ -2108,7 +2108,8 @@ sub numLinesInFile {
 # rfamseq_nse_lookup_and_md5: fetch a sequence in Rfamseq and calculate its md5
 # ena_nse_lookup_and_md5:     fetch a sequence from ENA and calculate its md5
 # genbank_nse_lookup_and_md5: fetch a sequence from NCBI's GenBank and calculate its md5
-# genbank_lookup_taxids:      fetch taxids for a list of sequences from NCBI's GenBank
+# genbank_fetch_taxids:       fetch taxids for a list of sequences from NCBI's GenBank
+# ncbi_taxonomy_fetch_taxinfo:       fetch taxids for a list of sequences from NCBI's GenBank
 # rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
 #-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
@@ -2364,8 +2365,8 @@ sub genbank_nse_lookup_and_md5 {
 }
 
 #-------------------------------------------------------------------------------
-=head2 genbank_lookup_taxids
-  Title    : genbank_lookup_taxids
+=head2 genbank_fetch_taxids
+  Title    : genbank_fetch_taxids
   Incept   : EPN, Tue Apr 30 20:35:00 2019
   Function : Looks up sequences in GenBank and parses their taxids.
   Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
@@ -2378,17 +2379,17 @@ sub genbank_nse_lookup_and_md5 {
            :             can be undef, in which case set to '3'
   Returns  : void, fills %{$taxid_HR}
   Dies     : if @{$name_AR} is empty upon entering
-           : if something goes wrong parsing curl results
+           : if something goes wrong parsing xml
 =cut
 
-sub genbank_lookup_taxids {
+sub genbank_fetch_taxids {
   my ( $name_AR, $taxid_HR, $nattempts, $nseconds ) = @_;
   
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
   if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
-    die "ERROR in genbank_lookup_taxids undefined or empty input name array"; 
+    die "ERROR in genbank_fetch_taxid undefined or empty input name array"; 
   }
   %{$taxid_HR} = ();
   $taxid_HR->{$name_AR->[0]} = "";
@@ -2398,7 +2399,7 @@ sub genbank_lookup_taxids {
     $taxid_HR->{$name_AR->[$i]} = "";
   }
 
-  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&rettype-fasta&retmode=xml&id=" . $name_str;
+  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
   my $xml_string = get($genbank_url);
 
   if(! defined $xml_string) { 
@@ -2442,6 +2443,112 @@ sub genbank_lookup_taxids {
     else { 
       die "ERROR unable to fetch exactly 1 taxid for $acc from GenBank XML";
     }
+  }
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
+=head2 ncbi_taxonomy_fetch_taxinfo
+  Title    : ncbi_taxonomy_fetch_taxinfo
+  Incept   : EPN, Tue May  7 19:04:55 2019
+  Function : Looks up taxids in NCBI's taxonomy DB and parses the resulting info.
+  Args     : $taxid_AR:      ref to array of taxids to fetch info for, pre-filled
+           : $tax_table_HHR: ref to 2D hash to fill with fetched info
+           : $nattempts:     number of attempts to make to fetch the sequence
+           :                 (if this is being run in parallel it can cause failure
+           :                 due (presumably) to overloading NCBI in some way.)
+           :                 can be undef, in which case set to '1' 
+           : $nseconds:      number of seconds to wait between attempts
+           :                 can be undef, in which case set to '3'
+  Returns  : void
+  Dies     : if @{$taxid_AR} is empty upon entering
+           : if something goes wrong parsing the xml
+=cut
+
+sub ncbi_taxonomy_fetch_taxinfo {
+  my ( $taxid_AR, $tax_table_HHR, $nattempts, $nseconds ) = @_;
+  
+  if(! defined $nattempts) { $nattempts = 1; }
+  if(! defined $nseconds)  { $nseconds  = 3; }
+
+  if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
+    die "ERROR in genbank_lookup_taxids undefined or empty input name array"; 
+  }
+  my $taxid_str = $taxid_AR->[0];
+  for(my $i = 1; $i < scalar(@{$taxid_AR}); $i++) { 
+    $taxid_str .= "," . $taxid_AR->[$i];
+  }
+
+  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
+  my $xml_string = get($genbank_url);
+
+  if(! defined $xml_string) { 
+    # if NCBI is being hit by a bunch of requests, the get() command
+    # may fail in that $got_url may be undefined. If that happens we
+    # wait a few seconds ($nseconds) and try again (up to
+    # $nattempts) times BUT we only do this for sequences that
+    # don't look like they are RNAcentral ids. For sequences that
+    # look like they are RNAcentral ids we do not do more attempts.
+    my $attempt_ctr = 1;
+    while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+      sleep($nseconds);
+      $xml_string = get($genbank_url);
+      $attempt_ctr++;
+    }
+    if($attempt_ctr > $nattempts) { 
+      die "ERROR trying to fetch taxids from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+    }
+  }
+  my $xml = XML::LibXML->load_xml(string => $xml_string);
+
+  foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
+    my $taxid               = $taxon->findvalue('./TaxId');
+    my $lineage             = $taxon->findvalue('./Lineage');
+    my $scientific_name     = $taxon->findvalue('./ScientificName');
+    if(! defined $taxid) { 
+      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse taxid from xml";
+    }
+    if(! defined $lineage) { 
+      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse lineage from xml for taxid $taxid";
+    }
+    if(! defined $scientific_name) { 
+      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse scientific_name from xml for taxid $taxid";
+    }
+    if(defined $tax_table_HHR->{$taxid}) { 
+      die "ERROR in ncbi_taxonomy_fetch_taxinfo() read taxid $taxid twice from xml";
+    }
+
+    my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
+    my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
+
+    my $tree_display_name = $species;
+    $tree_display_name =~ s/ /\_/g;
+
+    my $align_display_name = $tree_display_name . "[" . $taxid . "]";
+
+    # we only want the lineage starting at "superkingdom", so we have to parse further
+    my @lineage_A = split("; ", $lineage);
+    my $i = 0;
+    my $superkingdom_i = -1;
+    foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
+      my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
+      my $sub_rank = $sub_taxon->findvalue('./Rank');
+      if($sub_rank eq "superkingdom") { 
+        $superkingdom_i = $i;
+      }
+      $i++;
+    }
+    if($superkingdom_i == -1) { 
+      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to find superkingdom rank for taxid $taxid";
+    }
+    my $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
+
+    %{$tax_table_HHR->{$taxid}} = ();
+    $tax_table_HHR->{$taxid}{"species"}            = $species;
+    $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
+    $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
+    $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
   }
 
   return;

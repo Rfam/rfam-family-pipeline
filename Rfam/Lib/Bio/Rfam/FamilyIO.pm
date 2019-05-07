@@ -1588,8 +1588,20 @@ sub writeTbloutDependentFiles {
     }
     close($seedoutFH) if(defined($seedoutFH));
     
-    Bio::Rfam::Utils::genbank_lookup_taxids(\@seed_name_A, \%seed_taxid_H);
+    Bio::Rfam::Utils::genbank_fetch_taxids(\@seed_name_A, \%seed_taxid_H);
+
+    my @taxid_A = ();
+    my %taxid_H = ();
+    foreach my $tmp_key (keys %seed_taxid_H) { 
+      if(! exists $taxid_H{$seed_taxid_H{$tmp_key}}) { 
+        push(@taxid_A, $seed_taxid_H{$tmp_key});
+        $taxid_H{$seed_taxid_H{$tmp_key}} = 1;
+      }
+    }
+    my %tax_table_HH = ();
+    Bio::Rfam::Utils::ncbi_taxonomy_fetch_taxinfo(\@taxid_A, \%tax_table_HH);
   }
+
 
   # parse TBLOUT
   my @outAA = (); # we'll fill these with data for outlist
