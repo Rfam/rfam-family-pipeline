@@ -13,6 +13,7 @@ use Carp;
 use Digest::MD5 qw(md5_hex);
 use LWP::Simple;                
 use JSON qw( decode_json );     
+use XML::LibXML;
 
 use Cwd;
 use Data::Dumper;
@@ -2397,30 +2398,49 @@ sub genbank_lookup_taxids {
     $taxid_HR->{$name_AR->[$i]} = "";
   }
 
-  my $curl_cmd = sprintf("curl -s \"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=xml\"", $name_str);
-  my $curl_output = `$curl_cmd | grep -e TSeq_accver -e TSeq_taxid`;
+  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&rettype-fasta&retmode=xml&id=" . $name_str;
+  my $xml_string = get($genbank_url);
 
-  # example 
-  # <TSeq_accver>AAFR03033448.1</TSeq_accver>
-  # <TSeq_taxid>13616</TSeq_taxid>
-  # <TSeq_accver>AANN01289908.1</TSeq_accver>
-  # <TSeq_taxid>9365</TSeq_taxid>
-  my @curl_A = split(/\n/, $curl_output);
-  my $acc    = undef;
-  my $taxid  = undef;
-  foreach my $curl_line (@curl_A) { 
-    if($curl_line =~ /\<TSeq\_accver\>(.+)\<\/TSeq\_accver\>/) { 
-      $acc = Bio::Rfam::Utils::strip_version($1);
+  if(! defined $xml_string) { 
+    # if NCBI is being hit by a bunch of requests, the get() command
+    # may fail in that $got_url may be undefined. If that happens we
+    # wait a few seconds ($nseconds) and try again (up to
+    # $nattempts) times BUT we only do this for sequences that
+    # don't look like they are RNAcentral ids. For sequences that
+    # look like they are RNAcentral ids we do not do more attempts.
+    my $attempt_ctr = 1;
+    while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+      sleep($nseconds);
+      $xml_string = get($genbank_url);
+      $attempt_ctr++;
     }
-    if($curl_line =~ /\<TSeq\_taxid\>(.+)\<\/TSeq\_taxid\>/) { 
+    if($attempt_ctr > $nattempts) { 
+      die "ERROR trying to fetch taxids from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+    }
+  }
+
+  my $xml = XML::LibXML->load_xml(string => $xml_string);
+
+  foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
+    my $acc = $gbseq->findvalue('./GBSeq_primary-accession');
+    if(! defined $acc) { 
+      die "ERROR in genbank_lookup_taxids problem parsing XML, no primary-accession read"; 
+    }
+    if(! exists $taxid_HR->{$acc}) { 
+      die "ERROR in genbank_lookup_taxids problem parsing XML, unexpected accession $acc"; 
+    }
+
+    my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
+    if(! defined $taxid) { 
+      die "ERROR in genbank_lookup_taxids did not read taxon info for $acc";
+    }
+    # ensure we get exactly 1 match (not 0, not more than 1)
+    if($taxid =~ /^taxon\:(\d+)$/) { 
       $taxid = $1;
-      if(! defined $acc) { 
-        die "ERROR in genbank_lookup_taxids problem parsing curl output, read taxid $taxid but have not yet read an accession version"; 
-      }
-      if(! exists $taxid_HR->{$acc}) { 
-        die "ERROR in genbank_lookup_taxids problem parsing curl output, read taxid $taxid for accession $acc which is not in input array of accessions"; 
-      }
       $taxid_HR->{$acc} = $taxid;
+    }
+    else { 
+      die "ERROR unable to fetch exactly 1 taxid for $acc from GenBank XML";
     }
   }
 
