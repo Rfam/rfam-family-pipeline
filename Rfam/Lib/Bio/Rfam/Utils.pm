@@ -2373,21 +2373,21 @@ sub genbank_nse_lookup_and_md5 {
   Incept   : EPN, Tue Apr 30 20:35:00 2019
   Function : Looks up sequences in GenBank and parses their taxids.
   Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
-           : $taxid_HR:  ref to hash of taxids, key is seq name, filled here
-           : $desc_HR:   ref to hash of descs, key is seq name, filled here
+           : $info_HHR:  ref to 2D hash to fill, 1D key is name from name_AR, 
+           :             2D keys are "ncbi_id", and "description"
            : $nattempts: number of attempts to make to fetch the sequence
            :             (if this is being run in parallel it can cause failure
            :              due (presumably) to overloading NCBI in some way.)
            :             can be undef, in which case set to '1' 
            : $nseconds:  number of seconds to wait between attempts
            :             can be undef, in which case set to '3'
-  Returns  : void, fills %{$taxid_HR}
+  Returns  : void, fills %{$info_HHR}
   Dies     : if @{$name_AR} is empty upon entering
            : if something goes wrong parsing xml
 =cut
 
 sub genbank_fetch_taxids_and_descs {
-  my ( $name_AR, $taxid_HR, $desc_HR, $nattempts, $nseconds ) = @_;
+  my ( $name_AR, $info_HHR, $nattempts, $nseconds ) = @_;
 
   my $sub_name = "genbank_fetch_taxids_and_descs";
   
@@ -2397,22 +2397,17 @@ sub genbank_fetch_taxids_and_descs {
   if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
     die "ERROR in $sub_name undefined or empty input name array"; 
   }
-  if(! defined $taxid_HR) { 
-    die "ERROR in $sub_name undefined taxid_HR"; 
-  }
-  if(! defined $desc_HR) { 
-    die "ERROR in $sub_name undefined desc_HR"; 
+  if(! defined $info_HHR) { 
+    die "ERROR in $sub_name undefined info_HHR";
   }
 
-  %{$taxid_HR} = ();
-  %{$desc_HR} = ();
-  $taxid_HR->{$name_AR->[0]} = "";
-  $desc_HR->{$name_AR->[0]}  = "";
-  my $name_str = $name_AR->[0];
-  for(my $i = 1; $i < scalar(@{$name_AR}); $i++) { 
-    $name_str .= "," . $name_AR->[$i];
-    $taxid_HR->{$name_AR->[$i]} = "";
-    $desc_HR->{$name_AR->[$i]} = "";
+  my $name_str = "";
+  foreach my $name (@{$name_AR}) { 
+    %{$info_HHR->{$name}} = ();
+    if($name_str ne "") { $name_str .= ","; }
+    $name_str .= $name;
+    $info_HHR->{$name}{"ncbi_id"}     = "-";
+    $info_HHR->{$name}{"description"} = "-";
   }
 
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
@@ -2443,15 +2438,15 @@ sub genbank_fetch_taxids_and_descs {
     if(! defined $acc) { 
       die "ERROR in $sub_name problem parsing XML, no primary-accession read"; 
     }
-    if(! exists $taxid_HR->{$acc}) { 
+    if(! exists $info_HHR->{$acc}) { 
       die "ERROR in $sub_name problem parsing XML, unexpected accession $acc"; 
     }
 
-    my $desc = $gbseq->findvalue('./GBSeq_definition');
-    if(! defined $desc) { 
+    my $description = $gbseq->findvalue('./GBSeq_definition');
+    if(! defined $description) { 
       die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
     }
-    $desc_HR->{$acc} = $desc;
+    $info_HHR->{$acc}{"description"} = $description;
 
     my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
     if(! defined $taxid) { 
@@ -2460,7 +2455,7 @@ sub genbank_fetch_taxids_and_descs {
     # ensure we get exactly 1 match (not 0, not more than 1)
     if($taxid =~ /^taxon\:(\d+)$/) { 
       $taxid = $1;
-      $taxid_HR->{$acc} = $taxid;
+      $info_HHR->{$acc}{"ncbi_id"} = $taxid;
     }
     else { 
       die "ERROR unable to fetch exactly 1 taxid for $acc from GenBank XML";
