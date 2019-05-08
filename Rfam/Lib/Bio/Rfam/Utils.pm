@@ -2108,9 +2108,12 @@ sub numLinesInFile {
 # rfamseq_nse_lookup_and_md5: fetch a sequence in Rfamseq and calculate its md5
 # ena_nse_lookup_and_md5:     fetch a sequence from ENA and calculate its md5
 # genbank_nse_lookup_and_md5: fetch a sequence from NCBI's GenBank and calculate its md5
-# genbank_fetch_taxids:       fetch taxids for a list of sequences from NCBI's GenBank
-# ncbi_taxonomy_fetch_taxinfo:       fetch taxids for a list of sequences from NCBI's GenBank
 # rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
+#-------------------------------------------------------------------------------
+# Subroutines brought in to deal with SEED seqs not being in the Rfam DB
+#-------------------------------------------------------------------------------
+# genbank_fetch_taxids_and_descs: fetch taxids and descs for a list of sequences from NCBI's GenBank
+# ncbi_taxonomy_fetch_taxinfo:    fetch tax info to populate taxonomy table for a list of taxids
 #-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
   Title    : md5_of_sequence_string
@@ -2365,12 +2368,13 @@ sub genbank_nse_lookup_and_md5 {
 }
 
 #-------------------------------------------------------------------------------
-=head2 genbank_fetch_taxids
-  Title    : genbank_fetch_taxids
+=head2 genbank_fetch_taxids_and_descs
+  Title    : genbank_fetch_taxids_and_descs
   Incept   : EPN, Tue Apr 30 20:35:00 2019
   Function : Looks up sequences in GenBank and parses their taxids.
   Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
            : $taxid_HR:  ref to hash of taxids, key is seq name, filled here
+           : $desc_HR:   ref to hash of descs, key is seq name, filled here
            : $nattempts: number of attempts to make to fetch the sequence
            :             (if this is being run in parallel it can cause failure
            :              due (presumably) to overloading NCBI in some way.)
@@ -2382,21 +2386,33 @@ sub genbank_nse_lookup_and_md5 {
            : if something goes wrong parsing xml
 =cut
 
-sub genbank_fetch_taxids {
-  my ( $name_AR, $taxid_HR, $nattempts, $nseconds ) = @_;
+sub genbank_fetch_taxids_and_descs {
+  my ( $name_AR, $taxid_HR, $desc_HR, $nattempts, $nseconds ) = @_;
+
+  my $sub_name = "genbank_fetch_taxids_and_descs";
   
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
   if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
-    die "ERROR in genbank_fetch_taxid undefined or empty input name array"; 
+    die "ERROR in $sub_name undefined or empty input name array"; 
   }
+  if(! defined $taxid_HR) { 
+    die "ERROR in $sub_name undefined taxid_HR"; 
+  }
+  if(! defined $desc_HR) { 
+    die "ERROR in $sub_name undefined desc_HR"; 
+  }
+
   %{$taxid_HR} = ();
+  %{$desc_HR} = ();
   $taxid_HR->{$name_AR->[0]} = "";
+  $desc_HR->{$name_AR->[0]}  = "";
   my $name_str = $name_AR->[0];
   for(my $i = 1; $i < scalar(@{$name_AR}); $i++) { 
     $name_str .= "," . $name_AR->[$i];
     $taxid_HR->{$name_AR->[$i]} = "";
+    $desc_HR->{$name_AR->[$i]} = "";
   }
 
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
@@ -2425,15 +2441,21 @@ sub genbank_fetch_taxids {
   foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
     my $acc = $gbseq->findvalue('./GBSeq_primary-accession');
     if(! defined $acc) { 
-      die "ERROR in genbank_lookup_taxids problem parsing XML, no primary-accession read"; 
+      die "ERROR in $sub_name problem parsing XML, no primary-accession read"; 
     }
     if(! exists $taxid_HR->{$acc}) { 
-      die "ERROR in genbank_lookup_taxids problem parsing XML, unexpected accession $acc"; 
+      die "ERROR in $sub_name problem parsing XML, unexpected accession $acc"; 
     }
+
+    my $desc = $gbseq->findvalue('./GBSeq_definition');
+    if(! defined $desc) { 
+      die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
+    }
+    $desc_HR->{$acc} = $desc;
 
     my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
     if(! defined $taxid) { 
-      die "ERROR in genbank_lookup_taxids did not read taxon info for $acc";
+      die "ERROR in $sub_name did not read taxon info for $acc";
     }
     # ensure we get exactly 1 match (not 0, not more than 1)
     if($taxid =~ /^taxon\:(\d+)$/) { 
@@ -2473,7 +2495,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
   if(! defined $nseconds)  { $nseconds  = 3; }
 
   if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
-    die "ERROR in genbank_lookup_taxids undefined or empty input name array"; 
+    die "ERROR in ncbi_taxonomy_fetch_taxinfo undefined or empty input name array"; 
   }
   my $taxid_str = $taxid_AR->[0];
   for(my $i = 1; $i < scalar(@{$taxid_AR}); $i++) { 

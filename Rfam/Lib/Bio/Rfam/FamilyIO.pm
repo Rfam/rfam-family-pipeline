@@ -1425,10 +1425,10 @@ sub writeTbloutDependentFiles {
   my %seedseq_overlap_below_gaH    = (); # key: SEED sequence, value name of best hit <  GA that overlaps with it
   my %seedseq_overlap_below_ga_scH = (); # key: SEED sequence, score of best hit   <  GA that overlaps with it
 
-  # Prepare the queries for execution.
+  # Prepare the queries for execution
   my $sthDesc    = $rfdbh->prepare_seqaccToDescription();
-  my $sthTax     = $rfdbh->prepare_seqaccToSpeciesTaxStringAndID();
-  my $sthTaxSeed = $rfdbh->prepare_taxIDToSpeciesAndTaxString();
+  my $sthTax     = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
+  my $sthTaxSeed = $rfdbh->prepare_taxIdToSpeciesAndTaxString();
 
   # open OUTPUT files
   my $outFH; 
@@ -1501,6 +1501,7 @@ sub writeTbloutDependentFiles {
   $printed_thresh = 0;
   my @seed_name_A  = (); # array of sequences with hits in SEEDTBLOUT
   my %seed_taxid_H = (); # taxid for each seq in @seed_name_AR
+  my %seed_desc_H = ();  # desc for each seq in @seed_name_AR
   if(-s $stblI) { 
     my @seed_outAA = (); # we'll fill this with data for seedoutlist
     open(STBL, "grep -v ^'#' $stblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
@@ -1588,26 +1589,16 @@ sub writeTbloutDependentFiles {
     }
     close($seedoutFH) if(defined($seedoutFH));
     
-    Bio::Rfam::Utils::genbank_fetch_taxids(\@seed_name_A, \%seed_taxid_H);
-
-    my @taxid_A = ();
-    my %taxid_H = ();
-    foreach my $tmp_key (keys %seed_taxid_H) { 
-      if(! exists $taxid_H{$seed_taxid_H{$tmp_key}}) { 
-        push(@taxid_A, $seed_taxid_H{$tmp_key});
-        $taxid_H{$seed_taxid_H{$tmp_key}} = 1;
-      }
-    }
-    my %tax_table_HH = ();
-    Bio::Rfam::Utils::ncbi_taxonomy_fetch_taxinfo(\@taxid_A, \%tax_table_HH);
+    Bio::Rfam::Utils::genbank_fetch_taxids_and_descs(\@seed_name_A, \%seed_taxid_H, \%seed_desc_H);
   }
-
 
   # parse TBLOUT
   my @outAA = (); # we'll fill these with data for outlist
   my @spcAA = (); # we'll fill these with data for species
   my $have_all_tax_info   = 1;  # set to FALSE if we fail to find a tax string
   my $zero_hits_above_thr = 1;  # set to FALSE if we have >= 1 hit above thr
+  my %new_tax_table_HH = (); # 2D hash with info on SEED taxids not yet in RfamLive taxonomy table
+                             # 1D key is taxid, 2D key is field in taxonomy table (e.g. "tax_string")
   $nlines_cur = 0;
   $prv_bits   = 99999.00;    # previous bit score seen
   $prv_evalue = 0.;          # previous E-value seen
@@ -1630,12 +1621,35 @@ sub writeTbloutDependentFiles {
     my $seqLabel = 'FULL';
     if($seedmsa->get_sqidx($name) != -1) { 
       $seqLabel = 'SEED-MSA';
+      # a SEED seq get the tax info for this sequence, either from the
+      # taxonomy table (if it has a taxId that is already in the
+      # taxonomy table) or by looking up its taxid at NCBI
       my (undef, $seed_name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($name);
       if(defined $seed_name) { 
         $seed_name = Bio::Rfam::Utils::strip_version($seed_name);
-        $ncbiId = (defined $seed_taxid_H{$seed_name}) ? $seed_taxid_H{$seed_name} : "-";
-        if((defined $sthTaxSeed) && ($ncbiId ne "-")) { 
-          ($species, $shortSpecies, $taxString) = fetchSpeciesAndTaxString($sthTaxSeed, $ncbiId);
+        ($ncbiId, $species, $shortSpecies, $taxString) = ("-", "-", "-", "-");
+        if(defined $seed_desc_H{$seed_name}) { 
+          $description = $seed_desc_H{$seed_name};
+        }
+        if(defined $seed_taxid_H{$seed_name}) { 
+          $ncbiId = $seed_taxid_H{$seed_name};
+          if(defined $sthTaxSeed) { 
+            ($species, $shortSpecies, $taxString) = fetchSpeciesAndTaxString($sthTaxSeed, $ncbiId);
+          }
+          if($species eq "-") { 
+            # fetchSpeciesAndTaxString did not find $ncbiId in the
+            # taxonomy table look it up at NCBI
+            if(! defined $new_tax_table_HH{$ncbiId}) { 
+              my @new_taxid_A = ($ncbiId);
+              printf("HEYA! fetching taxinfo for $ncbiId\n");
+              Bio::Rfam::Utils::ncbi_taxonomy_fetch_taxinfo(\@new_taxid_A, \%new_tax_table_HH);
+            }
+            if(defined $new_tax_table_HH{$ncbiId}) { 
+              $species      = $new_tax_table_HH{$ncbiId}{"species"};
+              $shortSpecies = $new_tax_table_HH{$ncbiId}{"align_display_name"};
+              $taxString    = $new_tax_table_HH{$ncbiId}{"tax_string"};
+            }
+          }
         }
       }
     }
@@ -1850,7 +1864,7 @@ sub writeScores {
              : in the database. 
     Args     : $tblline:     a tabular output line from a cmsearch --tblout file.
              : $sthDesc:     prepared database query for fetching description ($rfdbh->prepared_seqaccToDescription())
-             : $sthTax:      prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndID())
+             : $sthTax:      prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndId())
              : $is_reversed: '1' for a line from a reversed search
              : $require_tax: '1' to require each hit desc and tax info is found in database (die if it is not)
              :               '0' to fill all desc and tax info with '-' if not found in database
@@ -1898,7 +1912,7 @@ sub processTbloutLine {
     $description = fetchDescription($sthDesc, $name2lookup);
   }
   if(defined $sthTax) { 
-    ($species, $shortSpecies, $taxString, $ncbiId) = fetchSpeciesTaxStringAndID($sthTax, $name2lookup);
+    ($species, $shortSpecies, $taxString, $ncbiId) = fetchSpeciesTaxStringAndId($sthTax, $name2lookup);
   }
 
   if($require_tax) { 
@@ -1951,16 +1965,16 @@ sub fetchDescription {
   return $description;
 }
 
-=head2 fetchSpeciesTaxStringAndID
+=head2 fetchSpeciesTaxStringAndId
 
-    Title    : fetchSpeciesTaxStringAndID()
+    Title    : fetchSpeciesTaxStringAndId()
     Incept   : EPN, Tue Dec 10 06:39:12 2013
-    Usage    : fetchSpeciesTaxStringAndID($sthTax, $seqAcc)
-    Function : Fetch a species string, tax string, and NCBI ID from RfamLive 
+    Usage    : fetchSpeciesTaxStringAndId($sthTax, $seqAcc)
+    Function : Fetch a species string, tax string, and NCBI Id from RfamLive 
              : for a sequence accession given a DBI statement handle 
              : ($sthTax) for executing queries with a single bind 
              : value: rfamseq_acc.
-    Args     : $sthTax:  prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndID())
+    Args     : $sthTax:  prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndId())
              : $seqacc: sequence accession (name) to get description for
     Returns  : list of:
              : $species:      species string
@@ -1971,11 +1985,11 @@ sub fetchDescription {
 
 =cut
 
-sub fetchSpeciesTaxStringAndID { 
+sub fetchSpeciesTaxStringAndId { 
   my ($sthTax, $seqacc) = @_;
 
-  if(! defined $sthTax) { die "ERROR, fetchSpeciesTaxStringAndID, sthTax is undefined"; }
-  if(! defined $seqacc) { die "ERROR, fetchSpeciesTaxStringAndID, seqacc is undefined"; }
+  if(! defined $sthTax) { die "ERROR, fetchSpeciesTaxStringAndId, sthTax is undefined"; }
+  if(! defined $seqacc) { die "ERROR, fetchSpeciesTaxStringAndId, seqacc is undefined"; }
 
   my ($species, $shortSpecies, $taxString, $ncbiId);
 
@@ -2002,7 +2016,7 @@ sub fetchSpeciesTaxStringAndID {
     Function : Fetch a species string and tax string, from RfamLive 
              : given a DBI statement handle ($sthTaxSeed) for 
              : executing queries with a single bind value: ncbiId.
-    Args     : $sthTaxSeed:  prepared database query for fetching tax info ($rfdbh->prepare_taxIDToSpeciesAndTaxString())
+    Args     : $sthTaxSeed:  prepared database query for fetching tax info ($rfdbh->prepare_taxIdToSpeciesAndTaxString())
              : $ncbiId:      NCBI taxid
     Returns  : list of:
              : $species:      species string

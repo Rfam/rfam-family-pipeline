@@ -100,11 +100,11 @@ sub prepare_seqaccToDescription {
   return( $sth );
 }
 
-=head2 prepare_seqaccToSpeciesTaxStringAndID
+=head2 prepare_seqaccToSpeciesTaxStringAndId
 
-  Title    : prepare_seqaccToSpeciesTaxStringAndID
+  Title    : prepare_seqaccToSpeciesTaxStringAndId
   Incept   : EPN, Mon Feb 25 10:27:25 2013
-  Usage    : $rfamdb->prepare_seqaccToSpeciesTaxStringAndID( )
+  Usage    : $rfamdb->prepare_seqaccToSpeciesTaxStringAndId( )
   Function : Returns a DBI statement handle for executing queries. This statement
            : has one bind value: rfamseq_acc.
   Args     : none
@@ -112,7 +112,7 @@ sub prepare_seqaccToDescription {
   
 =cut
 
-sub prepare_seqaccToSpeciesTaxStringAndID {
+sub prepare_seqaccToSpeciesTaxStringAndId {
   my ($self) = @_;
   
   my $dbh = $self->storage->dbh;
@@ -126,11 +126,11 @@ sub prepare_seqaccToSpeciesTaxStringAndID {
 }
 
 
-=head2 prepare_taxIDToSpeciesAndTaxString
+=head2 prepare_taxIdToSpeciesAndTaxString
 
-  Title    : prepare_taxIDToSpeciesAndTaxString
+  Title    : prepare_taxIdToSpeciesAndTaxString
   Incept   : EPN, Tue May  7 15:49:18 2019
-  Usage    : $rfamdb->prepare_taxIDToSpeciesAndTaxString( )
+  Usage    : $rfamdb->prepare_taxIdToSpeciesAndTaxString( )
   Function : Returns a DBI statement handle for executing queries. This statement
            : has one bind value: ncbi_id.
   Args     : none
@@ -138,7 +138,7 @@ sub prepare_seqaccToSpeciesTaxStringAndID {
   
 =cut
 
-sub prepare_taxIDToSpeciesAndTaxString {
+sub prepare_taxIdToSpeciesAndTaxString {
   my ($self) = @_;
   
   my $dbh = $self->storage->dbh;
