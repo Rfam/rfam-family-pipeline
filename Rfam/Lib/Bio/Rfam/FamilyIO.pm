@@ -1589,46 +1589,9 @@ sub writeTbloutDependentFiles {
       writeOutlistOrSpeciesChunk($seedoutFH, \@seed_outAA, 1);
     }
     close($seedoutFH) if(defined($seedoutFH));
-    
-    # fill "ncbi_id" and "description" 2D keys:
-    Bio::Rfam::Utils::genbank_fetch_taxids_and_descs(\@seed_name_A, \%seed_info_HH);
-
-    # for each seed taxid, gather the remaining tax info either from RfamLive or from NCBI
-    my @taxid_seed_A  = (); # array of taxids for the seed sequences
-    my %taxid_seed_H  = (); # just so we don't add the same taxid to @taxid_seed_A more than once
-    my %taxid_info_HH = (); # 2D hash, 1D key is taxid, 2D key is "species", "align_display_name", "tax_string"
-    my $taxid_seed; # a single taxid
-    foreach my $seed_name (@seed_name_A) { 
-      $taxid_seed = $seed_info_HH{$seed_name}{"ncbi_id"};
-      if(! defined $taxid_seed_H{$taxid_seed}) { 
-        push(@taxid_seed_A, $taxid_seed);
-        $taxid_seed_H{$taxid_seed} = 1;
-      }
-    }
-    # first look up in RfamLive taxonomy table:
-    my @lookup_taxid_A = (); # list of taxids in @taxid_seed_A not found in RfamLive taxonomy table
-    foreach $taxid_seed (@taxid_seed_A) { 
-      ($taxid_info_HH{$taxid_seed}{"species"}, 
-       $taxid_info_HH{$taxid_seed}{"align_display_name"}, 
-       $taxid_info_HH{$taxid_seed}{"tax_string"}) = fetchSpeciesAndTaxString($sthTaxSeed, $taxid_seed);
-      if($taxid_info_HH{$taxid_seed}{"species"} eq "-") { 
-        # $taxid_seed is not in RfamLive taxonomy table, add to list to lookup at NCBI
-        push(@lookup_taxid_A, $taxid_seed);
-      }
-    }
-
-    if(scalar(@lookup_taxid_A) > 0) { 
-      Bio::Rfam::Utils::ncbi_taxonomy_fetch_taxinfo(\@lookup_taxid_A, \%taxid_info_HH);
-    }
-
-    # transfer per-taxid data from %taxid_info_HH to per-seed-seq %seed_info_HH
-    foreach my $seed_name (@seed_name_A) { 
-      $taxid_seed = $seed_info_HH{$seed_name}{"ncbi_id"};
-      $seed_info_HH{$seed_name}{"species"}            = $taxid_info_HH{$taxid_seed}{"species"};
-      $seed_info_HH{$seed_name}{"align_display_name"} = $taxid_info_HH{$taxid_seed}{"align_display_name"};
-      $seed_info_HH{$seed_name}{"tax_string"}         = $taxid_info_HH{$taxid_seed}{"tax_string"};
-    }
   }
+
+  fetch_seed_sequence_info(\@seed_name_A, $sthTaxSeed, \%seed_info_HH);
 
   # parse TBLOUT
   my @outAA = (); # we'll fill these with data for outlist
@@ -3838,6 +3801,70 @@ sub validate_species_format {
 
   close(IN);
   return;
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 fetch_seed_sequence_info
+
+  Title    : fetch_seed_sequence_info
+  Incept   : EPN, Wed May  8 15:08:06 2019
+  Usage    : Bio::Rfam::FamilyIO::fetch_seed_sequence_info($seed_name_AR, $seed_info_HHR)
+  Function : Fetch information on seed sequences in @{$seed_name_AR} from either 
+           : the RfamLive DB or NCBI's Genbank/Taxonomy and fill in data in 
+           : %{$seed_info_HHR}.
+  Args     : $seed_name_AR:    ref to array with seed sequence names
+           : $sthTaxSeed:     prepared database query for fetching species and tax string ($rfdbh->prepare_taxIdToSpeciesAndTaxString())
+           : $seed_info_HHR:   ref to 2D hash with seed info, FILLED HERE
+           :                   1D key is seed name, 2D keys are:
+           :                   "ncbi_id", "description", "species", "align_display_name" and "tax_string"
+  Returns  : void
+  Dies     : if there's some problem parsing fetched data
+
+=cut
+
+sub fetch_seed_sequence_info { 
+  my ($seed_name_AR, $sthTaxSeed, $seed_info_HHR) = @_;
+
+  # fill "ncbi_id" and "description" 2D keys:
+  Bio::Rfam::Utils::genbank_fetch_taxids_and_descs($seed_name_AR, $seed_info_HHR);
+  
+  # for each seed taxid, gather the remaining tax info either from RfamLive or from NCBI
+  my @taxid_seed_A  = (); # array of taxids for the seed sequences
+  my %taxid_seed_H  = (); # just so we don't add the same taxid to @taxid_seed_A more than once
+  my %taxid_info_HH = (); # 2D hash, 1D key is taxid, 2D key is "species", "align_display_name", "tax_string"
+  my $taxid_seed; # a single taxid
+  foreach my $seed_name (@{$seed_name_AR}) { 
+    $taxid_seed = $seed_info_HHR->{$seed_name}{"ncbi_id"};
+    if(! defined $taxid_seed_H{$taxid_seed}) { 
+      push(@taxid_seed_A, $taxid_seed);
+      $taxid_seed_H{$taxid_seed} = 1;
+    }
+  }
+  # first look up in RfamLive taxonomy table:
+  my @lookup_taxid_A = (); # list of taxids in @taxid_seed_A not found in RfamLive taxonomy table
+  foreach $taxid_seed (@taxid_seed_A) { 
+    ($taxid_info_HH{$taxid_seed}{"species"}, 
+     $taxid_info_HH{$taxid_seed}{"align_display_name"}, 
+     $taxid_info_HH{$taxid_seed}{"tax_string"}) = fetchSpeciesAndTaxString($sthTaxSeed, $taxid_seed);
+    if($taxid_info_HH{$taxid_seed}{"species"} eq "-") { 
+      # $taxid_seed is not in RfamLive taxonomy table, add to list to lookup at NCBI
+      push(@lookup_taxid_A, $taxid_seed);
+    }
+  }
+  
+  if(scalar(@lookup_taxid_A) > 0) { 
+    Bio::Rfam::Utils::ncbi_taxonomy_fetch_taxinfo(\@lookup_taxid_A, \%taxid_info_HH);
+  }
+  
+  # transfer per-taxid data from %taxid_info_HH to per-seed-seq %seed_info_HH
+  foreach my $seed_name (@{$seed_name_AR}) { 
+    $taxid_seed = $seed_info_HHR->{$seed_name}{"ncbi_id"};
+    $seed_info_HHR->{$seed_name}{"species"}            = $taxid_info_HH{$taxid_seed}{"species"};
+    $seed_info_HHR->{$seed_name}{"align_display_name"} = $taxid_info_HH{$taxid_seed}{"align_display_name"};
+    $seed_info_HHR->{$seed_name}{"tax_string"}         = $taxid_info_HH{$taxid_seed}{"tax_string"};
+  }
+  return
 }
 
 1;
