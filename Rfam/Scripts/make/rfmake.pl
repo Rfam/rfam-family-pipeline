@@ -254,7 +254,7 @@ if((! $do_forcecomp) && ($do_curcomp || $do_oldcomp)) {
 
 # create hash of potential output files
 my %outfileH = ();
-my @outfile_orderA = ("SCORES", "outlist", "revoutlist", "seedoutlist", "species", "revspecies", "outlist.pdf", "species.pdf", "taxinfo", "align", "alignout", 
+my @outfile_orderA = ("SCORES", "outlist", "revoutlist", "seedoutlist", "species", "revspecies", "seedspecies", "outlist.pdf", "species.pdf", "taxinfo", "align", "alignout", 
                       "repalign", "repalignout", "comparison", "lostoutlist", "newoutlist", "lostspecies", "newspecies"); 
 $outfileH{"SCORES"}      = "tabular list of all hits above GA threshold";
 $outfileH{"outlist"}     = "sorted list of all hits from TBLOUT";
@@ -262,6 +262,7 @@ $outfileH{"revoutlist"}  = "sorted list of all hits from REVTBLOUT";
 $outfileH{"seedoutlist"} = "sorted list of all hits from SEEDTBLOUT";
 $outfileH{"species"}     = "same as outlist, but with additional taxonomic information";
 $outfileH{"revspecies"}  = "same as revoutlist, but with additional taxonomic information";
+$outfileH{"seedspecies"} = "same as seedoutlist, but with additional taxonomic information";
 $outfileH{"outlist.pdf"} = "bit score histograms of all hits";
 $outfileH{"species.pdf"} = "bit score histogram hits, colored by taxonomy";
 $outfileH{"taxinfo"}     = "summary of taxonomic groups in seed/full/other sets";

@@ -2434,31 +2434,31 @@ sub genbank_fetch_taxids_and_descs {
   my $xml = XML::LibXML->load_xml(string => $xml_string);
 
   foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
-    my $acc = $gbseq->findvalue('./GBSeq_primary-accession');
-    if(! defined $acc) { 
-      die "ERROR in $sub_name problem parsing XML, no primary-accession read"; 
+    my $accver = $gbseq->findvalue('./GBSeq_accession-version');
+    if(! defined $accver) { 
+      die "ERROR in $sub_name problem parsing XML, no accession-version read"; 
     }
-    if(! exists $info_HHR->{$acc}) { 
-      die "ERROR in $sub_name problem parsing XML, unexpected accession $acc"; 
+    if(! exists $info_HHR->{$accver}) { 
+      die "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver"; 
     }
 
     my $description = $gbseq->findvalue('./GBSeq_definition');
     if(! defined $description) { 
       die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
     }
-    $info_HHR->{$acc}{"description"} = $description;
+    $info_HHR->{$accver}{"description"} = $description;
 
     my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
     if(! defined $taxid) { 
-      die "ERROR in $sub_name did not read taxon info for $acc";
+      die "ERROR in $sub_name did not read taxon info for $accver";
     }
     # ensure we get exactly 1 match (not 0, not more than 1)
     if($taxid =~ /^taxon\:(\d+)$/) { 
       $taxid = $1;
-      $info_HHR->{$acc}{"ncbi_id"} = $taxid;
+      $info_HHR->{$accver}{"ncbi_id"} = $taxid;
     }
     else { 
-      die "ERROR unable to fetch exactly 1 taxid for $acc from GenBank XML";
+      die "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
     }
   }
 
@@ -2532,9 +2532,6 @@ sub ncbi_taxonomy_fetch_taxinfo {
     if(! defined $scientific_name) { 
       die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse scientific_name from xml for taxid $taxid";
     }
-    if(defined $tax_table_HHR->{$taxid}) { 
-      die "ERROR in ncbi_taxonomy_fetch_taxinfo() read taxid $taxid twice from xml";
-    }
 
     my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
     my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
@@ -2582,6 +2579,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
            : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
            :            if defined, this should be equal to $md5 input
            : $id:       if $have_seq is '1': RNAcentral ID for sequence, else undefined
+           : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
   Dies     : if there is a problem fetching from RNAcentral
 =cut
 
@@ -2597,18 +2595,59 @@ sub rnacentral_md5_lookup {
   #print Dumper $decoded_json;
 
   my $have_seq = 0;
-  my $md5 = undef;
-  my $id  = undef;
+  my $md5  = undef;
+  my $id   = undef;
+  my $desc = undef;
 
   if((defined $decoded_json->{'results'}) && 
      (defined $decoded_json->{'results'}[0]{'md5'}) && 
      (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
     $have_seq = 1;
-    $md5 = $decoded_json->{'results'}[0]{'md5'};
-    $id  = $decoded_json->{'results'}[0]{'rnacentral_id'};
+    $md5  = $decoded_json->{'results'}[0]{'md5'};
+    $id   = $decoded_json->{'results'}[0]{'rnacentral_id'};
+    $desc = $decoded_json->{'results'}[0]{'description'};
   }
 
-  return ($have_seq, $md5, $id);
+  return ($have_seq, $md5, $id, $desc);
+}
+
+#-------------------------------------------------------------------------------
+=head2 rnacentral_id_lookup
+  Title    : rnacentral_id_lookup
+  Incept   : EPN, Wed May  8 19:36:30 2019
+  Function : Looks up a sequence in RNAcentral based on its RNAcentral id
+  Args     : $in_id: URS id of the sequence we are looking up
+  Returns  : 3 values:
+           : $have_seq: '1' if sequence exists in RNAcentral, else '0'
+           : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
+           :            if defined, this should be equal to $md5 input
+           : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
+  Dies     : if there is a problem fetching from RNAcentral
+=cut
+
+sub rnacentral_id_lookup { 
+  my ( $in_id ) = @_;
+  
+  my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
+  #printf("rnacentral_url: $rnacentral_url\n");
+  my $json = get($rnacentral_url);
+  if(! defined $json) { die "ERROR trying to fetch from rnacentral using md5"; }
+  # Decode the entire JSON
+  my $decoded_json = decode_json($json);
+  #print Dumper $decoded_json;
+
+  my $have_seq = 0;
+  my $md5  = undef;
+  my $desc = undef;
+
+  if((defined $decoded_json->{'results'}) && 
+     (defined $decoded_json->{'results'}[0]{'md5'}) && 
+     (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
+    $have_seq = 1;
+    $md5  = $decoded_json->{'results'}[0]{'md5'};
+    $desc = $decoded_json->{'results'}[0]{'description'};
+  }
+  return ($have_seq, $md5, $desc);
 }
 
 #-------------------------------------------------------------------------------

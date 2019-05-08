@@ -1107,15 +1107,15 @@ sub checkSEEDSeqs {
 
   my $error = 0;
 
-  my $nrfm_pass = 0;
-  my $ngbk_pass = 0;
-  my $nrnc_pass = 0;
-  my $nfail = 0;
   my $nseq  = $familyObj->SEED->nseq;
   my @fail_A = ();
   # look-up each SEED sequence
   for ( my $i = 0 ; $i < $nseq; $i++ ) {
     my $name_or_nse  = $familyObj->SEED->get_sqname($i);
+    my ($is_nse, $name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($name_or_nse);
+    my $pass_rfm = 0;
+    my $pass_gbk = 0;
+
     my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
     my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
     
@@ -1126,51 +1126,76 @@ sub checkSEEDSeqs {
     my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse, 200, 3);
     
     # lookup in RNAcentral
-    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
+    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
     
     # check if it fails for any of following reasons:
-    # 1) not in any of Rfamseq, GenBank, or RNAcentral
-    # 2) source seq exists in Rfamseq, but not subseq (start-end)
-    # 3) source seq exists in GenBank, but not subseq (start-end)
-    # 4) subseq appears to exist in Rfamseq, but md5 does not match
-    # 5) subseq appears to exist in GenBank, but md5 does not match
-    # 6) subseq appears to exist in RNAcentral, but md5 does not match
+    # 1) name is not in name/start-end format
+    # 2) not in any of Rfamseq, GenBank, or RNAcentral
+    # 3) source seq exists in Rfamseq, but not subseq (start-end)
+    # 4) source seq exists in GenBank, but not subseq (start-end)
+    # 5) subseq appears to exist in Rfamseq, but md5 does not match
+    # 6) subseq appears to exist in GenBank, but md5 does not match
+    # 7) subseq appears to exist in RNAcentral, but md5 does not match
     #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
+    # 8) subseq appears to exist in RNAcentral, but it is not in URS_taxid format
+    if(! $is_nse) { 
+      # 1) name is not in valid name/start-end format
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; it is not in valid name/start-end format\n"
+    }
     if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
-      # 1) not in any of Rfamseq, GenBank, or RNAcentral
+      # 2) not in any of Rfamseq, GenBank, or RNAcentral
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; it exists in none of: Rfamseq, GenBank, RNAcentral\n"
     }
     if(($rfamseq_has_source_seq) && (! $rfamseq_has_exact_seq)) { 
-      # 2) source seq exists in Rfamseq, but not subseq (start-end)
+      # 3) source seq exists in Rfamseq, but not subseq (start-end)
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; its source sequence exists in Rfamseq, but specific range subsequence does not\n";
     }
     if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) { 
-      # 3) source seq exists in GenBank, but not subseq (start-end)
+      # 4) source seq exists in GenBank, but not subseq (start-end)
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; its source sequence exists in GenBank, but specific range subsequence does not\n";
     }
     if($rfamseq_has_exact_seq) { 
       if($rfamseq_md5 ne $seed_md5) {
-        # 4) subseq appears to exist in Rfamseq, but md5 does not match
+        # 5) subseq appears to exist in Rfamseq, but md5 does not match
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in Rfamseq, but md5 does not match\n";
+      }
+      else { 
+        $pass_rfm = 1;
       }
     }        
     if($genbank_has_exact_seq) { 
       if($genbank_md5 ne $seed_md5) {
-        # 5) subseq appears to exist in GenBank, but md5 does not match
+        # 6) subseq appears to exist in GenBank, but md5 does not match
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in GenBank, but md5 does not match\n";
+      }
+      else { 
+        $pass_gbk = 1;
       }
     }
     if($rnacentral_has_exact_seq) { 
       if($rnacentral_md5 ne $seed_md5) {
-        # 6) subseq appears to exist in RNAcentral, but md5 does not match
+        # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n";
+      }
+      else { 
+        # 8) subseq only exists in RNAcentral, but is not in URS_taxid format
+        # if the sequence *only* exists in RNAcentral verify that it 
+        # has the proper name format URS_taxid
+        if((! $pass_rfm) && (! $pass_gbk)) { 
+          my ($is_rnacentral_taxid, undef, undef) = Bio::Utils::rnacentral_urs_taxid_breakdown(($is_nse) ? $name : $name_or_nse);
+          if($is_rnacentral_taxid != 1) { 
+            $error = 1;
+            warn "SEED sequence $name_or_nse fails validation; it is only in RNAcentral, but its name is not in the expected URS_taxid format\n";
+          }
+        }
       }
     }
   }
