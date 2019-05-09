@@ -89,10 +89,57 @@ sub loadRfamFromLocalFile {
                            reqdFormat   => 'Stockholm',
                            # NOTE: we don't pass 'forceText => 1', if we did we'd read the alignment in text mode...
                           },
-                'DESC'   => $self->parseDESC("$dir/$family/DESC"),
-                'CM'     => $self->parseCM("$dir/$family/CM"),
-                'SCORES' => $self->parseScores("$dir/$family/SCORES"),
-                'TBLOUT' => { fileLocation => "$dir/$family/TBLOUT" }
+                'DESC'       => $self->parseDESC("$dir/$family/DESC"),
+                'CM'         => $self->parseCM("$dir/$family/CM"),
+                'SCORES'     => $self->parseScores("$dir/$family/SCORES"),
+                'SEEDSCORES' => $self->parseScores("$dir/$family/SEEDSCORES"),
+                'TBLOUT'     => { fileLocation => "$dir/$family/TBLOUT" },
+                'SEEDTBLOUT' => { fileLocation => "$dir/$family/SEEDTBLOUT" }
+               };
+
+  #Use Moose to coerce these through!
+  my $famObj = Bio::Rfam::Family->new($params);
+
+  return ($famObj);
+}
+
+sub loadRfamFromLocalFile_preSEED {
+  my ( $self, $family, $dir, $source ) = @_;
+
+  unless ( -d "$dir/$family" ) {
+    confess("Could not find family directory $dir/$family");
+  }
+
+  my %params;
+  foreach my $f ( @{ $self->{config}->mandatoryFiles } ) {
+    unless ( -e "$dir/$family/$f" ) {
+      confess("Could not find $dir/$family/$f\n");
+    }
+    my $fh;
+
+    #print "Opening $dir/$family/$f\n";
+    open( $fh, "$dir/$family/$f" )
+      or confess("Could not open $dir/$family/$f:[$!]");
+    $params{$f} = $fh;
+  }
+
+  if ($source) {
+    $params{'source'} = $source;
+  } else {
+    $params{'source'} = 'file';
+  }
+
+  my $params = {
+                'SEED' => {
+                           fileLocation => "$dir/$family/SEED",
+                           aliType      => 'seed',
+                           reqdFormat   => 'Stockholm',
+                           # NOTE: we don't pass 'forceText => 1', if we did we'd read the alignment in text mode...
+                          },
+                'DESC'       => $self->parseDESC("$dir/$family/DESC"),
+                'CM'         => $self->parseCM("$dir/$family/CM"),
+                'SCORES'     => $self->parseScores("$dir/$family/SCORES"),
+                'TBLOUT'     => { fileLocation => "$dir/$family/TBLOUT" },
                };
 
   #Use Moose to coerce these through!
@@ -169,7 +216,10 @@ sub loadRfamFromSVN {
     $client->catFile( $family, $f, $fh );
     close($fh);
   }
-  my $famObj = $self->loadRfamFromLocalFile( $family, $dir, 'svn' );
+# TEMP!
+#  my $famObj = $self->loadRfamFromLocalFile( $family, $dir, 'svn' );
+  my $famObj = $self->loadRfamFromLocalFile_preSEED( $family, $dir, 'svn' );
+
   return $famObj;
 }
 
@@ -1292,12 +1342,48 @@ sub moveFamilyInRDB {
 # make scores 2D array from outlist, then write it by calling writeScores()
 sub makeAndWriteScores {
   my ($self, $famObj, $outlistLocation) = @_;
+  my @scoresAA = ();
+  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, \@scoresAA);
+
+  my $scoresObj = Bio::Rfam::Family::Scores->new(
+                                                 {
+                                                  numRegions => $n,
+                                                  regions    => \@scoresAA,
+                                                  nres       => $nres,
+                                                 }
+                                                );
+
+  $famObj->SCORES($scoresObj);
+  $self->writeScores($famObj->SCORES, "SCORES");
+
+  return;
+}
+sub makeAndWriteSeedScores {
+  my ($self, $famObj, $outlistLocation) = @_;
+  my @scoresAA = ();
+  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, \@scoresAA);
+
+  my $scoresObj = Bio::Rfam::Family::Scores->new(
+                                                 {
+                                                  numRegions => $n,
+                                                  regions    => \@scoresAA,
+                                                  nres       => $nres,
+                                                 }
+                                                );
+
+  $famObj->SEEDSCORES($scoresObj);
+  $self->writeScores($famObj->SEEDSCORES, "SEEDSCORES");
+
+  return;
+}
+
+sub makeAndWriteScores_helper {
+  my ($self, $famObj, $outlistLocation, $scoresAAR) = @_;
 
   my $n    = 0;                 # number of hits
   my $nres = 0;                 # total number of residues in all hits
   my $name;                     # sequence name (name/start-end)
   my $tcode;                    # truncation code ("no", "5'", "3'", "5'&3'")
-  my @scoresAA = ();            # 2D array of scores
   my $threshold = $famObj->DESC->CUTGA; # threshold
   my $stype;            # lowercase version of type ('seed' or 'full')
 
@@ -1340,6 +1426,8 @@ sub makeAndWriteScores {
 
       if ($type eq "SEED-DB") {
         $stype = "seed";
+      } elsif ($type eq "SEED") {
+        $stype = "seed";
       } elsif ($type eq "FULL") {
         $stype = "full";
       } elsif ($type ne "SEED-MSA") { 
@@ -1347,7 +1435,7 @@ sub makeAndWriteScores {
       }
 
       if($type ne "SEED-MSA") { # skip hits in outlist that are to SEED alignment seqs
-        push(@{$scoresAA[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
+        push(@{$scoresAAR->[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
         if ($start <= $end) {
           $nres += ($end - $start + 1);
         } else {
@@ -1359,18 +1447,7 @@ sub makeAndWriteScores {
   }
   close(OL);
 
-  my $scoresObj = Bio::Rfam::Family::Scores->new(
-                                                 {
-                                                  numRegions => $n,
-                                                  regions    => \@scoresAA,
-                                                  nres       => $nres,
-                                                 }
-                                                );
-    
-  $famObj->SCORES($scoresObj);
-  $self->writeScores($famObj);
-
-  return;
+  return ($n, $nres);
 }
     
 =head2 writeTbloutDependentFiles
@@ -1805,16 +1882,15 @@ sub writeTbloutDependentFiles {
   return;
 }
 
-# write scores to SCORES file
+# write scores to SCORES or SEEDSCORES file
 sub writeScores {
   ## example array of values in $scoresObj->regions:
   ##
   #  AGFT01076311.1/81-1           81      1     AGFT01076311.1  46.13   3.02e-03 1        100    0       seed
   ## <sqacc.version>/<start>-<end> <start> <end> <sqacc.version> <bitsc> <evalue> <qstart> <qend> <trunc> <type> 
   ## 0                             1       2     3               4       5        6        7      8       9              
-  my ($self, $famObj) = @_;
+  my ($self, $scoresObj, $out_file) = @_;
 
-  my $scoresObj = $famObj->SCORES;
   my $scoresAAR = $scoresObj->regions;
   my $nels   = 10; # hard-coded KNOWN number of elements in each array
   my ($i, $j);                  # counters
@@ -1822,7 +1898,7 @@ sub writeScores {
   my $wid;                      # width of a field
   my @widthA = ();              # max width of each field
 
-  open(SC, ">SCORES") || croak "ERROR unable to open SCORES for writing"; 
+  open(SC, ">", $out_file) || croak "ERROR unable to open $out_file for writing in writeScores"; 
 
   for ($j = 0; $j < $nels; $j++) {
     $widthA[$j] = 0;

@@ -162,10 +162,14 @@ if ($onlydesc) {
   $error = Bio::Rfam::QC::essential($upFamilyObj, "$pwd/$family", $oldFamilyObj, $config);
   die "Failed essential QC step.\n" if($error);
   
+  printf("calling optional checks\n");
   $error = Bio::Rfam::QC::optional( $upFamilyObj, "$pwd/$family", $oldFamilyObj, 
                                     $config, $overrideHashRef, $overlapIgnore );
   die "Failed QC.\n" if($error);
 }
+
+printf("FAMILY PASSES!\n");
+exit 0;
 
 #-------------------------------------------------------------------------------
 #If we get here, then great! We can now check the family in!

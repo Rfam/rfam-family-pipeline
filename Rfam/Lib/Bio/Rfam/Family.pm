@@ -102,6 +102,13 @@ has 'TBLOUT' => (
   coerce   => 1
 );
 
+has 'SEEDTBLOUT' => (
+  is       => 'ro',
+  isa      => 'Bio::Rfam::Family::TBLOUT',
+  required => 0,
+  coerce   => 1
+);
+
 has 'DESC' => (
   is        => 'ro',
   isa       => 'Bio::Rfam::Family::DESC',

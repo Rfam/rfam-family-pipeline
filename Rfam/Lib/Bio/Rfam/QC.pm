@@ -694,12 +694,13 @@ sub checkNonFreeText {
 }
 #------------------------------------------------------------------------------
 
-=head2 compareSeedAndScores
+=head2 compareSeedAndSeedScores
 
-  Title    : compareSeedAndScores
+  Title    : compareSeedAndSeedScores
   Incept   : finnr, Jul 24, 2013 1:03:53 PM
-  Usage    : Bio::Rfam::QC::compareSeedAndScores($familyObj);
-  Function : Takes a family object and compares the SEED to the scores file to
+             EPN, Thu May  9 17:05:49 2019
+  Usage    : Bio::Rfam::QC::compareSeedAndSeedScores($familyObj);
+  Function : Takes a family object and compares the SEED to the SEEDSCORES file to
            : ensure that all sequences are found. It does not look at co-ordinates
            : just sequence accessions.
   Args     : A Bio::Rfam::Family object
@@ -707,24 +708,27 @@ sub checkNonFreeText {
   
 =cut
 
-sub compareSeedAndScores {
+sub compareSeedAndSeedScores {
   my ($familyObj) = @_;
 
   if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
 
+  if (!$familyObj->SEEDSCORES) { 
+    die "ERROR in compareSeedAndSeedScores() no SEEDSCORES object exists";
+  }
+
   #Hash of SEED sequence accessions
   my %seed;
   for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
     my $s = $familyObj->SEED->get_sqname($i);
-    my ($seq) = $s =~ /^(\S+)\/\d+\-\d+$/;
-    $seed{$seq} = 1;
+    $seed{$s} = 1;
   }
 
   #Now loop over the scores files and delete keys when we find accessions
   #present, with the hope we have an empty seed hash
-  foreach my $r ( @{ $familyObj->SCORES->regions } ) {
+  foreach my $r ( @{ $familyObj->SEEDSCORES->regions } ) {
     if ( exists( $seed{ $r->[3] } ) ) {
       delete( $seed{ $r->[3] } );
     }
@@ -1631,25 +1635,23 @@ sub essential {
   
   $error = Bio::Rfam::QC::checkTimestamps($dir, $config);
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
   
   $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
   
-  $error = checkSEEDSeqs($newFamily, $seqDBObj);
+  #$error = checkSEEDSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
   }
-  
-  # TEMPORARY: suspending check that all SCORES seqs (full hits) are in Rfamseq
-  # TODO: uncomment this to reinstate check 
-  # $error = checkScoresSeqs($newFamily, $seqDBObj);
+
+  $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
@@ -1710,13 +1712,13 @@ sub optional {
  
   
   if(!exists($override->{seed})){
-    $error = compareSeedAndScores($newFamily);
+    $error = compareSeedAndSeedScores($newFamily);
     if($error){
-      warn "Failed check to ensue all SEED sequences found.\n";
+      warn "Failed check to ensure all SEED sequences found.\n";
       $masterError =1;
     }
   }else{
-    warn "Ignoring check to ensue all SEED sequences found.\n";
+    warn "Ignoring check to ensure all SEED sequences found.\n";
   }
   
   if(!exists($override->{coding})){
@@ -1813,7 +1815,7 @@ sub essentialClan {
   $error = Bio::Rfam::QC::checkClanFormat($newClan);
   
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential clan format checks.\n";
     $masterError = 1;
   }
   
