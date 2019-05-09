@@ -1645,9 +1645,9 @@ sub essential {
     $masterError = 1;
   }
   
-  #$error = checkSEEDSeqs($newFamily, $seqDBObj);
+  $error = checkSEEDSeqs($newFamily, $seqDBObj);
   if($error){
-    warn "Family failed essential threshold check.\n";
+    warn "Family failed essential check that seed sequences are all valid (from at least one of rfamseq, GenBank or RNAcentral).\n";
     $masterError = 1;
   }
 
@@ -1710,7 +1710,6 @@ sub optional {
     warn "Ignoring spell check.\n";
   }
  
-  
   if(!exists($override->{seed})){
     $error = compareSeedAndSeedScores($newFamily);
     if($error){
