@@ -1504,17 +1504,18 @@ sub writeTbloutDependentFiles {
   my %seedseq_overlap_below_ga_scH = (); # key: SEED sequence, score of best hit   <  GA that overlaps with it
 
   # Prepare the queries for execution
-  my $sthDesc      = $rfdbh->prepare_seqaccToDescription();
-  my $sthTax       = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
-  my $sthTaxIdDesc = $rfdbh->prepare_seqaccToTaxIdAndDescription();
-  my $sthTaxSeed   = $rfdbh->prepare_taxIdToSpeciesAndTaxString();
+  my $sthDesc        = $rfdbh->prepare_seqaccToDescription();
+  my $sthTax         = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
+  my $sthRfamseqSeed = $rfdbh->prepare_seqaccToTaxIdDescLengthAndMolType();
+  my $sthTaxSeed     = $rfdbh->prepare_taxIdToSpeciesAndTaxString();
 
   # Fetch the seed sequence information we'll need to output to *species and *outlist
   my @seed_nse_A   = (); # array of SEED sequence names in name/start-end format
   my %seed_info_HH = (); # 1D key is SEED sequence name in name/start-end format
                          # 2D keys are "ncbi_id", "description", "species", "align_display_name", "tax_string"
 
-  fetch_seed_sequence_info($seedmsa, $sthTaxIdDesc, $sthTaxSeed, \%seed_info_HH);
+#  fetch_seed_sequence_info($seedmsa, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
+  fetch_seed_sequence_info($seedmsa, undef, $sthTaxSeed, \%seed_info_HH);
 
   # open OUTPUT files
   my $outFH; 
@@ -2040,11 +2041,11 @@ sub fetchDescription {
   return $description;
 }
 
-=head2 fetchTaxIdAndDescription
+=head2 fetchTaxIdDescLengthAndMolType
 
-    Title    : fetchTaxIdAndDescription()
+    Title    : fetchTaxIdDescLengthAndMolType()
     Incept   : EPN, Tue Dec 10 06:34:22 2013
-    Usage    : fetchTaxIdAndDescription($sthDesc, $seqAcc)
+    Usage    : fetchTaxIdDescLengthAndMolType($sthDesc, $seqAcc)
     Function : Fetch a description from RfamLive for a sequence accession
              : given a DBI statement handle ($sthDesc) for executing
              : queries with a single bind value: rfamseq_acc.
@@ -2055,17 +2056,17 @@ sub fetchDescription {
 
 =cut
 
-sub fetchTaxIdAndDescription { 
-  my ($sthTaxIdDesc, $seqacc) = @_;
+sub fetchTaxIdDescLengthAndMolType { 
+  my ($sthRfamseqSeed, $seqacc) = @_;
 
-  if(! defined $sthTaxIdDesc) { die "ERROR, fetchTaxIdAndDescription, sthTaxIdDesc is undefined"; }
-  if(! defined $seqacc)         { die "ERROR, fetchTaxIdAndDescription, seqacc is undefined"; }
+  if(! defined $sthRfamseqSeed) { die "ERROR, fetchTaxIdDescLengthAndMolType, sthRfamseqSeed is undefined"; }
+  if(! defined $seqacc)         { die "ERROR, fetchTaxIdDescLengthAndMolType, seqacc is undefined"; }
 
   my $taxid;
   my $description;
 
-  $sthTaxIdDesc->execute($seqacc);
-  my $res = $sthTaxIdDesc->fetchall_arrayref;
+  $sthRfamseqSeed->execute($seqacc);
+  my $res = $sthRfamseqSeed->fetchall_arrayref;
   foreach my $row (@$res) {
     $taxid       .= $row->[0];
     $description .= $row->[1];
@@ -3928,8 +3929,8 @@ sub validate_species_format {
            : the RfamLive DB or NCBI's Genbank/Taxonomy and fill in data in 
            : %{$seed_info_HHR}.
   Args     : $seedmsa:         Bio::Rfam::Family::MSA object, the seed alignment
-           : $sthTaxIdDesc:  prepared database query for fetching taxid and seq description from RfamLive Rfamseq table
-           :                   ($rfdbh->prepare_seqaccToTaxIdAndDescription())
+           : $sthRfamseqSeed:  prepared database query for fetching taxid and seq description from RfamLive Rfamseq table
+           :                   ($rfdbh->prepare_seqaccToTaxIdAndDescAndLengthription())
            :                   undef to NOT try to fetch from RfamLive rfamseq table
            : $sthTaxSeed:      prepared database query for fetching species and tax string from RfamLive taxonomy table
            :                   ($rfdbh->prepare_taxIdToSpeciesAndTaxString())
@@ -3943,7 +3944,7 @@ sub validate_species_format {
 =cut
 
 sub fetch_seed_sequence_info { 
-  my ($seedmsa, $sthTaxIdDesc, $sthTaxSeed, $seed_nse_info_HHR) = @_;
+  my ($seedmsa, $sthRfamseqSeed, $sthTaxSeed, $seed_nse_info_HHR) = @_;
   my $sub_name = "Bio::Rfam::FamilyIO::fetch_seed_sequence_info()";
 
   my @seed_name_A = (); # array of unique sequence names (after removing '/start-end' from seed names)
@@ -3959,7 +3960,7 @@ sub fetch_seed_sequence_info {
     # only add to @seed_name_A if first occurrence
     if(! defined $seed_name_H{$seed_name}) { 
       push(@seed_name_A, $seed_name);
-      foreach my $key ("ncbi_id", "description", "species", "align_display_name", "tax_string") { 
+      foreach my $key ("ncbi_id", "description", "species", "align_display_name", "tax_string", "length", "mol_type", "source") { 
         $seed_name_info_HH{$seed_name}{$key} = "-";
       }
       $seed_name_H{$seed_name} = 1;
@@ -3968,16 +3969,19 @@ sub fetch_seed_sequence_info {
 
   ################################################################
   # get taxid and description for each sequence, by
-  # 1) if(defined $sthTaxIdDesc): try to fetch from RfamLive RfamSeq table
+  # 1) if(defined $sthRfamseqSeed): try to fetch from RfamLive RfamSeq table
   # 2) if not fetched in 1, try to fetch from GenBank
   # 3) if not fetched in 1 or 2, try to fetch from RNAcentral
   # we do these in loops, so we can submit multi-name queries to NCBI
 
   my @lookup_genbank_A = (); # list of names in @seed_name_A not found in RfamLive rfamseq table
   foreach $seed_name (@seed_name_A) { 
-    if(defined $sthTaxIdDesc) { 
+    if(defined $sthRfamseqSeed) { 
       ($seed_name_info_HH{$seed_name}{"ncbi_id"}, 
-       $seed_name_info_HH{$seed_name}{"description"}) = fetchTaxIdAndDescription($sthTaxIdDesc, $seed_name);
+       $seed_name_info_HH{$seed_name}{"description"},
+       $seed_name_info_HH{$seed_name}{"length"},
+       $seed_name_info_HH{$seed_name}{"mol_type"})
+       = fetchTaxIdDescLengthAndMolType($sthRfamseqSeed, $seed_name);
     }
     if($seed_name_info_HH{$seed_name}{"ncbi_id"} eq "-") { 
       push(@lookup_genbank_A, $seed_name);
@@ -3985,7 +3989,7 @@ sub fetch_seed_sequence_info {
   }
 
   if(scalar(@lookup_genbank_A) > 0) { 
-    Bio::Rfam::Utils::genbank_fetch_taxids_and_descs(\@lookup_genbank_A, \%seed_name_info_HH);
+    Bio::Rfam::Utils::genbank_fetch_seq_info(\@lookup_genbank_A, \%seed_name_info_HH);
   }
 
   foreach $seed_name (@seed_name_A) { 

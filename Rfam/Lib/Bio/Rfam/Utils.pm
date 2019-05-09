@@ -2374,7 +2374,7 @@ sub genbank_nse_lookup_and_md5 {
   Function : Looks up sequences in GenBank and parses their taxids.
   Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
            : $info_HHR:  ref to 2D hash to fill, 1D key is name from name_AR, 
-           :             2D keys are "ncbi_id", and "description"
+           :             2D keys are "ncbi_id", "description", "length", and "mol_type"
            : $nattempts: number of attempts to make to fetch the sequence
            :             (if this is being run in parallel it can cause failure
            :              due (presumably) to overloading NCBI in some way.)
@@ -2408,6 +2408,8 @@ sub genbank_fetch_taxids_and_descs {
     $name_str .= $name;
     $info_HHR->{$name}{"ncbi_id"}     = "-";
     $info_HHR->{$name}{"description"} = "-";
+    $info_HHR->{$name}{"length"}      = "-";
+    $info_HHR->{$name}{"mol_type"}    = "-";
   }
 
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
@@ -2448,6 +2450,12 @@ sub genbank_fetch_taxids_and_descs {
     }
     $info_HHR->{$accver}{"description"} = $description;
 
+    my $length = $gbseq->findvalue('./GBSeq_length');
+    if(! defined $length) { 
+      die "ERROR in $sub_name problem parsing XML, no length read";
+    }
+    $info_HHR->{$accver}{"length"} = $length;
+
     my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
     if(! defined $taxid) { 
       die "ERROR in $sub_name did not read taxon info for $accver";
@@ -2459,6 +2467,11 @@ sub genbank_fetch_taxids_and_descs {
     }
     else { 
       die "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
+    }
+
+    my $mol_type = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
+    if(! defined $mol_type) { 
+      die "ERROR in $sub_name did not read mol_type info for $accver";
     }
   }
 

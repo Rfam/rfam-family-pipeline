@@ -100,11 +100,11 @@ sub prepare_seqaccToDescription {
   return( $sth );
 }
 
-=head2 prepare_seqaccToTaxIdAndDescription
+=head2 prepare_seqaccToTaxIdDescLengthAndMolType
 
-  Title    : prepare_seqaccToTaxIdAndDescription
+  Title    : prepare_seqaccToTaxIdDescLengthAndMolType
   Incept   : EPN, Wed May  8 19:30:03 2019
-  Usage    : $rfamdb->prepare_seqaccToTaxIdAndDescription( )
+  Usage    : $rfamdb->prepare_seqaccToTaxIdDescLengthAndMolType( )
   Function : Returns a DBI statement handle for executing queries. This statement
            : has one bind value: rfamseq_acc.
   Args     : none
@@ -112,11 +112,11 @@ sub prepare_seqaccToDescription {
   
 =cut
 
-sub prepare_seqaccToTaxIdAndDescription {
+sub prepare_seqaccToTaxIdDescLengthAndMolType {
   my ($self) = @_;
   
   my $dbh = $self->storage->dbh;
-  my $sth = $dbh->prepare("SELECT ncbi_id, description
+  my $sth = $dbh->prepare("SELECT ncbi_id, description, length, mol_type
                            FROM rfamseq me
                            WHERE ( me.rfamseq_acc = ? )");
 
