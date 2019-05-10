@@ -42,7 +42,7 @@ sub updateSeedRegionsFromFamilyObj {
   }
   $self->populate(\@row);
   if($count != $familyObj->SEED->nseq){
-    craok("Did not upload the correct number of sequences.\n");
+    croak("Did not upload the correct number of sequences.\n");
   }
   #TODO - search related to check number of SEED sequence match num_seed.
 }

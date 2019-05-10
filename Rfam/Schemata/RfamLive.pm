@@ -148,11 +148,11 @@ sub prepare_seqaccToSpeciesTaxStringAndId {
   return( $sth );
 }
 
-=head2 prepare_taxIdToSpeciesAndTaxString
+=head2 prepare_taxIdToSpeciesDisplayNamesAndTaxString
 
-  Title    : prepare_taxIdToSpeciesAndTaxString
+  Title    : prepare_taxIdToSpeciesDisplayNamesAndTaxString
   Incept   : EPN, Tue May  7 15:49:18 2019
-  Usage    : $rfamdb->prepare_taxIdToSpeciesAndTaxString( )
+  Usage    : $rfamdb->prepare_taxIdToSpeciesDisplayNamesAndTaxString( )
   Function : Returns a DBI statement handle for executing queries. This statement
            : has one bind value: ncbi_id.
   Args     : none
@@ -160,11 +160,11 @@ sub prepare_seqaccToSpeciesTaxStringAndId {
   
 =cut
 
-sub prepare_taxIdToSpeciesAndTaxString {
+sub prepare_taxIdToSpeciesDisplayNamesAndTaxString {
   my ($self) = @_;
   
   my $dbh = $self->storage->dbh;
-  my $sth = $dbh->prepare("SELECT t.species, t.align_display_name, t.tax_string
+  my $sth = $dbh->prepare("SELECT t.species, t.tree_display_name, t.align_display_name, t.tax_string
                             FROM taxonomy t
                             WHERE ( t.ncbi_id = ? )");
 

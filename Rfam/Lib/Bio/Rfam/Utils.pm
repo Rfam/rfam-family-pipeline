@@ -2719,6 +2719,37 @@ sub rnacentral_urs_taxid_breakdown {
 }
 
 #-------------------------------------------------------------------------------
+=head2 accession_version_breakdown
+
+  Title    : accession_version_breakdown
+  Incept   : EPN, Fri May 10 17:04:20 2019
+  Usage    : accession_version_breakdown($accver)
+  Function : Checks if $accver is of format /^\S+\.\d+$/
+           : without checking that accession is actually a 
+           : valid accession (any string is allowed)
+           : and breaks down into accession and version.
+           : (see 'Returns' section)
+  Args     : <sqname>: seqname, possibly of format /\S+\.\d+/
+  Returns  : 3 values:
+           :   '1' if <sqname> is in /^\S+\.\d+$/ format, else '0'
+           :   $acc: the \S+ part of the matching <sqname>, undef if first return value is '0'
+	   :   $ver: the \d+ part of the matching <sqname>, undef if first return value is '0'
+=cut
+
+sub accession_version_breakdown {
+  my ($sqname) = $_[0];
+  
+  my $acc;
+  my $ver;
+  
+  if($sqname =~ /^(\S+)\.(\d+)$/) { 
+    ($acc, $ver) = ($1,$2);
+    return(1, $acc, $ver);
+  }
+  return (0, undef, undef);
+}
+
+#-------------------------------------------------------------------------------
 =head2 strip_version
   Title    : strip_version
   Incept   : EPN, Tue Apr 30 21:09:22 2019
@@ -2735,6 +2766,8 @@ sub strip_version {
 
   return $accver;
 }
+
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Miniature helper subroutines 

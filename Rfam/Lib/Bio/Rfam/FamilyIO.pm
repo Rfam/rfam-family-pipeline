@@ -1507,15 +1507,14 @@ sub writeTbloutDependentFiles {
   my $sthDesc        = $rfdbh->prepare_seqaccToDescription();
   my $sthTax         = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
   my $sthRfamseqSeed = $rfdbh->prepare_seqaccToTaxIdDescLengthMolTypeAndSource();
-  my $sthTaxSeed     = $rfdbh->prepare_taxIdToSpeciesAndTaxString();
+  my $sthTaxSeed     = $rfdbh->prepare_taxIdToSpeciesDisplayNamesAndTaxString();
 
   # Fetch the seed sequence information we'll need to output to *species and *outlist
   my @seed_nse_A   = (); # array of SEED sequence names in name/start-end format
   my %seed_info_HH = (); # 1D key is SEED sequence name in name/start-end format
                          # 2D keys are "ncbi_id", "description", "species", "align_display_name", "tax_string"
 
-#  fetch_seed_sequence_info($seedmsa, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
-  fetch_seed_sequence_info($seedmsa, undef, $sthTaxSeed, \%seed_info_HH);
+  fetch_seed_sequence_info($seedmsa, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
 
   # open OUTPUT files
   my $outFH; 
@@ -2078,7 +2077,7 @@ sub fetchTaxIdDescLengthMolTypeAndSource {
     $source      .= $row->[4];
   }
 
-  return ($ncbi_id, $description, $length, $mol_type, $source);
+ return ($ncbi_id, $description, $length, $mol_type, $source);
 }
 
 =head2 fetchSpeciesTaxStringAndId
@@ -2124,49 +2123,52 @@ sub fetchSpeciesTaxStringAndId {
   return ($species, $shortSpecies, $taxString, $ncbiId);
 }
 
-=head2 fetchSpeciesAndTaxString
+=head2 fetchSpeciesDisplayNamesAndTaxString
 
-    Title    : fetchSpeciesAndTaxString
+    Title    : fetchSpeciesDisplayNamesAndTaxString
     Incept   : EPN, Tue May  7 15:54:18 2019
-    Usage    : fetchSpeciesAndTaxString($sthTaxSeed, $ncbiId)
+    Usage    : fetchSpeciesDisplayNamesAndTaxString($sthTaxSeed, $ncbiId)
     Function : Fetch a species string and tax string, from RfamLive 
              : given a DBI statement handle ($sthTaxSeed) for 
              : executing queries with a single bind value: ncbiId.
     Args     : $sthTaxSeed:  prepared database query for fetching tax info ($rfdbh->prepare_taxIdToSpeciesAndTaxString())
              : $ncbiId:      NCBI taxid
     Returns  : list of:
-             : $species:      species string
-             : $shortSpecies: short version of $species
-             : $taxString:    taxonomy string
+             : $species:            species string
+             : $tree_display_name:  modified version of $species, for tree display
+             : $align_display_name: modified version of $species, for alignment display
+             : $tax_string:         taxonomy string
     Dies     : if $sthTaxSeed or $ncbiId is not defined
 
 =cut
 
-sub fetchSpeciesAndTaxString { 
+sub fetchSpeciesDisplayNamesAndTaxString { 
   my ($sthTaxSeed, $ncbiId) = @_;
 
-  if(! defined $sthTaxSeed) { die "ERROR, fetchSpeciesAndTaxString, sthTaxSee is undefined"; }
-  if(! defined $ncbiId)     { die "ERROR, fetchSpeciesAndTaxString, ncbiId is undefined"; }
+  if(! defined $sthTaxSeed) { die "ERROR, fetchSpeciesDisplayNamesAndTaxString, sthTaxSee is undefined"; }
+  if(! defined $ncbiId)     { die "ERROR, fetchSpeciesDisplayNamesAndTaxString, ncbiId is undefined"; }
 
-  my ($species, $shortSpecies, $taxString);
+  my ($species, $tree_display_name, $align_display_name, $tax_string);
 
   $sthTaxSeed->execute($ncbiId);
   my $rfres = $sthTaxSeed->fetchall_arrayref;
   if(defined $rfres) { 
     foreach my $row (@{$rfres}) {
       if (scalar(@{$row}) < 3) { die "ERROR problem fetching tax info for ncbi taxid $ncbiId"; }
-      $species       .= $row->[0];
-      $shortSpecies  .= $row->[1];
-      $taxString     .= $row->[2];
+      $species            .= $row->[0];
+      $tree_display_name  .= $row->[1];
+      $align_display_name .= $row->[2];
+      $tax_string         .= $row->[3];
     }
   }
   else { 
     $species = "-";
-    $shortSpecies = "-";
-    $taxString = "-";
+    $tree_display_name = "-";
+    $align_display_name = "-";
+    $tax_string = "-";
   }
 
-  return ($species, $shortSpecies, $taxString);
+  return ($species, $tree_display_name, $align_display_name, $tax_string);
 }
 
 # append chunk of lines to 'outlist' or 'species' file 
@@ -3924,7 +3926,6 @@ sub validate_species_format {
   return;
 }
 
-#-------------------------------------------------------------------------------
 
 =head2 fetch_seed_sequence_info
 
@@ -3966,7 +3967,7 @@ sub fetch_seed_sequence_info {
     # only add to @seed_name_A if first occurrence
     if(! defined $seed_name_H{$seed_name}) { 
       push(@seed_name_A, $seed_name);
-      foreach my $key ("ncbi_id", "description", "species", "align_display_name", "tax_string", "length", "mol_type", "source") { 
+      foreach my $key ("ncbi_id", "description", "species", "tree_display_name", "align_display_name", "tax_string", "length", "mol_type", "source") { 
         $seed_name_info_HH{$seed_name}{$key} = "-";
       }
       $seed_name_H{$seed_name} = 1;
@@ -4027,7 +4028,7 @@ sub fetch_seed_sequence_info {
   # 2) if not fetch in 1, try to fetch from NCBI taxonomy
   my @taxid_seed_A  = (); # array of taxids for the seed sequences
   my %taxid_seed_H  = (); # just so we don't add the same taxid to @taxid_seed_A more than once
-  my %taxid_info_HH = (); # 2D hash, 1D key is taxid, 2D key is "species", "align_display_name", "tax_string"
+  my %taxid_info_HH = (); # 2D hash, 1D key is taxid, 2D key is "species", "tree_display_name", "align_display_name", "tax_string"
   my $taxid_seed; # a single taxid
   foreach my $seed_name (@seed_name_A) { 
     if(defined $seed_name_info_HH{$seed_name}{"ncbi_id"}) { 
@@ -4041,13 +4042,14 @@ sub fetch_seed_sequence_info {
 
   my @lookup_taxonomy_A = (); # list of taxids in @taxid_seed_A not found in taxonomy table
   foreach $taxid_seed (@taxid_seed_A) { 
-    foreach my $key ("species", "align_display_name", "tax_string") { 
+    foreach my $key ("species", "tree_display_name", "align_display_name", "tax_string") { 
       $taxid_info_HH{$taxid_seed}{$key} = "-";
     }
     if(defined $sthTaxSeed) { 
       ($taxid_info_HH{$taxid_seed}{"species"}, 
+       $taxid_info_HH{$taxid_seed}{"tree_display_name"}, 
        $taxid_info_HH{$taxid_seed}{"align_display_name"}, 
-       $taxid_info_HH{$taxid_seed}{"tax_string"}) = fetchSpeciesAndTaxString($sthTaxSeed, $taxid_seed);
+       $taxid_info_HH{$taxid_seed}{"tax_string"}) = fetchSpeciesDisplayNamesAndTaxString($sthTaxSeed, $taxid_seed);
     }
     if($taxid_info_HH{$taxid_seed}{"species"} eq "-") { 
       push(@lookup_taxonomy_A, $taxid_seed);
@@ -4068,6 +4070,7 @@ sub fetch_seed_sequence_info {
     $seed_nse_info_HHR->{$seed_nse}{"description"} = $seed_name_info_HH{$seed_name}{"description"};
     $taxid_seed = $seed_nse_info_HHR->{$seed_nse}{"ncbi_id"}; # for convenience
     $seed_nse_info_HHR->{$seed_nse}{"species"}            = $taxid_info_HH{$taxid_seed}{"species"};
+    $seed_nse_info_HHR->{$seed_nse}{"tree_display_name"}  = $taxid_info_HH{$taxid_seed}{"tree_display_name"};
     $seed_nse_info_HHR->{$seed_nse}{"align_display_name"} = $taxid_info_HH{$taxid_seed}{"align_display_name"};
     $seed_nse_info_HHR->{$seed_nse}{"tax_string"}         = $taxid_info_HH{$taxid_seed}{"tax_string"};
   }
