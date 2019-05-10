@@ -162,7 +162,7 @@ sub prepare_seqaccToSpeciesTaxStringAndId {
 
 sub prepare_taxIdToSpeciesDisplayNamesAndTaxString {
   my ($self) = @_;
-  
+
   my $dbh = $self->storage->dbh;
   my $sth = $dbh->prepare("SELECT t.species, t.tree_display_name, t.align_display_name, t.tax_string
                             FROM taxonomy t

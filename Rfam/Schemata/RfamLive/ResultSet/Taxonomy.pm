@@ -26,7 +26,7 @@ sub updateTaxonomyFromFamilyObj {
   my $i;
   my $seedmsa = $familyObj->SEED;
   my $nseq = $seedmsa->nseq;
-  my $seen_taxid_H = (); # set to 1 for taxids we've updated so far, 
+  my %seen_taxid_H = (); # set to 1 for taxids we've updated so far, 
                          # this is a small optimization, no need to update twice for same taxid 
                          # (we assume all other data is equivalent for equal taxids but we don't check)
   for($i = 0; $i < $nseq; $i++) { 
@@ -36,17 +36,17 @@ sub updateTaxonomyFromFamilyObj {
       croak "ERROR in $sub_name, seed sequence name not in name/start-end format ($seed_nse)"; 
     }
 
-    my $ncbi_id = $seed_info_HH{$seed_nse}{"ncbi_id"};
+    my $ncbi_id = $seed_info_HHR->{$seed_nse}{"ncbi_id"};
     if((! defined $ncbi_id) || ($ncbi_id eq "-")) { 
       croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty ncbi_id value"; 
     }
     if(! defined $seen_taxid_H{$ncbi_id}) { 
       $seen_taxid_H{$ncbi_id} = 1; # we'll skip this taxid if we see it again
 
-      my $species            = $seed_info_HH{$seed_nse}{"species"};
-      my $tax_string         = $seed_info_HH{$seed_nse}{"tax_string"};
-      my $tree_display_name  = $seed_info_HH{$seed_nse}{"tree_display_name"};
-      my $align_display_name = $seed_info_HH{$seed_nse}{"align_display_name"};
+      my $species            = $seed_info_HHR->{$seed_nse}{"species"};
+      my $tax_string         = $seed_info_HHR->{$seed_nse}{"tax_string"};
+      my $tree_display_name  = $seed_info_HHR->{$seed_nse}{"tree_display_name"};
+      my $align_display_name = $seed_info_HHR->{$seed_nse}{"align_display_name"};
 
       if((! defined $species) || ($species eq "-")) { 
         croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty species value"; 

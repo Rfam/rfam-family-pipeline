@@ -59,11 +59,11 @@ sub updateRfamseqFromFamilyObj {
     if(! defined $rfamseq_entry) { 
       # sequence is not yet in rfamseq, add it
 
-      my $ncbi_id     = $seed_info_HH{$seed_nse}{"ncbi_id"};
-      my $description = $seed_info_HH{$seed_nse}{"description"};
-      my $length      = $seed_info_HH{$seed_nse}{"length"};
-      my $mol_type    = $seed_info_HH{$seed_nse}{"mol_type"};
-      my $source      = $seed_info_HH{$seed_nse}{"source"};
+      my $ncbi_id     = $seed_info_HHR->{$seed_nse}{"ncbi_id"};
+      my $description = $seed_info_HHR->{$seed_nse}{"description"};
+      my $length      = $seed_info_HHR->{$seed_nse}{"length"};
+      my $mol_type    = $seed_info_HHR->{$seed_nse}{"mol_type"};
+      my $source      = $seed_info_HHR->{$seed_nse}{"source"};
 
       if((! defined $ncbi_id) || ($ncbi_id eq "-")) { 
         croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty ncbi_id value"; 

@@ -2026,15 +2026,20 @@ sub processTbloutLine {
 sub fetchDescription { 
   my ($sthDesc, $seqacc) = @_;
 
-  if(! defined $sthDesc) { die "ERROR, fetchDescription, sthDesc is undefined"; }
-  if(! defined $seqacc)  { die "ERROR, fetchDescription, seqacc is undefined"; }
+  my $sub_name = "fetchDescription()";
+  if(! defined $sthDesc) { croak "ERROR in $sub_name, sthDesc is undefined"; }
+  if(! defined $seqacc)  { croak "ERROR in $sub_name, seqacc is undefined"; }
 
   my $description;
 
   $sthDesc->execute($seqacc);
   my $res = $sthDesc->fetchall_arrayref;
-  foreach my $row (@$res) {
-    $description .= $row->[0];
+  if(scalar(@{$res}) == 1) { 
+    if (scalar(@{$res->[0]}) != 1) { croak "ERROR in $sub_name, fetching for $seqacc"; }
+    $description = $res->[0][0];
+  }
+  elsif(scalar(@{$res}) > 1) { 
+    croak("ERROR, in $sub_name, multiple rows fetched from rfamseq for sequence $seqacc (should only be 1)");
   }
 
   return $description;
@@ -2058,8 +2063,9 @@ sub fetchDescription {
 sub fetchTaxIdDescLengthMolTypeAndSource { 
   my ($sthRfamseqSeed, $seqacc) = @_;
 
-  if(! defined $sthRfamseqSeed) { die "ERROR, fetchTaxIdDescLengthMolTypeAndSource, sthRfamseqSeed is undefined"; }
-  if(! defined $seqacc)         { die "ERROR, fetchTaxIdDescLengthMolTypeAndSource, seqacc is undefined"; }
+  my $sub_name = "fetchTaxIdDescLengthMolTypeAndSource()";
+  if(! defined $sthRfamseqSeed) { croak "ERROR, in $sub_name, sthRfamseqSeed is undefined"; }
+  if(! defined $seqacc)         { croak "ERROR, in $sub_name, seqacc is undefined"; }
 
   my $ncbi_id     = "-";
   my $description = "-";
@@ -2069,15 +2075,19 @@ sub fetchTaxIdDescLengthMolTypeAndSource {
 
   $sthRfamseqSeed->execute($seqacc);
   my $res = $sthRfamseqSeed->fetchall_arrayref;
-  foreach my $row (@$res) {
-    $ncbi_id     .= $row->[0];
-    $description .= $row->[1];
-    $length      .= $row->[2];
-    $mol_type    .= $row->[3];
-    $source      .= $row->[4];
+  if(scalar(@{$res}) == 1) { 
+    if (scalar(@{$res->[0]}) != 5) { croak "ERROR in $sub_name, fetching for $seqacc"; }
+    $ncbi_id     = $res->[0][0];
+    $description = $res->[0][1];
+    $length      = $res->[0][2];
+    $mol_type    = $res->[0][3];
+    $source      = $res->[0][4];
+  }
+  elsif(scalar(@{$res}) > 1) { 
+    croak("ERROR, in $sub_name, multiple rows fetched from rfamseq for sequence $seqacc (should only be 1)");
   }
 
- return ($ncbi_id, $description, $length, $mol_type, $source);
+  return ($ncbi_id, $description, $length, $mol_type, $source);
 }
 
 =head2 fetchSpeciesTaxStringAndId
@@ -2103,21 +2113,26 @@ sub fetchTaxIdDescLengthMolTypeAndSource {
 sub fetchSpeciesTaxStringAndId { 
   my ($sthTax, $seqacc) = @_;
 
-  if(! defined $sthTax) { die "ERROR, fetchSpeciesTaxStringAndId, sthTax is undefined"; }
-  if(! defined $seqacc) { die "ERROR, fetchSpeciesTaxStringAndId, seqacc is undefined"; }
+  my $sub_name = "fetchSpeciesTaxStringAndId()";
+  if(! defined $sthTax) { die "ERROR in $sub_name, sthTax is undefined"; }
+  if(! defined $seqacc) { die "ERROR in $sub_name, seqacc is undefined"; }
 
-  my ($species, $shortSpecies, $taxString, $ncbiId);
-
+  my $species      = "-";
+  my $shortSpecies = "-";
+  my $taxString    = "-";
+  my $ncbiId       = "-";
+ 
   $sthTax->execute($seqacc);
-  my $rfres = $sthTax->fetchall_arrayref;
-  if(defined $rfres) { 
-    foreach my $row (@{$rfres}) {
-      if (scalar(@{$row}) < 4) { die "ERROR problem fetching tax info for $seqacc"; }
-      $species       .= $row->[0];
-      $shortSpecies  .= $row->[1];
-      $taxString     .= $row->[2];
-      $ncbiId        .= $row->[3];
-    }
+  my $res = $sthTax->fetchall_arrayref;
+  if(scalar(@{$res}) == 1) { 
+    if (scalar(@{$res->[0]}) != 4) { croak "ERROR in $sub_name, fetching for $seqacc"; }
+    $species      = $res->[0][0];
+    $shortSpecies = $res->[0][1];
+    $taxString    = $res->[0][2];
+    $ncbiId       = $res->[0][3];
+  }
+  elsif(scalar(@{$res}) > 1) { 
+    croak("ERROR, in $sub_name, multiple rows fetched for sequence $seqacc (should only be 1)");
   }
 
   return ($species, $shortSpecies, $taxString, $ncbiId);
@@ -2145,27 +2160,26 @@ sub fetchSpeciesTaxStringAndId {
 sub fetchSpeciesDisplayNamesAndTaxString { 
   my ($sthTaxSeed, $ncbiId) = @_;
 
-  if(! defined $sthTaxSeed) { die "ERROR, fetchSpeciesDisplayNamesAndTaxString, sthTaxSee is undefined"; }
-  if(! defined $ncbiId)     { die "ERROR, fetchSpeciesDisplayNamesAndTaxString, ncbiId is undefined"; }
+  my $sub_name = "fetchSpeciesDisplayNamesAndTaxString()";
+  if(! defined $sthTaxSeed) { croak "ERROR in $sub_name, sthTaxSeed is undefined"; }
+  if(! defined $ncbiId)     { croak "ERROR in $sub_name, ncbiId is undefined"; }
 
-  my ($species, $tree_display_name, $align_display_name, $tax_string);
-
+  my $species            = "-";
+  my $tree_display_name  = "-";
+  my $align_display_name = "-";
+  my $tax_string         = "-";
+ 
   $sthTaxSeed->execute($ncbiId);
-  my $rfres = $sthTaxSeed->fetchall_arrayref;
-  if(defined $rfres) { 
-    foreach my $row (@{$rfres}) {
-      if (scalar(@{$row}) < 3) { die "ERROR problem fetching tax info for ncbi taxid $ncbiId"; }
-      $species            .= $row->[0];
-      $tree_display_name  .= $row->[1];
-      $align_display_name .= $row->[2];
-      $tax_string         .= $row->[3];
-    }
+  my $res = $sthTaxSeed->fetchall_arrayref;
+  if(scalar(@{$res}) == 1) { 
+    if (scalar(@{$res->[0]}) != 4) { croak "ERROR in $sub_name, fetching for $ncbiId"; }
+    $species            = $res->[0][0];
+    $tree_display_name  = $res->[0][1];
+    $align_display_name = $res->[0][2];
+    $tax_string         = $res->[0][3];
   }
-  else { 
-    $species = "-";
-    $tree_display_name = "-";
-    $align_display_name = "-";
-    $tax_string = "-";
+  elsif(scalar(@{$res}) > 1) { 
+    croak("ERROR, in $sub_name, multiple rows fetched for taxid $ncbiId (should only be 1)");
   }
 
   return ($species, $tree_display_name, $align_display_name, $tax_string);
