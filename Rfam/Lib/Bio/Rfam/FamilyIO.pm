@@ -1506,7 +1506,7 @@ sub writeTbloutDependentFiles {
   # Prepare the queries for execution
   my $sthDesc        = $rfdbh->prepare_seqaccToDescription();
   my $sthTax         = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
-  my $sthRfamseqSeed = $rfdbh->prepare_seqaccToTaxIdDescLengthAndMolType();
+  my $sthRfamseqSeed = $rfdbh->prepare_seqaccToTaxIdDescLengthMolTypeAndSource();
   my $sthTaxSeed     = $rfdbh->prepare_taxIdToSpeciesAndTaxString();
 
   # Fetch the seed sequence information we'll need to output to *species and *outlist
@@ -2041,9 +2041,9 @@ sub fetchDescription {
   return $description;
 }
 
-=head2 fetchTaxIdDescLengthAndMolType
+=head2 fetchTaxIdDescLengthMolTypeAndSource
 
-    Title    : fetchTaxIdDescLengthAndMolType()
+    Title    : fetchTaxIdDescLengthMolTypeAndSource()
     Incept   : EPN, Tue Dec 10 06:34:22 2013
     Usage    : fetchTaxIdDescLengthAndMolType($sthDesc, $seqAcc)
     Function : Fetch a description from RfamLive for a sequence accession
@@ -2056,23 +2056,29 @@ sub fetchDescription {
 
 =cut
 
-sub fetchTaxIdDescLengthAndMolType { 
+sub fetchTaxIdDescLengthMolTypeAndSource { 
   my ($sthRfamseqSeed, $seqacc) = @_;
 
-  if(! defined $sthRfamseqSeed) { die "ERROR, fetchTaxIdDescLengthAndMolType, sthRfamseqSeed is undefined"; }
-  if(! defined $seqacc)         { die "ERROR, fetchTaxIdDescLengthAndMolType, seqacc is undefined"; }
+  if(! defined $sthRfamseqSeed) { die "ERROR, fetchTaxIdDescLengthMolTypeAndSource, sthRfamseqSeed is undefined"; }
+  if(! defined $seqacc)         { die "ERROR, fetchTaxIdDescLengthMolTypeAndSource, seqacc is undefined"; }
 
-  my $taxid;
-  my $description;
+  my $ncbi_id     = "-";
+  my $description = "-";
+  my $length      = "-";
+  my $mol_type    = "-";
+  my $source      = "-";
 
   $sthRfamseqSeed->execute($seqacc);
   my $res = $sthRfamseqSeed->fetchall_arrayref;
   foreach my $row (@$res) {
-    $taxid       .= $row->[0];
+    $ncbi_id     .= $row->[0];
     $description .= $row->[1];
+    $length      .= $row->[2];
+    $mol_type    .= $row->[3];
+    $source      .= $row->[4];
   }
 
-  return ($taxid, $description);
+  return ($ncbi_id, $description, $length, $mol_type, $source);
 }
 
 =head2 fetchSpeciesTaxStringAndId
@@ -3980,8 +3986,9 @@ sub fetch_seed_sequence_info {
       ($seed_name_info_HH{$seed_name}{"ncbi_id"}, 
        $seed_name_info_HH{$seed_name}{"description"},
        $seed_name_info_HH{$seed_name}{"length"},
-       $seed_name_info_HH{$seed_name}{"mol_type"})
-       = fetchTaxIdDescLengthAndMolType($sthRfamseqSeed, $seed_name);
+       $seed_name_info_HH{$seed_name}{"mol_type"},
+       $seed_name_info_HH{$seed_name}{"source"})
+       = fetchTaxIdDescLengthMolTypeAndSource($sthRfamseqSeed, $seed_name);
     }
     if($seed_name_info_HH{$seed_name}{"ncbi_id"} eq "-") { 
       push(@lookup_genbank_A, $seed_name);
@@ -3994,15 +4001,19 @@ sub fetch_seed_sequence_info {
 
   foreach $seed_name (@seed_name_A) { 
     if($seed_name_info_HH{$seed_name}{"ncbi_id"} eq "-") { 
-      my (undef, $rnacentral_urs, $rnacentral_taxid) = Bio::Utils::rnacentral_urs_taxid_breakdown($seed_name);
-      if(defined $rnacentral_taxid) { 
+      my ($is_urs_taxid, $rnacentral_urs, $rnacentral_taxid) = Bio::Utils::rnacentral_urs_taxid_breakdown($seed_name);
+      if($is_urs_taxid) { 
         $seed_name_info_HH{$seed_name}{"ncbi_id"} = $rnacentral_taxid;
-      }
-      if(defined $rnacentral_urs) { 
-        my (undef, undef, $rnacentral_description) = Bio::Rfam::Utils::rnacentral_id_lookup($rnacentral_urs);
+        my (undef, undef, $rnacentral_description, $rnacentral_length) = Bio::Rfam::Utils::rnacentral_id_lookup($rnacentral_urs);
         if(defined $rnacentral_description) { 
           $seed_name_info_HH{$seed_name}{"description"} = $rnacentral_description;
         }
+        if(defined $rnacentral_length) { 
+          $seed_name_info_HH{$seed_name}{"length"} = $rnacentral_length;
+        }
+        # hard-coded (not fetched)
+        $seed_name_info_HH{$seed_name}{"mol_type"} = "ncRNA";
+        $seed_name_info_HH{$seed_name}{"source"}   = "SEED:RNAcentral";
       }
     }
   }

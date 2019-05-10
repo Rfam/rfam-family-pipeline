@@ -2112,7 +2112,7 @@ sub numLinesInFile {
 #-------------------------------------------------------------------------------
 # Subroutines brought in to deal with SEED seqs not being in the Rfam DB
 #-------------------------------------------------------------------------------
-# genbank_fetch_taxids_and_descs: fetch taxids and descs for a list of sequences from NCBI's GenBank
+# genbank_fetch_seq_info: fetch taxids and descs for a list of sequences from NCBI's GenBank
 # ncbi_taxonomy_fetch_taxinfo:    fetch tax info to populate taxonomy table for a list of taxids
 #-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
@@ -2368,8 +2368,8 @@ sub genbank_nse_lookup_and_md5 {
 }
 
 #-------------------------------------------------------------------------------
-=head2 genbank_fetch_taxids_and_descs
-  Title    : genbank_fetch_taxids_and_descs
+=head2 genbank_fetch_seq_info
+  Title    : genbank_fetch_seq_info
   Incept   : EPN, Tue Apr 30 20:35:00 2019
   Function : Looks up sequences in GenBank and parses their taxids.
   Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
@@ -2386,10 +2386,10 @@ sub genbank_nse_lookup_and_md5 {
            : if something goes wrong parsing xml
 =cut
 
-sub genbank_fetch_taxids_and_descs {
+sub genbank_fetch_seq_info {
   my ( $name_AR, $info_HHR, $nattempts, $nseconds ) = @_;
 
-  my $sub_name = "genbank_fetch_taxids_and_descs";
+  my $sub_name = "genbank_fetch_seq_info";
   
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
@@ -2473,6 +2473,9 @@ sub genbank_fetch_taxids_and_descs {
     if(! defined $mol_type) { 
       die "ERROR in $sub_name did not read mol_type info for $accver";
     }
+    $info_HHR->{$accver}{"mol_type"} = $mol_type;
+
+    $info_HHR->{$accver}{"source"} = "SEED:GenBank";
   }
 
   return;
@@ -2630,11 +2633,12 @@ sub rnacentral_md5_lookup {
   Incept   : EPN, Wed May  8 19:36:30 2019
   Function : Looks up a sequence in RNAcentral based on its RNAcentral id
   Args     : $in_id: URS id of the sequence we are looking up
-  Returns  : 3 values:
+  Returns  : 4 values:
            : $have_seq: '1' if sequence exists in RNAcentral, else '0'
            : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
            :            if defined, this should be equal to $md5 input
            : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
+           : $length:   if $have_seq is '1': length for sequence, else undefined
   Dies     : if there is a problem fetching from RNAcentral
 =cut
 
@@ -2650,17 +2654,19 @@ sub rnacentral_id_lookup {
   #print Dumper $decoded_json;
 
   my $have_seq = 0;
-  my $md5  = undef;
-  my $desc = undef;
+  my $md5    = undef;
+  my $desc   = undef;
+  my $length = undef;
 
   if((defined $decoded_json->{'results'}) && 
      (defined $decoded_json->{'results'}[0]{'md5'}) && 
      (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
     $have_seq = 1;
-    $md5  = $decoded_json->{'results'}[0]{'md5'};
-    $desc = $decoded_json->{'results'}[0]{'description'};
+    $md5    = $decoded_json->{'results'}[0]{'md5'};
+    $desc   = $decoded_json->{'results'}[0]{'description'};
+    $length = $decoded_json->{'results'}[0]{'length'};
   }
-  return ($have_seq, $md5, $desc);
+  return ($have_seq, $md5, $desc, $length);
 }
 
 #-------------------------------------------------------------------------------
