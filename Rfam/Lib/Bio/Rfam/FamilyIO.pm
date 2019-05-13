@@ -1696,7 +1696,6 @@ sub writeTbloutDependentFiles {
   open(TBL, "cat $stblI $tblI | grep -v ^'#' | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
   while ($tblline = <TBL>) {
     my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString, $got_tax) = 
-        ###processTbloutLine($tblline, $sthDesc, $sthTax, 0, $require_tax); #'0' says: no this is not a reversed search 
         processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); #'0, 0' says: no this is not a reversed search, taxonomy info is not required
 
     # determine if this hit overlaps with any other hits on opposite strand

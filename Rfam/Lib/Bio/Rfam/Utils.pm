@@ -2321,8 +2321,8 @@ sub genbank_nse_lookup_and_md5 {
         $got_url = get($url);
         $attempt_ctr++;
       }
-      if($attempt_ctr > $nattempts) { 
-        die "ERROR trying to fetch $name from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+      if(($attempt_ctr >= $nattempts) && (! defined $got_url)) {
+        croak "ERROR trying to fetch sequence info for $name from genbank, reached maximum allowed number of attempts ($nattempts)"; 
       }
     }
   }
@@ -2391,7 +2391,7 @@ sub genbank_fetch_seq_info {
 
   my $sub_name = "genbank_fetch_seq_info";
   
-  if(! defined $nattempts) { $nattempts = 1; }
+  if(! defined $nattempts) { $nattempts = 10; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
   if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
@@ -2428,8 +2428,8 @@ sub genbank_fetch_seq_info {
       $xml_string = get($genbank_url);
       $attempt_ctr++;
     }
-    if($attempt_ctr > $nattempts) { 
-      die "ERROR trying to fetch taxids from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+    if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
+      croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
     }
   }
 
@@ -2502,8 +2502,8 @@ sub genbank_fetch_seq_info {
 sub ncbi_taxonomy_fetch_taxinfo {
   my ( $taxid_AR, $tax_table_HHR, $nattempts, $nseconds ) = @_;
   
-  if(! defined $nattempts) { $nattempts = 1; }
-  if(! defined $nseconds)  { $nseconds  = 3; }
+  if(! defined $nattempts) { $nattempts = 10; }
+  if(! defined $nseconds)  { $nseconds  = 3;  }
 
   if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
     die "ERROR in ncbi_taxonomy_fetch_taxinfo undefined or empty input name array"; 
@@ -2529,8 +2529,8 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $xml_string = get($genbank_url);
       $attempt_ctr++;
     }
-    if($attempt_ctr > $nattempts) { 
-      die "ERROR trying to fetch taxids from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+    if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
+      die "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)"; 
     }
   }
   my $xml = XML::LibXML->load_xml(string => $xml_string);

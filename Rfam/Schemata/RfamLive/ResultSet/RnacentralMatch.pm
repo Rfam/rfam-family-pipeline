@@ -35,13 +35,14 @@ sub updateRnacentralMatchesFromFamilyObj {
     my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
 
     if($rnacentral_has_exact_seq) { 
-      # update table, if this entry already exists it will be updated, else a new entry is added
+      # update table if this entry already exists, else, create a new one
       $self->update_or_create({ rfamseq_acc        => $seed_name,
                                 seq_start          => $seed_start,
                                 seq_end            => $seed_end,
                                 md5                => $seed_md5,
                                 rnacentral_id      => $rnacentral_id,
-                                type               => "seed"} );
+                                type               => "seed"},
+                              { key => 'primary' });
     }
   }
 

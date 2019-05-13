@@ -66,7 +66,8 @@ sub updateTaxonomyFromFamilyObj {
                                 species            => $species, 
                                 tree_display_name  => $tree_display_name,
                                 align_display_name => $align_display_name,
-                                tax_string         => $tax_string} );
+                                tax_string         => $tax_string },
+          { key => 'primary' });
       
     } # end of 'if(! defined $seen_taxid_H{$ncbi_id})'
   }

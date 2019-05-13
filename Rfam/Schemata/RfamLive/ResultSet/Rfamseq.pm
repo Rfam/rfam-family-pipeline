@@ -55,7 +55,8 @@ sub updateRfamseqFromFamilyObj {
     }
 
     # check if sequence is already in the Rfamseq table, if it is we do nothing:
-    my $rfamseq_entry = $self->find( { rfamseq_acc => $seed_name} );
+    my $rfamseq_entry = $self->find( { rfamseq_acc => $seed_name},
+                                     { key => 'primary' });
     if(! defined $rfamseq_entry) { 
       # sequence is not yet in rfamseq, add it
 
