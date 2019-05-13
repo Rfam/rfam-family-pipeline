@@ -3178,9 +3178,9 @@ sub parseOutlistAndSpecies {
         last; # breaks us out of 'while($outline = <OUT>)' loop
       }
       
-      if((! defined $minsc || $minsc eq "")          || # no minimum being enforced
-         ($out_elA[0] >= $minsc)                     || # we're above our minimum
-         ($do_allseed && $out_elA[2] eq "SEED")) {      # we're forcing info collection on all seed seqs and we've got one here        
+      if((! defined $minsc || $minsc eq "")            || # no minimum being enforced
+         ($out_elA[0] >= $minsc)                       || # we're above our minimum
+         ($do_allseed && $out_elA[2] eq "SEED-MSA")) {    # we're forcing info collection on all seed seqs and we've got one here        
         #sanity check
         for($i = 0; $i <= 3; $i++) { 
           if($out_elA[$i] ne $spc_elA[$i]) { 
@@ -3195,10 +3195,11 @@ sub parseOutlistAndSpecies {
         
         # determine group
         $group = "";
-        if   ($out_elA[2] eq "SEED")  { $group = "SEED"; } 
-        elsif($out_elA[0] >= $ga)     { $group = "FULL"; } 
-        elsif($out_elA[1] <= $emax)   { $group = "OTHER"; } 
-        if(defined $groupOHAR) { push(@{$groupOHAR->{$group}}, $name); }
+        if   ($out_elA[2] eq "SEED-MSA")  { $group = "SEED"; } 
+        elsif($out_elA[2] eq "SEED-DB")   { $group = undef;  } # a hit in the DB to a seed seq, we should have also seen a SEED-MSA hit, so we skip to avoiad double counting
+        elsif($out_elA[0] >= $ga)         { $group = "FULL"; } 
+        elsif($out_elA[1] <= $emax)       { $group = "OTHER"; } 
+        if((defined $groupOHAR) && (defined $group)) { push(@{$groupOHAR->{$group}}, $name); }
         
         if(defined $infoHHR) { 
           $infoHHR->{$name}{"rank"}     = $ct;
