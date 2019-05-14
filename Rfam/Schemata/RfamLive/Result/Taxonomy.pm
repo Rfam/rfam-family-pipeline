@@ -52,7 +52,7 @@ __PACKAGE__->table("taxonomy");
 
   data_type: 'varchar'
   is_nullable: 1
-  size: 50
+  size: 112
 
 =cut
 

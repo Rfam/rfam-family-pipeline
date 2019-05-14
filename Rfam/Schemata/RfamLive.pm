@@ -100,11 +100,11 @@ sub prepare_seqaccToDescription {
   return( $sth );
 }
 
-=head2 prepare_seqaccToSpeciesTaxStringAndID
+=head2 prepare_seqaccToTaxIdDescLengthMolTypeAndSource
 
-  Title    : prepare_seqaccToSpeciesTaxStringAndID
-  Incept   : EPN, Mon Feb 25 10:27:25 2013
-  Usage    : $rfamdb->prepare_seqaccToSpeciesTaxStringAndID( )
+  Title    : prepare_seqaccToTaxIdDescLengthMolTypeAndSource
+  Incept   : EPN, Wed May  8 19:30:03 2019
+  Usage    : $rfamdb->prepare_seqaccToTaxIdDescLengthMolTypeAndSource( )
   Function : Returns a DBI statement handle for executing queries. This statement
            : has one bind value: rfamseq_acc.
   Args     : none
@@ -112,7 +112,30 @@ sub prepare_seqaccToDescription {
   
 =cut
 
-sub prepare_seqaccToSpeciesTaxStringAndID {
+sub prepare_seqaccToTaxIdDescLengthMolTypeAndSource {
+  my ($self) = @_;
+  
+  my $dbh = $self->storage->dbh;
+  my $sth = $dbh->prepare("SELECT ncbi_id, description, length, mol_type, source
+                           FROM rfamseq me
+                           WHERE ( me.rfamseq_acc = ? )");
+
+  return( $sth );
+}
+
+=head2 prepare_seqaccToSpeciesTaxStringAndId
+
+  Title    : prepare_seqaccToSpeciesTaxStringAndId
+  Incept   : EPN, Mon Feb 25 10:27:25 2013
+  Usage    : $rfamdb->prepare_seqaccToSpeciesTaxStringAndId( )
+  Function : Returns a DBI statement handle for executing queries. This statement
+           : has one bind value: rfamseq_acc.
+  Args     : none
+  Returns  : DBI statement handle
+  
+=cut
+
+sub prepare_seqaccToSpeciesTaxStringAndId {
   my ($self) = @_;
   
   my $dbh = $self->storage->dbh;
@@ -121,6 +144,29 @@ sub prepare_seqaccToSpeciesTaxStringAndID {
                             JOIN taxonomy t
                             ON t.ncbi_id = r.ncbi_id 
                             WHERE ( r.rfamseq_acc = ? )");
+
+  return( $sth );
+}
+
+=head2 prepare_taxIdToSpeciesDisplayNamesAndTaxString
+
+  Title    : prepare_taxIdToSpeciesDisplayNamesAndTaxString
+  Incept   : EPN, Tue May  7 15:49:18 2019
+  Usage    : $rfamdb->prepare_taxIdToSpeciesDisplayNamesAndTaxString( )
+  Function : Returns a DBI statement handle for executing queries. This statement
+           : has one bind value: ncbi_id.
+  Args     : none
+  Returns  : DBI statement handle
+  
+=cut
+
+sub prepare_taxIdToSpeciesDisplayNamesAndTaxString {
+  my ($self) = @_;
+
+  my $dbh = $self->storage->dbh;
+  my $sth = $dbh->prepare("SELECT t.species, t.tree_display_name, t.align_display_name, t.tax_string
+                            FROM taxonomy t
+                            WHERE ( t.ncbi_id = ? )");
 
   return( $sth );
 }

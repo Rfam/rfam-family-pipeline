@@ -13,6 +13,7 @@ use Carp;
 use Digest::MD5 qw(md5_hex);
 use LWP::Simple;                
 use JSON qw( decode_json );     
+use XML::LibXML;
 
 use Cwd;
 use Data::Dumper;
@@ -2109,6 +2110,11 @@ sub numLinesInFile {
 # genbank_nse_lookup_and_md5: fetch a sequence from NCBI's GenBank and calculate its md5
 # rnacentral_md5_lookup:      check if a sequence is in RNAcentral using its md5
 #-------------------------------------------------------------------------------
+# Subroutines brought in to deal with SEED seqs not being in the Rfam DB
+#-------------------------------------------------------------------------------
+# genbank_fetch_seq_info: fetch taxids and descs for a list of sequences from NCBI's GenBank
+# ncbi_taxonomy_fetch_taxinfo:    fetch tax info to populate taxonomy table for a list of taxids
+#-------------------------------------------------------------------------------
 =head2 md5_of_sequence_string
   Title    : md5_of_sequence_string
   Incept   : EPN, Wed Nov 14 19:38:53 2018
@@ -2278,7 +2284,7 @@ sub genbank_nse_lookup_and_md5 {
   
   my ( $is_nse, $name, $start, $end, $strand ) = Bio::Rfam::Utils::nse_breakdown($nse);
   if(! $is_nse) { 
-    die "ERROR, in ena_nse_lookup_and_md5() $nse not in name/start-end format.\n";
+    die "ERROR, in genbank_nse_lookup_and_md5() $nse not in name/start-end format.\n";
   }
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
@@ -2299,7 +2305,7 @@ sub genbank_nse_lookup_and_md5 {
 
   my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
   my $got_url = get($url);
-  my $looks_like_rnacentral =  id_looks_like_rnacentral($name);
+  my $looks_like_rnacentral = id_looks_like_rnacentral($name);
 
   if(! defined $got_url) { 
     if(! $looks_like_rnacentral) { 
@@ -2315,8 +2321,8 @@ sub genbank_nse_lookup_and_md5 {
         $got_url = get($url);
         $attempt_ctr++;
       }
-      if($attempt_ctr > $nattempts) { 
-        die "ERROR trying to fetch $name from genbank, exceeded number of attempts: $attempt_ctr > $nattempts"; 
+      if(($attempt_ctr >= $nattempts) && (! defined $got_url)) {
+        croak "ERROR trying to fetch sequence info for $name from genbank, reached maximum allowed number of attempts ($nattempts)"; 
       }
     }
   }
@@ -2362,6 +2368,231 @@ sub genbank_nse_lookup_and_md5 {
 }
 
 #-------------------------------------------------------------------------------
+=head2 genbank_fetch_seq_info
+  Title    : genbank_fetch_seq_info
+  Incept   : EPN, Tue Apr 30 20:35:00 2019
+  Function : Looks up sequences in GenBank and parses their taxids.
+  Args     : $name_AR:   ref to array of names to fetch taxids for, pre-filled
+           : $info_HHR:  ref to 2D hash to fill, 1D key is name from name_AR, 
+           :             2D keys are "ncbi_id", "description", "length", and "mol_type"
+           : $nattempts: number of attempts to make to fetch the sequence
+           :             (if this is being run in parallel it can cause failure
+           :              due (presumably) to overloading NCBI in some way.)
+           :             can be undef, in which case set to '1' 
+           : $nseconds:  number of seconds to wait between attempts
+           :             can be undef, in which case set to '3'
+  Returns  : void, fills %{$info_HHR}
+  Dies     : if @{$name_AR} is empty upon entering
+           : if something goes wrong parsing xml
+=cut
+
+sub genbank_fetch_seq_info {
+  my ( $name_AR, $info_HHR, $nattempts, $nseconds ) = @_;
+
+  my $sub_name = "genbank_fetch_seq_info";
+  
+  if(! defined $nattempts) { $nattempts = 10; }
+  if(! defined $nseconds)  { $nseconds  = 3; }
+
+  if((! defined $name_AR) || (scalar(@{$name_AR}) == 0)) { 
+    die "ERROR in $sub_name undefined or empty input name array"; 
+  }
+  if(! defined $info_HHR) { 
+    die "ERROR in $sub_name undefined info_HHR";
+  }
+
+  my $name_str = "";
+  foreach my $name (@{$name_AR}) { 
+    %{$info_HHR->{$name}} = ();
+    if($name_str ne "") { $name_str .= ","; }
+    $name_str .= $name;
+    $info_HHR->{$name}{"ncbi_id"}     = "-";
+    $info_HHR->{$name}{"description"} = "-";
+    $info_HHR->{$name}{"length"}      = "-";
+    $info_HHR->{$name}{"mol_type"}    = "-";
+  }
+
+  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
+  my $xml_string = get($genbank_url);
+
+  if(! defined $xml_string) { 
+    # if NCBI is being hit by a bunch of requests, the get() command
+    # may fail in that $got_url may be undefined. If that happens we
+    # wait a few seconds ($nseconds) and try again (up to
+    # $nattempts) times BUT we only do this for sequences that
+    # don't look like they are RNAcentral ids. For sequences that
+    # look like they are RNAcentral ids we do not do more attempts.
+    my $attempt_ctr = 1;
+    while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+      sleep($nseconds);
+      $xml_string = get($genbank_url);
+      $attempt_ctr++;
+    }
+    if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
+      croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
+    }
+  }
+
+  my $xml = XML::LibXML->load_xml(string => $xml_string);
+
+  foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
+    my $accver = $gbseq->findvalue('./GBSeq_accession-version');
+    if(! defined $accver) { 
+      die "ERROR in $sub_name problem parsing XML, no accession-version read"; 
+    }
+    if(! exists $info_HHR->{$accver}) { 
+      die "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver"; 
+    }
+
+    my $description = $gbseq->findvalue('./GBSeq_definition');
+    if(! defined $description) { 
+      die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
+    }
+    $info_HHR->{$accver}{"description"} = $description;
+
+    my $length = $gbseq->findvalue('./GBSeq_length');
+    if(! defined $length) { 
+      die "ERROR in $sub_name problem parsing XML, no length read";
+    }
+    $info_HHR->{$accver}{"length"} = $length;
+
+    my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
+    if(! defined $taxid) { 
+      die "ERROR in $sub_name did not read taxon info for $accver";
+    }
+    # ensure we get exactly 1 match (not 0, not more than 1)
+    if($taxid =~ /^taxon\:(\d+)$/) { 
+      $taxid = $1;
+      $info_HHR->{$accver}{"ncbi_id"} = $taxid;
+    }
+    else { 
+      die "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
+    }
+
+    my $mol_type = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
+    if(! defined $mol_type) { 
+      die "ERROR in $sub_name did not read mol_type info for $accver";
+    }
+    $info_HHR->{$accver}{"mol_type"} = $mol_type;
+
+    $info_HHR->{$accver}{"source"} = "SEED:GenBank";
+  }
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
+=head2 ncbi_taxonomy_fetch_taxinfo
+  Title    : ncbi_taxonomy_fetch_taxinfo
+  Incept   : EPN, Tue May  7 19:04:55 2019
+  Function : Looks up taxids in NCBI's taxonomy DB and parses the resulting info.
+  Args     : $taxid_AR:      ref to array of taxids to fetch info for, pre-filled
+           : $tax_table_HHR: ref to 2D hash to fill with fetched info
+           : $nattempts:     number of attempts to make to fetch the sequence
+           :                 (if this is being run in parallel it can cause failure
+           :                 due (presumably) to overloading NCBI in some way.)
+           :                 can be undef, in which case set to '1' 
+           : $nseconds:      number of seconds to wait between attempts
+           :                 can be undef, in which case set to '3'
+  Returns  : void
+  Dies     : if @{$taxid_AR} is empty upon entering
+           : if something goes wrong parsing the xml
+=cut
+
+sub ncbi_taxonomy_fetch_taxinfo {
+  my ( $taxid_AR, $tax_table_HHR, $nattempts, $nseconds ) = @_;
+
+  my $sub_name = "ncbi_taxonomy_fetch_taxinfo()";
+
+  if(! defined $nattempts) { $nattempts = 10; }
+  if(! defined $nseconds)  { $nseconds  = 3;  }
+
+  if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
+    die "ERROR in $sub_name undefined or empty input name array"; 
+  }
+  my $taxid_str = $taxid_AR->[0];
+  for(my $i = 1; $i < scalar(@{$taxid_AR}); $i++) { 
+    $taxid_str .= "," . $taxid_AR->[$i];
+  }
+
+  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
+  my $xml_string = get($genbank_url);
+
+  if(! defined $xml_string) { 
+    # if NCBI is being hit by a bunch of requests, the get() command
+    # may fail in that $got_url may be undefined. If that happens we
+    # wait a few seconds ($nseconds) and try again (up to
+    # $nattempts) times BUT we only do this for sequences that
+    # don't look like they are RNAcentral ids. For sequences that
+    # look like they are RNAcentral ids we do not do more attempts.
+    my $attempt_ctr = 1;
+    while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+      sleep($nseconds);
+      $xml_string = get($genbank_url);
+      $attempt_ctr++;
+    }
+    if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
+      die "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)"; 
+    }
+  }
+  my $xml = XML::LibXML->load_xml(string => $xml_string);
+
+  foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
+    my $taxid               = $taxon->findvalue('./TaxId');
+    my $lineage             = $taxon->findvalue('./Lineage');
+    my $scientific_name     = $taxon->findvalue('./ScientificName');
+    if(! defined $taxid) { 
+      die "ERROR in $sub_name unable to parse taxid from xml";
+    }
+    if(! defined $lineage) { 
+      die "ERROR in $sub_name unable to parse lineage from xml for taxid $taxid";
+    }
+    if(! defined $scientific_name) { 
+      die "ERROR in $sub_name unable to parse scientific_name from xml for taxid $taxid";
+    }
+
+    my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
+    my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
+
+    my $tree_display_name = $species;
+    $tree_display_name =~ s/ /\_/g;
+
+    my $align_display_name = $tree_display_name . "[" . $taxid . "]";
+
+    # we only want the lineage starting at "superkingdom", so we have to parse further
+    my @lineage_A = split("; ", $lineage);
+    my $i = 0;
+    my $superkingdom_i = -1;
+    foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
+      my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
+      my $sub_rank = $sub_taxon->findvalue('./Rank');
+      if($sub_rank eq "superkingdom") { 
+        $superkingdom_i = $i;
+      }
+      $i++;
+    }
+    if($superkingdom_i == -1) { 
+      die "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid";
+    }
+    my $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
+
+    %{$tax_table_HHR->{$taxid}} = ();
+    $tax_table_HHR->{$taxid}{"species"}            = $species;
+    $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
+    $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
+    $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
+
+    printf("in $sub_name for taxid: $taxid\n");
+    printf("\tspecies: $species\n");
+    printf("\ttax_string: $tax_string\n");
+    printf("\ttree: $tree_display_name\n");
+    printf("\talign: $align_display_name\n");
+  }
+
+  return;
+}
+
+#-------------------------------------------------------------------------------
 =head2 rnacentral_md5_lookup
   Title    : rnacentral_md5_lookup
   Incept   : EPN, Tue Nov 27 11:33:59 2018
@@ -2372,6 +2603,7 @@ sub genbank_nse_lookup_and_md5 {
            : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
            :            if defined, this should be equal to $md5 input
            : $id:       if $have_seq is '1': RNAcentral ID for sequence, else undefined
+           : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
   Dies     : if there is a problem fetching from RNAcentral
 =cut
 
@@ -2387,18 +2619,62 @@ sub rnacentral_md5_lookup {
   #print Dumper $decoded_json;
 
   my $have_seq = 0;
-  my $md5 = undef;
-  my $id  = undef;
+  my $md5  = undef;
+  my $id   = undef;
+  my $desc = undef;
 
   if((defined $decoded_json->{'results'}) && 
      (defined $decoded_json->{'results'}[0]{'md5'}) && 
      (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
     $have_seq = 1;
-    $md5 = $decoded_json->{'results'}[0]{'md5'};
-    $id  = $decoded_json->{'results'}[0]{'rnacentral_id'};
+    $md5  = $decoded_json->{'results'}[0]{'md5'};
+    $id   = $decoded_json->{'results'}[0]{'rnacentral_id'};
+    $desc = $decoded_json->{'results'}[0]{'description'};
   }
 
-  return ($have_seq, $md5, $id);
+  return ($have_seq, $md5, $id, $desc);
+}
+
+#-------------------------------------------------------------------------------
+=head2 rnacentral_id_lookup
+  Title    : rnacentral_id_lookup
+  Incept   : EPN, Wed May  8 19:36:30 2019
+  Function : Looks up a sequence in RNAcentral based on its RNAcentral id
+  Args     : $in_id: URS id of the sequence we are looking up
+  Returns  : 4 values:
+           : $have_seq: '1' if sequence exists in RNAcentral, else '0'
+           : $md5:      if $have_seq is '1': RNAcentral md5 for sequence, else undefined
+           :            if defined, this should be equal to $md5 input
+           : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
+           : $length:   if $have_seq is '1': length for sequence, else undefined
+  Dies     : if there is a problem fetching from RNAcentral
+=cut
+
+sub rnacentral_id_lookup { 
+  my ( $in_id ) = @_;
+  
+  my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
+  #printf("rnacentral_url: $rnacentral_url\n");
+  my $json = get($rnacentral_url);
+  if(! defined $json) { die "ERROR trying to fetch from rnacentral using md5"; }
+  # Decode the entire JSON
+  my $decoded_json = decode_json($json);
+  #print Dumper $decoded_json;
+
+  my $have_seq = 0;
+  my $md5    = undef;
+  my $desc   = undef;
+  my $length = undef;
+
+  if((defined $decoded_json->{'results'}) && 
+     (defined $decoded_json->{'results'}[0]{'md5'}) && 
+     (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
+    $have_seq = 1;
+    $md5    = $decoded_json->{'results'}[0]{'md5'};
+    $desc   = $decoded_json->{'results'}[0]{'description'};
+    $length = $decoded_json->{'results'}[0]{'length'};
+  }
+  return ($have_seq, $md5, $desc, $length);
 }
 
 #-------------------------------------------------------------------------------
@@ -2419,6 +2695,87 @@ sub id_looks_like_rnacentral {
   }
   return 0;
 }
+
+#-------------------------------------------------------------------------------
+=head2 rnacentral_urs_taxid_breakdown
+
+  Title    : rnacentral_urs_taxid_breakdown
+  Incept   : EPN, Tue May  7 14:08:46 2019
+  Usage    : rnacentral_urs_taxid_breakdown($rnacentral_id)
+  Function : Checks if $rnacentral_id is of format "URS_taxid",
+           : where URS matches /^URS[0-9A-F]{10}/ and taxid is
+           : an integer, and breaks it down into $urs, $taxid 
+           : (see 'Returns' section)
+  Args     : <sqname>: seqname, possibly of format "URS_taxid"
+  Returns  : 3 values:
+           :   '1' if <sqname> is of "URS_taxid" format, else '0'
+           :   $urs:   the URS part of <sqname>, undef if <sqname> does not match URS_taxid
+	   :   $taxid: the taxid part of <sqname>, undef if <sqname> does not match URS_taxid
+=cut
+
+sub rnacentral_urs_taxid_breakdown {
+  my ($sqname) = $_[0];
+  
+  my $urs;    # URS id
+  my $taxid;  # taxid
+  
+  if($sqname =~ /^(URS[0-9A-F]{10})\_(\d+)$/) { 
+    ($urs, $taxid) = ($1,$2);
+    return(1, $urs, $taxid);
+  }
+  return (0, undef, undef);
+}
+
+#-------------------------------------------------------------------------------
+=head2 accession_version_breakdown
+
+  Title    : accession_version_breakdown
+  Incept   : EPN, Fri May 10 17:04:20 2019
+  Usage    : accession_version_breakdown($accver)
+  Function : Checks if $accver is of format /^\S+\.\d+$/
+           : without checking that accession is actually a 
+           : valid accession (any string is allowed)
+           : and breaks down into accession and version.
+           : (see 'Returns' section)
+  Args     : <sqname>: seqname, possibly of format /\S+\.\d+/
+  Returns  : 3 values:
+           :   '1' if <sqname> is in /^\S+\.\d+$/ format, else '0'
+           :   $acc: the \S+ part of the matching <sqname>, undef if first return value is '0'
+	   :   $ver: the \d+ part of the matching <sqname>, undef if first return value is '0'
+=cut
+
+sub accession_version_breakdown {
+  my ($sqname) = $_[0];
+  
+  my $acc;
+  my $ver;
+  
+  if($sqname =~ /^(\S+)\.(\d+)$/) { 
+    ($acc, $ver) = ($1,$2);
+    return(1, $acc, $ver);
+  }
+  return (0, undef, undef);
+}
+
+#-------------------------------------------------------------------------------
+=head2 strip_version
+  Title    : strip_version
+  Incept   : EPN, Tue Apr 30 21:09:22 2019
+  Function : Removes a version from an accession.version string
+  Args     : $accver: accession.version
+  Returns  : $accver with version removed, if $accver not in the 
+           : correct format, just returns what is passed in
+=cut
+
+sub strip_version { 
+  my ( $accver ) = @_;
+
+  $accver =~ s/\.\d+$//;
+
+  return $accver;
+}
+
+#-------------------------------------------------------------------------------
 
 #-------------------------------------------------------------------------------
 # Miniature helper subroutines 

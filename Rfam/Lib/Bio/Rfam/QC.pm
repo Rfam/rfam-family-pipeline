@@ -694,12 +694,13 @@ sub checkNonFreeText {
 }
 #------------------------------------------------------------------------------
 
-=head2 compareSeedAndScores
+=head2 compareSeedAndSeedScores
 
-  Title    : compareSeedAndScores
+  Title    : compareSeedAndSeedScores
   Incept   : finnr, Jul 24, 2013 1:03:53 PM
-  Usage    : Bio::Rfam::QC::compareSeedAndScores($familyObj);
-  Function : Takes a family object and compares the SEED to the scores file to
+             EPN, Thu May  9 17:05:49 2019
+  Usage    : Bio::Rfam::QC::compareSeedAndSeedScores($familyObj);
+  Function : Takes a family object and compares the SEED to the SEEDSCORES file to
            : ensure that all sequences are found. It does not look at co-ordinates
            : just sequence accessions.
   Args     : A Bio::Rfam::Family object
@@ -707,24 +708,27 @@ sub checkNonFreeText {
   
 =cut
 
-sub compareSeedAndScores {
+sub compareSeedAndSeedScores {
   my ($familyObj) = @_;
 
   if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
 
+  if (!$familyObj->SEEDSCORES) { 
+    die "ERROR in compareSeedAndSeedScores() no SEEDSCORES object exists";
+  }
+
   #Hash of SEED sequence accessions
   my %seed;
   for ( my $i = 0 ; $i < $familyObj->SEED->nseq ; $i++ ) {
     my $s = $familyObj->SEED->get_sqname($i);
-    my ($seq) = $s =~ /^(\S+)\/\d+\-\d+$/;
-    $seed{$seq} = 1;
+    $seed{$s} = 1;
   }
 
   #Now loop over the scores files and delete keys when we find accessions
   #present, with the hope we have an empty seed hash
-  foreach my $r ( @{ $familyObj->SCORES->regions } ) {
+  foreach my $r ( @{ $familyObj->SEEDSCORES->regions } ) {
     if ( exists( $seed{ $r->[3] } ) ) {
       delete( $seed{ $r->[3] } );
     }
@@ -1107,15 +1111,15 @@ sub checkSEEDSeqs {
 
   my $error = 0;
 
-  my $nrfm_pass = 0;
-  my $ngbk_pass = 0;
-  my $nrnc_pass = 0;
-  my $nfail = 0;
   my $nseq  = $familyObj->SEED->nseq;
   my @fail_A = ();
   # look-up each SEED sequence
   for ( my $i = 0 ; $i < $nseq; $i++ ) {
     my $name_or_nse  = $familyObj->SEED->get_sqname($i);
+    my ($is_nse, $name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($name_or_nse);
+    my $pass_rfm = 0;
+    my $pass_gbk = 0;
+
     my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
     my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
     
@@ -1126,51 +1130,76 @@ sub checkSEEDSeqs {
     my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($name_or_nse, 200, 3);
     
     # lookup in RNAcentral
-    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
+    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
     
     # check if it fails for any of following reasons:
-    # 1) not in any of Rfamseq, GenBank, or RNAcentral
-    # 2) source seq exists in Rfamseq, but not subseq (start-end)
-    # 3) source seq exists in GenBank, but not subseq (start-end)
-    # 4) subseq appears to exist in Rfamseq, but md5 does not match
-    # 5) subseq appears to exist in GenBank, but md5 does not match
-    # 6) subseq appears to exist in RNAcentral, but md5 does not match
+    # 1) name is not in name/start-end format
+    # 2) not in any of Rfamseq, GenBank, or RNAcentral
+    # 3) source seq exists in Rfamseq, but not subseq (start-end)
+    # 4) source seq exists in GenBank, but not subseq (start-end)
+    # 5) subseq appears to exist in Rfamseq, but md5 does not match
+    # 6) subseq appears to exist in GenBank, but md5 does not match
+    # 7) subseq appears to exist in RNAcentral, but md5 does not match
     #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
+    # 8) subseq appears to exist in RNAcentral, but it is not in URS_taxid format
+    if(! $is_nse) { 
+      # 1) name is not in valid name/start-end format
+      $error = 1;
+      warn "SEED sequence $name_or_nse fails validation; it is not in valid name/start-end format\n"
+    }
     if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
-      # 1) not in any of Rfamseq, GenBank, or RNAcentral
+      # 2) not in any of Rfamseq, GenBank, or RNAcentral
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; it exists in none of: Rfamseq, GenBank, RNAcentral\n"
     }
     if(($rfamseq_has_source_seq) && (! $rfamseq_has_exact_seq)) { 
-      # 2) source seq exists in Rfamseq, but not subseq (start-end)
+      # 3) source seq exists in Rfamseq, but not subseq (start-end)
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; its source sequence exists in Rfamseq, but specific range subsequence does not\n";
     }
     if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) { 
-      # 3) source seq exists in GenBank, but not subseq (start-end)
+      # 4) source seq exists in GenBank, but not subseq (start-end)
       $error = 1;
       warn "SEED sequence $name_or_nse fails validation; its source sequence exists in GenBank, but specific range subsequence does not\n";
     }
     if($rfamseq_has_exact_seq) { 
       if($rfamseq_md5 ne $seed_md5) {
-        # 4) subseq appears to exist in Rfamseq, but md5 does not match
+        # 5) subseq appears to exist in Rfamseq, but md5 does not match
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in Rfamseq, but md5 does not match\n";
+      }
+      else { 
+        $pass_rfm = 1;
       }
     }        
     if($genbank_has_exact_seq) { 
       if($genbank_md5 ne $seed_md5) {
-        # 5) subseq appears to exist in GenBank, but md5 does not match
+        # 6) subseq appears to exist in GenBank, but md5 does not match
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in GenBank, but md5 does not match\n";
+      }
+      else { 
+        $pass_gbk = 1;
       }
     }
     if($rnacentral_has_exact_seq) { 
       if($rnacentral_md5 ne $seed_md5) {
-        # 6) subseq appears to exist in RNAcentral, but md5 does not match
+        # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
         $error = 1;
         warn "SEED sequence $name_or_nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n";
+      }
+      else { 
+        # 8) subseq only exists in RNAcentral, but is not in URS_taxid format
+        # if the sequence *only* exists in RNAcentral verify that it 
+        # has the proper name format URS_taxid
+        if((! $pass_rfm) && (! $pass_gbk)) { 
+          my ($is_rnacentral_taxid, undef, undef) = Bio::Utils::rnacentral_urs_taxid_breakdown(($is_nse) ? $name : $name_or_nse);
+          if($is_rnacentral_taxid != 1) { 
+            $error = 1;
+            warn "SEED sequence $name_or_nse fails validation; it is only in RNAcentral, but its name is not in the expected URS_taxid format\n";
+          }
+        }
       }
     }
   }
@@ -1606,25 +1635,23 @@ sub essential {
   
   $error = Bio::Rfam::QC::checkTimestamps($dir, $config);
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
   
   $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
   
   $error = checkSEEDSeqs($newFamily, $seqDBObj);
   if($error){
-    warn "Family failed essential threshold check.\n";
+    warn "Family failed essential check that seed sequences are all valid (from at least one of rfamseq, GenBank or RNAcentral).\n";
     $masterError = 1;
   }
-  
-  # TEMPORARY: suspending check that all SCORES seqs (full hits) are in Rfamseq
-  # TODO: uncomment this to reinstate check 
-  # $error = checkScoresSeqs($newFamily, $seqDBObj);
+
+  $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
@@ -1683,15 +1710,14 @@ sub optional {
     warn "Ignoring spell check.\n";
   }
  
-  
   if(!exists($override->{seed})){
-    $error = compareSeedAndScores($newFamily);
+    $error = compareSeedAndSeedScores($newFamily);
     if($error){
-      warn "Failed check to ensue all SEED sequences found.\n";
+      warn "Failed check to ensure all SEED sequences found.\n";
       $masterError =1;
     }
   }else{
-    warn "Ignoring check to ensue all SEED sequences found.\n";
+    warn "Ignoring check to ensure all SEED sequences found.\n";
   }
   
   if(!exists($override->{coding})){
@@ -1788,7 +1814,7 @@ sub essentialClan {
   $error = Bio::Rfam::QC::checkClanFormat($newClan);
   
   if($error){
-    warn "Family failed essential foramt checks.\n";
+    warn "Family failed essential clan format checks.\n";
     $masterError = 1;
   }
   
