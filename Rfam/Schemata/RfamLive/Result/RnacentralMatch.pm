@@ -65,7 +65,7 @@ __PACKAGE__->table("rnacentral_matches");
 
 __PACKAGE__->add_columns(
   "rfamseq_acc",
-  { data_type => "varchar", is_nullable => 1, size => 25 },
+  { data_type => "varchar", is_nullable => 0, size => 25 },
   "seq_start",
   {
     data_type => "bigint",
@@ -78,7 +78,7 @@ __PACKAGE__->add_columns(
   "md5",
   { data_type => "varchar", is_nullable => 0, size => 32 },
   "rnacentral_id",
-  { data_type => "varchar", is_nullable => 1, size => 25 },
+  { data_type => "varchar", is_nullable => 0, size => 25 },
   "type",
   {
     data_type => "enum",
@@ -92,6 +92,11 @@ __PACKAGE__->add_columns(
 # Created by DBIx::Class::Schema::Loader v0.07046 @ 2019-05-09 16:21:58
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:8/Mbe1P78BsjQlAPJNaLIw
 
+__PACKAGE__->add_unique_constraint(
+    acc_start_end_id => ["rfamseq_acc", "seq_start", "seq_end", "rnacentral_id"]
+);
 
-# You can replace this text with custom code or comments, and it will be preserved on regeneration
+#__PACKAGE__->set_primary_key(__PACKAGE__->columns);
+__PACKAGE__->set_primary_key('rfamseq_acc', 'seq_start', 'seq_end', 'rnacentral_id');
+
 1;

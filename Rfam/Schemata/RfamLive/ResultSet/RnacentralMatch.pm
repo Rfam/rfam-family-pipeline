@@ -36,13 +36,14 @@ sub updateRnacentralMatchesFromFamilyObj {
 
     if($rnacentral_has_exact_seq) { 
       # update table if this entry already exists, else, create a new one
-      $self->update_or_create({ rfamseq_acc        => $seed_name,
-                                seq_start          => $seed_start,
-                                seq_end            => $seed_end,
-                                md5                => $seed_md5,
-                                rnacentral_id      => $rnacentral_id,
-                                type               => "seed"},
-                              { key => 'primary' });
+      $self->update_or_create(
+        { rfamseq_acc        => $seed_name,
+          seq_start          => $seed_start,
+          seq_end            => $seed_end,
+          md5                => $seed_md5,
+          rnacentral_id      => $rnacentral_id,
+          type               => "seed"},
+        { key => 'acc_start_end_id' });
     }
   }
 

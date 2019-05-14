@@ -49,26 +49,26 @@ sub updateTaxonomyFromFamilyObj {
       my $align_display_name = $seed_info_HHR->{$seed_nse}{"align_display_name"};
 
       if((! defined $species) || ($species eq "-")) { 
-        croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty species value"; 
+        croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty species value"; 
       }
       if((! defined $tax_string) || ($tax_string eq "-")) { 
-        croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty tax_string value"; 
+        croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty tax_string value"; 
       }
       if((! defined $tree_display_name) || ($tree_display_name eq "-")) { 
-        croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty tree_display_name value"; 
+        croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty tree_display_name value"; 
       }
       if((! defined $align_display_name) || ($align_display_name eq "-")) { 
-        croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty align_display_name value"; 
+        croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty align_display_name value"; 
       }
-      
+
+      printf("calling update_or_create:\n\tncbi_id: $ncbi_id\n\ttax_string: $tax_string\n\tspecies: $species\n\ttree: $tree_display_name\n\talign: $align_display_name\n\n");
       # update table, if an entry already exists with ncbi_id this will update the row, else it will create a new row
       $self->update_or_create({ ncbi_id            => $ncbi_id,
                                 species            => $species, 
                                 tree_display_name  => $tree_display_name,
                                 align_display_name => $align_display_name,
                                 tax_string         => $tax_string },
-          { key => 'primary' });
-      
+                              { key => 'primary' });
     } # end of 'if(! defined $seen_taxid_H{$ncbi_id})'
   }
 

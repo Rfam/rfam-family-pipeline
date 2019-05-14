@@ -2501,12 +2501,14 @@ sub genbank_fetch_seq_info {
 
 sub ncbi_taxonomy_fetch_taxinfo {
   my ( $taxid_AR, $tax_table_HHR, $nattempts, $nseconds ) = @_;
-  
+
+  my $sub_name = "ncbi_taxonomy_fetch_taxinfo()";
+
   if(! defined $nattempts) { $nattempts = 10; }
   if(! defined $nseconds)  { $nseconds  = 3;  }
 
   if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
-    die "ERROR in ncbi_taxonomy_fetch_taxinfo undefined or empty input name array"; 
+    die "ERROR in $sub_name undefined or empty input name array"; 
   }
   my $taxid_str = $taxid_AR->[0];
   for(my $i = 1; $i < scalar(@{$taxid_AR}); $i++) { 
@@ -2540,13 +2542,13 @@ sub ncbi_taxonomy_fetch_taxinfo {
     my $lineage             = $taxon->findvalue('./Lineage');
     my $scientific_name     = $taxon->findvalue('./ScientificName');
     if(! defined $taxid) { 
-      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse taxid from xml";
+      die "ERROR in $sub_name unable to parse taxid from xml";
     }
     if(! defined $lineage) { 
-      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse lineage from xml for taxid $taxid";
+      die "ERROR in $sub_name unable to parse lineage from xml for taxid $taxid";
     }
     if(! defined $scientific_name) { 
-      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to parse scientific_name from xml for taxid $taxid";
+      die "ERROR in $sub_name unable to parse scientific_name from xml for taxid $taxid";
     }
 
     my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
@@ -2570,7 +2572,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $i++;
     }
     if($superkingdom_i == -1) { 
-      die "ERROR in ncbi_taxonomy_fetch_taxinfo() unable to find superkingdom rank for taxid $taxid";
+      die "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid";
     }
     my $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
 
@@ -2579,6 +2581,12 @@ sub ncbi_taxonomy_fetch_taxinfo {
     $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
     $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
     $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
+
+    printf("in $sub_name for taxid: $taxid\n");
+    printf("\tspecies: $species\n");
+    printf("\ttax_string: $tax_string\n");
+    printf("\ttree: $tree_display_name\n");
+    printf("\talign: $align_display_name\n");
   }
 
   return;

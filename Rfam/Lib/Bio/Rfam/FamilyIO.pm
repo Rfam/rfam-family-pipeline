@@ -4067,6 +4067,7 @@ sub fetch_seed_sequence_info {
     }
     if($taxid_info_HH{$taxid_seed}{"species"} eq "-") { 
       push(@lookup_taxonomy_A, $taxid_seed);
+      printf("in $sub_name, pushed $taxid_seed to lookup array\n");
     }
   }
   
