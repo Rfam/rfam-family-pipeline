@@ -502,7 +502,7 @@ sub makeBling {
   my $conservationLegend = SVGLegend('Sequence Conservation',0,1,\%colours);
   my $fcbpLegend = SVGLegend('Frac. Canonical BPs',0,1,\%colours);
   my $covariationLegend = SVGLegend('Covariation',-2,2,\%colours);
-  my $seqEntropyLegend = SVGLegend('Relative Entropy',0,$maxEntropy,\%colours);
+  my $seqEntropyLegend = SVGLegend('Entropy',0,$maxEntropy,\%colours);
   my $maxCMlegend = SVGLegend('Max. CM Parse',0,$maxMaxCMparseValue,\%colours);
 
   # Generate the SVG images

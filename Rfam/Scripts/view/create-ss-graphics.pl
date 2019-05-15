@@ -524,7 +524,7 @@ sub makesvgfile {
 
      <circle cx="10" cy="55" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'ENTROPY\')" />
      <circle cx="10" cy="55" r="3" id="rbENTROPY"  style="fill:black;visibility:visible;" onclick="click(\'ENTROPY\')" />
-     <text x="20" y="60" font-size="12px" fill="dimgray" onclick="click(\'ENTROPY\')"> Relative entropy </text> 
+     <text x="20" y="60" font-size="12px" fill="dimgray" onclick="click(\'ENTROPY\')"> Entropy </text>
 
      <circle cx="10" cy="75" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'CONSERVATION\')" />
      <circle cx="10" cy="75" r="3" id="rbCONSERVATION"  style="fill:black;visibility:visible;" onclick="click(\'CONSERVATION\')" />
