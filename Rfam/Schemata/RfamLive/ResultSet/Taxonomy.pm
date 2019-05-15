@@ -26,9 +26,10 @@ sub updateTaxonomyFromFamilyObj {
   my $i;
   my $seedmsa = $familyObj->SEED;
   my $nseq = $seedmsa->nseq;
-  my %seen_taxid_H = (); # set to 1 for taxids we've updated so far, 
-                         # this is a small optimization, no need to update twice for same taxid 
-                         # (we assume all other data is equivalent for equal taxids but we don't check)
+  my %added_taxid_H = (); # set to 1 for taxids we've updated so far, 
+                          # this is a small optimization, no need to update twice for same taxid 
+                          # (we assume all other data is equivalent for equal taxids but we don't check)
+  my @row_AH = (); # array of hashes with info to add to taxonomy table
   for($i = 0; $i < $nseq; $i++) { 
     my $seed_nse = $seedmsa->get_sqname($i);
     my ($is_nse, undef, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($seed_nse);
@@ -40,14 +41,20 @@ sub updateTaxonomyFromFamilyObj {
     if((! defined $ncbi_id) || ($ncbi_id eq "-")) { 
       croak "ERROR in $sub_name, seed sequence $seed_nse has undefined or empty ncbi_id value"; 
     }
-    if(! defined $seen_taxid_H{$ncbi_id}) { 
-      $seen_taxid_H{$ncbi_id} = 1; # we'll skip this taxid if we see it again
 
+    # check if ncbi_id is already in the Taxonomy table, if it is we do nothing:
+    my $taxonomy_entry = $self->find( { ncbi_id => $ncbi_id},
+                                      { key => 'primary' });
+    
+    if((! defined $taxonomy_entry) && 
+       (! defined $added_taxid_H{$ncbi_id})) { 
+      $added_taxid_H{$ncbi_id} = 1; # we'll skip this taxid if we see it again
+      
       my $species            = $seed_info_HHR->{$seed_nse}{"species"};
       my $tax_string         = $seed_info_HHR->{$seed_nse}{"tax_string"};
       my $tree_display_name  = $seed_info_HHR->{$seed_nse}{"tree_display_name"};
       my $align_display_name = $seed_info_HHR->{$seed_nse}{"align_display_name"};
-
+      
       if((! defined $species) || ($species eq "-")) { 
         croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty species value"; 
       }
@@ -60,17 +67,21 @@ sub updateTaxonomyFromFamilyObj {
       if((! defined $align_display_name) || ($align_display_name eq "-")) { 
         croak "ERROR in $sub_name, seed sequence $seed_nse (ncbi_id: $ncbi_id) has undefined or empty align_display_name value"; 
       }
-
+      
       printf("calling update_or_create:\n\tncbi_id: $ncbi_id\n\ttax_string: $tax_string\n\tspecies: $species\n\ttree: $tree_display_name\n\talign: $align_display_name\n\n");
-      # update table, if an entry already exists with ncbi_id this will update the row, else it will create a new row
-      $self->update_or_create({ ncbi_id            => $ncbi_id,
-                                species            => $species, 
-                                tree_display_name  => $tree_display_name,
-                                align_display_name => $align_display_name,
-                                tax_string         => $tax_string },
-                              { key => 'primary' });
-    } # end of 'if(! defined $seen_taxid_H{$ncbi_id})'
+      push(@row_AH, {  ncbi_id            => $ncbi_id,
+                       species            => $species, 
+                       tree_display_name  => $tree_display_name,
+                       align_display_name => $align_display_name,
+                       tax_string         => $tax_string } );
+      if(scalar(@row_AH) >= 1000) { 
+        $self->populate(\@row_AH);
+        @row_AH = ();
+      } 
+    } 
   }
+    
+  $self->populate(\@row_AH);
 
   return;
 }

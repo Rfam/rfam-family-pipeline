@@ -117,9 +117,7 @@ sub updateRfamseqFromFamilyObj {
     } # end of 'if(! defined $rfamseq_entry)'
   }
 
-  if(scalar(@row_AH) >= 1000) { 
-    $self->populate(\@row_AH);
-  }
+  $self->populate(\@row_AH);
 
   return;
 }

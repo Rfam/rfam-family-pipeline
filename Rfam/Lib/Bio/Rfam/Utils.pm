@@ -46,7 +46,7 @@ sub run_local_command {
   my ($cmd) = @_;
   
   system($cmd);
-  if($? != 0) { die "$cmd failed"; }
+  if($? != 0) { croak "$cmd failed"; }
   return;
 }
 
@@ -2508,11 +2508,16 @@ sub ncbi_taxonomy_fetch_taxinfo {
   if(! defined $nseconds)  { $nseconds  = 3;  }
 
   if((! defined $taxid_AR) || (scalar(@{$taxid_AR}) == 0)) { 
-    die "ERROR in $sub_name undefined or empty input name array"; 
+    croak "ERROR in $sub_name undefined or empty input name array"; 
   }
-  my $taxid_str = $taxid_AR->[0];
-  for(my $i = 1; $i < scalar(@{$taxid_AR}); $i++) { 
-    $taxid_str .= "," . $taxid_AR->[$i];
+  my %taxid_H = (); # hash to keep track of the taxids in our input @{$taxid_AR}
+  my $taxid_str = "";
+  foreach my $taxid (@{$taxid_AR}) { 
+    if(! defined $taxid_H{$taxid}) { 
+      if($taxid_str ne "") { $taxid_str .= ","; }
+      $taxid_str .= $taxid;
+      $taxid_H{$taxid} = 1;
+    }
   }
 
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
@@ -2532,23 +2537,51 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $attempt_ctr++;
     }
     if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
-      die "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)"; 
+      croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)"; 
     }
   }
   my $xml = XML::LibXML->load_xml(string => $xml_string);
 
   foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
-    my $taxid               = $taxon->findvalue('./TaxId');
-    my $lineage             = $taxon->findvalue('./Lineage');
-    my $scientific_name     = $taxon->findvalue('./ScientificName');
+    my $cur_taxid       = $taxon->findvalue('./TaxId');
+    if(! defined $cur_taxid) { 
+      croak "ERROR in $sub_name unable to parse taxid from xml";
+    }
+    # check if there are any additional taxids:
+    my @aka_taxid_A = ();
+    foreach my $aka_taxid_node ($taxon->findnodes('./AkaTaxIds/TaxId')) { 
+      push(@aka_taxid_A, $aka_taxid_node->to_literal());
+    }
+    # Determine which input taxid this xml set pertains to.
+    # It is not necessarily $cur_taxid (because if input taxid has been merged
+    # with another taxid, then $cur_taxid will be the new taxid it was merged to).
+    # However, if $cur_taxid is not an input taxid, one of the ids in @aka_taxid_A
+    # should be. 
+    my $taxid = undef;
+    my $taxid_is_cur = 0; # the taxid we wanted to fetch we actually fetched (we didn't fetch a new taxid that was merged to the one we wanted)
+    if(defined $taxid_H{$cur_taxid}) { 
+      $taxid = $cur_taxid;
+      $taxid_is_cur = 1;
+    }
+    else { 
+      foreach my $aka_taxid (@aka_taxid_A) { 
+        if((! defined $taxid) && (defined $taxid_H{$aka_taxid})) { 
+          $taxid = $aka_taxid;
+        }
+      }
+    }
     if(! defined $taxid) { 
-      die "ERROR in $sub_name unable to parse taxid from xml";
+      croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
     }
+
+    my $lineage         = $taxon->findvalue('./Lineage');
     if(! defined $lineage) { 
-      die "ERROR in $sub_name unable to parse lineage from xml for taxid $taxid";
+      croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
     }
+
+    my $scientific_name = $taxon->findvalue('./ScientificName');
     if(! defined $scientific_name) { 
-      die "ERROR in $sub_name unable to parse scientific_name from xml for taxid $taxid";
+      croak "ERROR in $sub_name unable to parse scientific_name from xml for taxid $cur_taxid";
     }
 
     my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
@@ -2572,21 +2605,17 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $i++;
     }
     if($superkingdom_i == -1) { 
-      die "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid";
+      croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid";
     }
     my $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
 
-    %{$tax_table_HHR->{$taxid}} = ();
-    $tax_table_HHR->{$taxid}{"species"}            = $species;
-    $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
-    $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
-    $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
-
-    printf("in $sub_name for taxid: $taxid\n");
-    printf("\tspecies: $species\n");
-    printf("\ttax_string: $tax_string\n");
-    printf("\ttree: $tree_display_name\n");
-    printf("\talign: $align_display_name\n");
+    if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
+      %{$tax_table_HHR->{$taxid}} = ();
+      $tax_table_HHR->{$taxid}{"species"}            = $species;
+      $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
+      $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
+      $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
+    }
   }
 
   return;
@@ -2613,7 +2642,7 @@ sub rnacentral_md5_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna?md5=" . $in_md5;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { die "ERROR trying to fetch from rnacentral using md5"; }
+  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5"; }
   # Decode the entire JSON
   my $decoded_json = decode_json($json);
   #print Dumper $decoded_json;
@@ -2656,7 +2685,7 @@ sub rnacentral_id_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { die "ERROR trying to fetch from rnacentral using md5"; }
+  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5"; }
   # Decode the entire JSON
   my $decoded_json = decode_json($json);
   #print Dumper $decoded_json;
