@@ -1,7 +1,7 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #
 # create-ss-graphics.pl: create secondary structure graphics given a SEED and CM
-# 
+#
 use strict;
 use Getopt::Long;
 use Bio::Rfam::Config;
@@ -12,7 +12,7 @@ use List::Util qw(max min); # used only by Paul's code in makesvgfile() which is
 
 ######################################
 # NOTES TO JOHN AND/OR ROB:
-# 
+#
 # I've replaced all the code up to line 133 of the original RFAMbling.pln
 # (https://xfamsvn.ebi.ac.uk/svn/code/branches/jfrc-rfam_20121001/Rfam/CVSimport/make/RFAMbling.pl)
 # And slightly modified the rest of the script, by modifying variable
@@ -32,13 +32,13 @@ use List::Util qw(max min); # used only by Paul's code in makesvgfile() which is
 # SUBROUTINES:
 # 1. cm_consensus_sequence_stats(): written by me, to get info for 'max CM parse' graphic
 # 2. help(): outputs usage info.
-# 3. Paul's makepsfile():    creates postscript files, called by main script, 
+# 3. Paul's makepsfile():    creates postscript files, called by main script,
 # 4. Paul's swallow_ss_ps(): helps create postscript files, called by main script
 # 5. Paul's makesvgfile():   NOT called from main script, not sure why
-# 
+#
 # I did not change subroutines 3-5 from the original RFAMbling.pl.
 #
-# - Eric 
+# - Eric
 ############################################
 
 
@@ -53,14 +53,14 @@ my $in_cmfile  = "CM";   # name of CM file
 my $do_help = 0;
 my $exec_description = "create secondary structure graphics for a family.";
 
-my $options_okay = 
+my $options_okay =
     &GetOptions( "ali=s"        => \$in_alifile,
-                 "cm=s"         => \$in_cmfile, 
+                 "cm=s"         => \$in_cmfile,
                  "h|help"       => \$do_help );
 
-if(! $options_okay) { 
-  &help($exec_description); 
-  die "ERROR, unrecognized option;"; 
+if(! $options_okay) {
+  &help($exec_description);
+  die "ERROR, unrecognized option;";
 }
 
 if(! -e $in_alifile) { $do_help = 1; }
@@ -77,9 +77,9 @@ if ( $do_help ) {
 my $io     = Bio::Rfam::FamilyIO->new;
 my $config = Bio::Rfam::Config->new;
 
-# open and validate file 
+# open and validate file
 my $msa = Bio::Easel::MSA->new({
-  fileLocation => $in_alifile 
+  fileLocation => $in_alifile
 });
 my $cm = $io->parseCM($in_cmfile);
 
@@ -107,31 +107,31 @@ my @bitscoresA  = ();             # emission score per position (impt: pair scor
 my @cseqA = ();                   # consensus sequence, the maximally scoring sequence to the CM
 get_consensus_sequence_score($config, $in_cmfile, $clen, \@bitscoresA, \@cseqA);
 # create the consensus sequence by concatenating the elements of the cseqA array
-my $cseq = ""; 
+my $cseq = "";
 foreach my $cres (@cseqA) { $cseq .= $cres; }
 
-# We want our values in the range 0.0 to 1.0 for the coloring in the 
+# We want our values in the range 0.0 to 1.0 for the coloring in the
 # graphics. So we divide each value by the full range (max-min).
 
 # fcbpA:         range will be 0..1, and it already is so we do nothing
 
 # conservationA: range will be 0..1, and it already is so we do nothing
 
-# entropyA:      range will be min..max: 
+# entropyA:      range will be min..max:
 my $maxent = Bio::Rfam::Utils::maxArray(\@entropyA, $clen);
 my $minent = Bio::Rfam::Utils::minArray(\@entropyA, $clen);
-for($cpos = 0; $cpos < $clen; $cpos++) { 
+for($cpos = 0; $cpos < $clen; $cpos++) {
   $entropyA[$cpos] = ($entropyA[$cpos] - $minent) / ($maxent - $minent);
 }
 
 # covariationA: range will be -2 to 2:
-for($cpos = 0; $cpos < $clen; $cpos++) { 
+for($cpos = 0; $cpos < $clen; $cpos++) {
   $covariationA[$cpos] = ($covariationA[$cpos] - 2.) / 4.;
 }
 
-# bitscoresA: range will be 0..max: 
+# bitscoresA: range will be 0..max:
 my $maxbitscore = Bio::Rfam::Utils::maxArray(\@bitscoresA, $clen);
-for($cpos = 0; $cpos < $clen; $cpos++) { 
+for($cpos = 0; $cpos < $clen; $cpos++) {
   if($bitscoresA[$cpos] < -0.000001) { die "ERROR negative bit score emission in consensus sequence"; }
   $bitscoresA[$cpos] /= $maxbitscore;
 }
@@ -142,10 +142,10 @@ for($cpos = 0; $cpos < $clen; $cpos++) {
 
 ###############################
 # Paul's POSTSCRIPT block
-# Two stages: 
+# Two stages:
 # 1. Create the fcbp, covariation, entropy and sequence conservation plots
 #    using the most-informative-sequence ($mis) as the reference sequence
-#    to be printed as the sequence on the SS graphic. 
+#    to be printed as the sequence on the SS graphic.
 # 2. Create the max CM parse plot using the CM's consensus sequence as
 #    the reference sequence.
 
@@ -156,7 +156,7 @@ my %mfe = ();        # hash of mfe pairs
 my @ss_ps = ('',''); # head and tail of the ss.ps file
 
 # print the mis and ss_cons to a file for RNAplot processing
-open RNAPLOT, " | RNAplot  --pre \'\'" 
+open RNAPLOT, " | RNAplot  --pre \'\'"
     or die "FATAL: problem running RNAplot\n[$!]";
 print RNAPLOT "$mis\n$ss_cons\n";
 close RNAPLOT or die "FATAL: problem closing RNAplot pipe\n[$!]";
@@ -183,7 +183,7 @@ $macro_seen= 0;
 
 
 # print the mis and ss_cons to a file for RNAplot processing
-open RNAPLOT, " | RNAplot  --pre \'\'" 
+open RNAPLOT, " | RNAplot  --pre \'\'"
     or die "FATAL: problem running RNAplot\n[$!]";
 print RNAPLOT "$cseq\n$ss_cons\n";
 close RNAPLOT or die "FATAL: problem closing RNAplot pipe\n[$!]";
@@ -211,13 +211,13 @@ system("convert -density 600 -geometry 400  rna_maxcm.ps'[0]' rna_maxcm.png") an
 ################################
 # VIENNA block
 #For updating rfam table:
-open  VIENNA, "> SEED.vienna"; 
+open  VIENNA, "> SEED.vienna";
 print VIENNA "$mis\n$ss_cons\n";
 close VIENNA;
 ################################
 
 ################################
-# JSON block 
+# JSON block
 my %structHash = (
     reference_sequence  => $mis,
     reference_structure => $ss_cons,
@@ -234,7 +234,7 @@ my $jsonStructHash = JSON->new->pretty(1)->encode(\%structHash);
 #$json->pretty(1);
 #my $jsonStructHash = $json->encode(\%structHash);
 
-open  JASON, "> SEED.json"; 
+open  JASON, "> SEED.json";
 print JASON $jsonStructHash;
 close JASON;
 ################################
@@ -253,8 +253,8 @@ exit 0;
     Title    : cm_consensus_sequence_stats
     Incept   : EPN, Wed May 21 08:52:13 2014
     Usage    : Bio::Rfam::Infernal::cm_consensus_sequence_stats($config, $cmfile, $clen)
-    Function : Given a CM file, use cmemit and cmalign to get stats on the 
-             : models consensus sequence, and the highest emission scores 
+    Function : Given a CM file, use cmemit and cmalign to get stats on the
+             : models consensus sequence, and the highest emission scores
              : at each consensus position of the model. This subroutine was
              : originally written to get data for a SS diagram that is hosted
              : on the Rfam website.
@@ -269,7 +269,7 @@ exit 0;
 =cut
 
 
-sub get_consensus_sequence_score { 
+sub get_consensus_sequence_score {
   my ($config, $cmfile, $clen, $escAR, $cseqAR) = @_;
 
   my $cmemitPath = $config->infernalPath . "cmemit";
@@ -282,7 +282,7 @@ sub get_consensus_sequence_score {
   # parse trace file
   # example lines:
   ## ..skip..
-  ## idx   emitl  emitr   state  mode  nxtl  nxtr  prv   tsc   esc 
+  ## idx   emitl  emitr   state  mode  nxtl  nxtr  prv   tsc   esc
   ## ----- ------ ------ ------- ----- ----- ----- ----- ----- -----
   ##   0     1    101      0S  Joint     1    -1    -1 -0.11  0.00
   ##   1     1G   101      3ML Joint     2    -1     0 -0.05  1.43
@@ -296,12 +296,12 @@ sub get_consensus_sequence_score {
   @{$cseqAR} = ();
   my $cpos; # counter over consensus positions
   # initialize arrays
-  for($cpos = 0; $cpos < $clen; $cpos++) { 
+  for($cpos = 0; $cpos < $clen; $cpos++) {
     $escAR->[$cpos]  = "";
     $cseqAR->[$cpos] = "";
   }
-  while(my $line = <IN>) { 
-    if($line =~ m/^\s+\d+\s+\d+/) { 
+  while(my $line = <IN>) {
+    if($line =~ m/^\s+\d+\s+\d+/) {
       # $line is a trace line of this form:
       #   10     5C    93G    39MP Joint    11    -1     9 -0.02  2.63
       $line =~ s/^\s+//; # remove leading whitespace
@@ -310,20 +310,20 @@ sub get_consensus_sequence_score {
       my ($lchar, $rchar, $lpos, $rpos) = ("", "", -1, -1);
       if($emitl =~ m/^(\d+)([A-Z])/) { $lpos = $1; $lchar = $2; }
       if($emitr =~ m/^(\d+)([A-Z])/) { $rpos = $1; $rchar = $2; }
-      if($lchar ne "") { 
-        if($state !~ m/ML/ && $state !~ m/MP/) { die "ERROR, unexpected left  emission in trace file: $line"; } 
+      if($lchar ne "") {
+        if($state !~ m/ML/ && $state !~ m/MP/) { die "ERROR, unexpected left  emission in trace file: $line"; }
         $escAR->[$lpos-1]  = ($state =~ m/MP/) ? $esc/2. : $esc; # split MP scores over both positions by dividing by 2
         $cseqAR->[$lpos-1] = $lchar;
       }
-      if($rchar ne "") { 
+      if($rchar ne "") {
         if($state !~ m/MR/ && $state !~ m/MP/) { die "ERROR, unexpected right emission in trace file: $line"; }
         $escAR->[$rpos-1]  = ($state =~ m/MP/) ? $esc/2. : $esc; # split MP scores over both positions by dividing by 2
         $cseqAR->[$rpos-1] = $rchar;
-      } 
+      }
     }
   }
   # we're done; check to make sure we filled all consensus positions (we should have)
-  for($cpos = 0; $cpos < $clen; $cpos++) { 
+  for($cpos = 0; $cpos < $clen; $cpos++) {
     if($escAR->[$cpos]  eq "") { die "ERROR, did not fill esc for consensus position $cpos"; }
     if($cseqAR->[$cpos] eq "") { die "ERROR, did not fill cseq for consensus position $cpos"; }
   }
@@ -333,11 +333,11 @@ sub get_consensus_sequence_score {
 
   return;
 }
-    
+
 sub help {
   my ($exec_description) = (@_);
   print STDERR <<EOF;
-    
+
 create-ss-graphics.pl - $exec_description
 
 Usage:      create-ss-graphics.pl [options]
@@ -355,7 +355,7 @@ EOF
 
 sub makepsfile {
 
-my ($psfile, $refstats, $min, $max, $title) = @_;    
+my ($psfile, $refstats, $min, $max, $title) = @_;
 #makepsfile("rna_fcbp.ps",\@fcbp, 0,1);
 my @stats = @$refstats;
 
@@ -424,7 +424,7 @@ print PSFILE "drawreliability\n";
 print PSFILE "0.1 -0.075 colorbar\n";
 print PSFILE $ss_ps[1];  # print tail
 close(PSFILE);
-    
+
     return 1;
 }
 
@@ -472,18 +472,18 @@ sub swallow_ss_ps {
 	    @coord5p = ($1, $2) if not @coord5p;
 	    @coord3p = ($1, $2);
 	}
-	
+
 	if ($prevLine =~ /Start Annotations/){
-	    
+
 	    my $y5p = $coord5p[1]+10;
 	    my $y3p = $coord3p[1]+10;
-	    
+
 	    #print "[" . $coord5p[0] . "] [" . $y5p . "] moveto (5\') show\n";
 	    #print "[" . $coord3p[0] . "] [" . $y3p . "] moveto (3\') show\n";
 	    $ss_ps[$tail] .= $coord5p[0] . " " . $y5p . " moveto (5\') gsave 0.5 dup scale show grestore\n";
 	    $ss_ps[$tail] .= $coord3p[0] . " " . $y3p . " moveto (3\') gsave 0.5 dup scale show grestore\n";
 	}
-	
+
 	last if eof;
 	$prevLine = $_;
     }
@@ -494,9 +494,9 @@ sub swallow_ss_ps {
 ######################################################################
 
 sub makesvgfile {
-    
+
 #SVG work:
-    
+
 ##############################################################################
 # VARIBALES THAT STORE DATA
 ##############################################################################
@@ -506,21 +506,21 @@ sub makesvgfile {
     my @Y = ( );
     my @SEQUENCE = ( );
     my @PARTNER = ( );
-    
+
 ##############################################################################
 # SOME CONSTANT SVG AND JAVASCRIPT
 ##############################################################################
-    
+
     my $menue = '<g transform="translate(10 550)" font-family="Arial,Helvetica">
      <text font-size="12px" x="5" y="0" fill="dimgray" font-weight="bold">Other display options</text>
 
      <circle cx="10" cy="15" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'COV\')" />
      <circle cx="10" cy="15" r="3" id="rbCOV"  style="fill:black;visibility:visible;" onclick="click(\'COV\')" />
-     <text x="20" y="20" font-size="12px" fill="dimgray" onclick="click(\'COV\')"> Covariation </text> 
+     <text x="20" y="20" font-size="12px" fill="dimgray" onclick="click(\'COV\')"> Covariation </text>
 
      <circle cx="10" cy="35" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'FCBP\')" />
      <circle cx="10" cy="35" r="3" id="rbFCBP"  style="fill:black;visibility:visible;" onclick="click(\'FCBP\')" />
-     <text x="20" y="40" font-size="12px" fill="dimgray" onclick="click(\'FCBP\')"> Frac. canonical BPs </text> 
+     <text x="20" y="40" font-size="12px" fill="dimgray" onclick="click(\'FCBP\')"> Frac. canonical BPs </text>
 
      <circle cx="10" cy="55" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'ENTROPY\')" />
      <circle cx="10" cy="55" r="3" id="rbENTROPY"  style="fill:black;visibility:visible;" onclick="click(\'ENTROPY\')" />
@@ -528,14 +528,14 @@ sub makesvgfile {
 
      <circle cx="10" cy="75" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'CONSERVATION\')" />
      <circle cx="10" cy="75" r="3" id="rbCONSERVATION"  style="fill:black;visibility:visible;" onclick="click(\'CONSERVATION\')" />
-     <text x="20" y="80" font-size="12px" fill="dimgray" onclick="click(\'CONSERVATION\')"> Sequence conservation </text> 
+     <text x="20" y="80" font-size="12px" fill="dimgray" onclick="click(\'CONSERVATION\')"> Sequence conservation </text>
 
      <circle cx="10" cy="95" r="5" stroke-width="1" stroke="rgb(100,100,100)" fill="white" onclick="click(\'NONE\')" />
      <circle cx="10" cy="95" r="3" id="rbNONE"  style="fill:black;visibility:hidden;" onclick="click(\'NONE\')" />
      <text x="20" y="100" font-size="12px" fill="dimgray" onclick="click(\'NONE\')"> Nothing </text>
 </g>';
 
-    
+
     my $click =  'function click(choice) {
    var radiobutton1 = (SVGDocument.getElementById("rbCOV"))  ? SVGDocument.getElementById("rbCOV")  : SVGDocument.getElementById("dummycircle");
    var radiobutton2 = (SVGDocument.getElementById("rbFCBP")) ? SVGDocument.getElementById("rbFCBP") : SVGDocument.getElementById("dummycircle");
@@ -563,7 +563,7 @@ sub makesvgfile {
       for (i = 0; i < IDS.length; i++){
           var tmp = SVGDocument.getElementById("c"+IDS[i]);
           tmp.setAttribute("style", "fill:"+COV[i]);
-          
+
       }
       var seq = SVGDocument.getElementById("seq");
       seq.setAttribute("style", "visibility: hidden");
@@ -584,7 +584,7 @@ sub makesvgfile {
       for (i = 0; i < IDS.length; i++){
           var tmp = SVGDocument.getElementById("c"+IDS[i]);
           tmp.setAttribute("style", "fill:"+FCBP[i]);
-          
+
       }
       var seq = SVGDocument.getElementById("seq");
       seq.setAttribute("style", "visibility: hidden");
@@ -605,7 +605,7 @@ sub makesvgfile {
       for (i = 0; i < IDS.length; i++){
           var tmp = SVGDocument.getElementById("c"+IDS[i]);
           tmp.setAttribute("style", "fill:"+ENTROPY[i]);
-          
+
       }
       var seq = SVGDocument.getElementById("seq");
       seq.setAttribute("style", "visibility: hidden");
@@ -626,7 +626,7 @@ sub makesvgfile {
       for (i = 0; i < IDS.length; i++){
           var tmp = SVGDocument.getElementById("c"+IDS[i]);
           tmp.setAttribute("style", "fill:"+CONSERVATION[i]);
-          
+
       }
       var seq = SVGDocument.getElementById("seq");
       seq.setAttribute("style", "visibility: hidden");
@@ -643,7 +643,7 @@ sub makesvgfile {
       legend2.setAttribute("style", "visibility: hidden");
       legend3.setAttribute("style", "visibility: hidden");
       legend4.setAttribute("style", "visibility: hidden");
-  
+
       for (i = 0; i < IDS.length; i++){
           var tmp = SVGDocument.getElementById("c"+IDS[i]);
           tmp.setAttribute("style", "fill:#ffffff");
@@ -653,11 +653,11 @@ sub makesvgfile {
       seq.setAttribute("style", "visibility: visible");
    }
 }';
-    
+
 ##############################################################################
 # READ RNA STRUCTURE FILE
 ##############################################################################
-    
+
     open(IN,'<rna.ps') || die "Can not open file rna.ps: $!";
     my ($i,$j) = (0,0);
     my $sequence = '';
@@ -665,12 +665,12 @@ sub makesvgfile {
     my @FCBP = ( );
     my @ENTROPY = ( );
     my @CONSERVATION = ( );
-    
+
     while(<IN>)
     {
     #chomp;
 	$sequence .= $1 if (m/(.*)(\\$)/);
-	
+
 	if (m/(\[)(-?\d+\.\d+)\s(-?\d+\.\d+)(\])/)
 	{
 	    $IDS[$i] = $i;
@@ -683,18 +683,18 @@ sub makesvgfile {
 	    $PARTNER[$2-1] = $3;
 	}
 	elsif (m/\s\s(\S+)\n/){
-	    
+
 	    $COV[$j++]         =$1;
 	    $FCBP[$j++]        =$1;
 	    $ENTROPY[$j++]     =$1;
 	    $CONSERVATION[$j++]=$1;
-	    
+
 	}
-	
+
     }
     close(IN);
-    $sequence =~ s/(\/sequence\s\()(.*)/$2/;	
-    @SEQUENCE = split (//, $sequence);	
+    $sequence =~ s/(\/sequence\s\()(.*)/$2/;
+    @SEQUENCE = split (//, $sequence);
 
     for my $i (0 .. $#IDS)
     {
@@ -713,15 +713,15 @@ sub makesvgfile {
     my $legendfcbp = "
 <g id=\"legend_fcbp\" transform=\"translate(230 550)\" font-family=\"Arial,Helvetica\">
 <text x=\"0\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">0</text>\n";
-    
+
     my $legendentropy = "
 <g id=\"legend_entropy\" transform=\"translate(230 550)\" font-family=\"Arial,Helvetica\">
 <text x=\"0\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">$minent</text>\n";
-    
+
     my $legendconservation = "
 <g id=\"legend_conservation\" transform=\"translate(230 550)\" font-family=\"Arial,Helvetica\">
 <text x=\"0\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">0</text>\n";
-    
+
 
     my $ii=0;
     foreach my $col (@colours){
@@ -732,7 +732,7 @@ sub makesvgfile {
     $legendfcbp .= $legendbod;
     $legendentropy .= $legendbod;
     $legendconservation .= $legendbod;
-    
+
     $legendcov .= "<text x=\"73\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">2</text>
 </g>\n";
     $legendfcbp .= "<text x=\"73\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">1</text>
@@ -741,7 +741,7 @@ sub makesvgfile {
 </g>\n";
     $legendconservation .= "<text x=\"73\" y=\"28\" font-size=\"12px\" fill=\"dimgray\">1</text>
 </g>\n";
-    
+
 # assign everywhere the same color
     for my $i (0 .. $#IDS)
     {
@@ -752,7 +752,7 @@ sub makesvgfile {
 	    my $j = int($covariationA[$i] * (scalar(@colours)-1));
 	    $COV[$i] = $colours[$j];
 	}
-	
+
 	if ($fcbpA[$i]<0){
 	    $FCBP[$i] = "#ffffff";
 	}
@@ -778,20 +778,20 @@ sub makesvgfile {
 	}
 
     }
-    
-    
+
+
 ##############################################################################
 # PRINT SVG
 ##############################################################################
 #open( SD, "$alnfile" ) or die ("FATAL: Couldn't open $alnfile [$!]\n $!\n");
-    
+
     open(RNASVG, ">rna.svg") or die ("FATAL: Couldn't open rna.svg\n [$!]");
-    
+
 # HEADER
     my $header = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <svg xmlns="http://www.w3.org/2000/svg" height="650" width="452" onload=\'Init(evt)\'>';
     print RNASVG $header;
-    
+
 # JAVASCRIPT
     print RNASVG '<script type="text/ecmascript">',"\n",'<![CDATA[',"\n";
     print RNASVG "IDS = new Array('",join("','",@IDS),"');\n";
@@ -802,9 +802,9 @@ sub makesvgfile {
     print RNASVG "var SVGDocument = null;\nvar SVGRoot = null;\n";
     print RNASVG 'function Init(evt) { SVGDocument = evt.target.ownerDocument;',"\n";
     print RNASVG 'SVGRoot = SVGDocument.documentElement;click("NONE"); }',"\n";
-    
+
     print RNASVG $click;
-    
+
     print RNASVG ']]>',"\n",'</script>',"\n";
     print RNASVG '<circle id="dummycircle" cx="1" cy="1" r="1" stroke-width="0" fill="white" />',"\n";
     print RNASVG $menue;
@@ -829,18 +829,18 @@ sub makesvgfile {
     }
     my $divisor = max $xspan, $yspan;
     $divisor += 16;
-    
+
     my $scale = 450/$divisor;
     print RNASVG '<g transform="scale(',$scale,',',$scale,') translate(',0,',',((452-$yspan*$scale)/2)/$scale,')">',"\n" if ($xspan > $yspan);
     print RNASVG '<g transform="scale(',$scale,',',$scale,') translate(',((452-$xspan*$scale)/2)/$scale,',',0,')">',"\n" if ($xspan <= $yspan);
-    
-    
+
+
 # DRAW THE CIRCLES (INITIALIZE TO WHITE)
     foreach my $i (0 .. $#IDS)
     {
 	print RNASVG '<circle id="c'.$IDS[$i].'" cx="'.$X[$i].'" cy="'.$Y[$i].'" r="8" style="fill:#ffffff" stroke="black" stroke-width="0"/>'."\n";
     }
-    
+
 # PRINT BACKBONE
     print RNASVG '<polyline style="stroke: black; fill: none; stroke-width: 1.5" id="outline" points="';
     foreach my $i (0 .. $#IDS)
@@ -848,7 +848,7 @@ sub makesvgfile {
 	print RNASVG $X[$i],",",$Y[$i],"\n";
     }
     print RNASVG '" />',"\n";
-    
+
 # PRINT PAIRS
     print RNASVG '<g style="stroke: black; stroke-width: 1" id="pairs">';
     foreach my $i (0 .. $#IDS)
@@ -861,7 +861,7 @@ sub makesvgfile {
 	}
     }
     print RNASVG "</g>\n";
-    
+
 # PRINT SEQUENCE
     print RNASVG '<g style="font-family: SansSerif" transform="translate(-6, 6)" id="seq">';
     foreach my $i (0 .. $#IDS)
@@ -869,7 +869,7 @@ sub makesvgfile {
 	print RNASVG '<text id="t',$IDS[$i],'" x="',$X[$i],'" y="',$Y[$i],'" fill="black">',$SEQUENCE[$i],'</text>',"\n";
     }
     print RNASVG "</g>\n";
-    
+
     print RNASVG "</g>\n";
     print RNASVG "</svg>\n";
 
@@ -877,8 +877,7 @@ sub makesvgfile {
 
 #    compute_bitscores();
 
-    
+
 }
 
 ######################################################################
-

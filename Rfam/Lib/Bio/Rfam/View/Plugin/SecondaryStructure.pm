@@ -21,7 +21,7 @@ has foo => (
 
 sub process {
   my $self = shift;
-  
+
   $self->makeRchie;
   $self->makeRscape;
   $self->makeBling;
@@ -32,7 +32,7 @@ sub makeRchie {
 	my ($self) = @_;
 
         my $config = $self->_mxrp_parent->config;
-	
+
 	my $rfamdb = $config->rfamlive;
 	my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
   my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
@@ -42,9 +42,9 @@ sub makeRchie {
 	my $rchie_img = "$location/$rfam_acc.rchie.png";
 	my $msa = $self->_mxrp_parent->family->SEED;
         $msa->write_msa($seed_loc);
-	
+
 	my $famRow = $rfamdb->resultset('Family')->find( { rfam_acc => $rfam_acc } );
-	
+
     if (!defined($famRow)) {
 		croak ("Failed to find entry in the Family table for $rfam_acc.");
 	}
@@ -52,23 +52,23 @@ sub makeRchie {
     my $r_script = $config->config->{binLocation} . '/stockholm2Arc.R';
 
 	my $Rchie_cmd = "$r_script $seed_loc $rchie_img 2> $location/$$.err";
-	
+
     print "Making arc diagram for $rfam_acc\n";
-	
+
     system ($Rchie_cmd);
-	
+
     if ($? == -1) {
 		croak ("Failed to generate Rchie image for $rfam_acc!\n");
 	}
-	
+
     my $fileGzipped;
 	gzip $rchie_img => \$fileGzipped;
-		
+
     my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
 			{rfam_acc => $rfam_acc,
 			 type => 'rchie'},
             {key => 'acc_and_type'});
-    
+
     $resultset->update({ image => $fileGzipped,
                          type => 'rchie'},
                        {key => 'acc_and_type'});
@@ -78,11 +78,11 @@ sub makeRchie {
          #                                                            type => 'rchie',
           #                                                           image => $fileGzipped},
            #                                                         {key => 'acc_and_type'});
-	
+
 }
 
 sub makeRscape{
-	
+
 	#some init steps from the config file
 	my ($self) = @_;
   	my $config = $self->_mxrp_parent->config;
@@ -108,44 +108,44 @@ sub makeRscape{
         if (!defined($famRow)) {
                 croak ("Failed to find entry in the Family table for $rfam_acc.");
         }
-	
+
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
 	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --cyk $seed_loc";
-	
+
 	print "Making rscape image for $rfam_acc\n";
-        
+
 	system ($rscape_cmd);
 
 	if ($? == -1) {
                 croak ("Failed to generate rscape images for $rfam_acc!\n");
         }
-    
-	
+
+
 	my $rscape_img = "$outdir/$rfam_id.R2R.sto.svg";
 	if (not -e $rscape_img){
 		$rscape_img = "$outdir/SEED_1.R2R.sto.svg";
 	}
-	
+
 	my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
 	if (not -e $rscape_cyk_img){
 		$rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
 	}
-	
+
 	my $rscapeImgGzipped;
 	my $rscapeCykGzipped;
-    
+
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
 	my $cleaned_r2r = "$outdir/creaned.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_img, $cleaned_r2r);
-        
+
 	gzip $cleaned_r2r => \$rscapeImgGzipped;
         #load image to the database
         my $resultset = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {	rfam_acc => $rfam_acc,
                                 type => 'rscape'},
                             { 	key => 'acc_and_type'});
-	
+
         $resultset->update({	image => $rscapeImgGzipped,
                                 type => 'rscape'},
                             {	key => 'acc_and_type'});
@@ -155,9 +155,9 @@ sub makeRscape{
 
 	my $cleaned_cyk_r2r = "$outdir/creaned.cyk.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_cyk_r2r);
-	
+
 	gzip  $cleaned_cyk_r2r => \$rscapeCykGzipped;
-	
+
         #load image to the database
         my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {    rfam_acc => $rfam_acc,
@@ -168,13 +168,13 @@ sub makeRscape{
                                 type => 'rscape-cyk'},
                             {    key => 'acc_and_type'});
         }
-	
+
 }
 
 sub clean_rscape_svg_files{
 	my ($self, $rscape_file, $cleaned_svg) = @_;
 	my $rfam_id = $self->_mxrp_parent->family->DESC->ID;
-	
+
 	open(my $fh_in, '<:encoding(UTF-8)', $rscape_file)
                 or die "Could not open file '$rscape_file' $!";
 
@@ -183,7 +183,7 @@ sub clean_rscape_svg_files{
 
         while (my $row = <$fh_in>) {
                 chomp $row;
-        	# check for pseudoknot line 
+        	# check for pseudoknot line
 	        if (index($row, ".pk") != -1) {
                         my ($clean_tag_line, $pk_segment) = split(">", $row, 2);
                         my ($junk, $pk_name) = split /[.]/, $pk_segment;
@@ -210,7 +210,7 @@ sub clean_rscape_svg_files{
 
 sub makeBling {
   my ($self) = @_;
-  
+
   my $config = $self->_mxrp_parent->config;
   my $rfamdb = $self->_mxrp_parent->config->rfamlive;
   my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
@@ -221,21 +221,21 @@ sub makeBling {
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
   my $RNAplot_img = "$location/$rfam_acc"."_ss.svg";
-  my $RNAplot_img_maxCM = "$location/$rfam_acc.maxcm_ss.svg"; 
-  my $RNAplot = "$location/rnaplot";  
+  my $RNAplot_img_maxCM = "$location/$rfam_acc.maxcm_ss.svg";
+  my $RNAplot = "$location/rnaplot";
   my $RNAplot_maxCM = "$location/rnaplot_maxCM";
 
   my $conservationSVG = "$location/$rfam_acc.conservation.svg";
   my $covariationSVG = "$location/$rfam_acc.covariation.svg";
   my $entropySVG = "$location/$rfam_acc.entropy.svg";
-  my $fcbpSVG = "$location/$rfam_acc.fcbp.svg"; 
-  my $normalSVG = "$location/$rfam_acc.normal.svg"; 
+  my $fcbpSVG = "$location/$rfam_acc.fcbp.svg";
+  my $normalSVG = "$location/$rfam_acc.normal.svg";
   my $maxCMparseSVG = "$location/$rfam_acc.maxcm.svg";
 
   # This is simply to get around a 'not digitized' error that easel is giving
   my $msa = $self->_mxrp_parent->family->SEED;
   $msa->write_msa($seed_loc);
-  $msa=Bio::Easel::MSA->new({ fileLocation => $seed_loc}); 
+  $msa=Bio::Easel::MSA->new({ fileLocation => $seed_loc});
 
   # Remove 'gapped' columns from the MSA object
   $msa->remove_rf_gap_columns();
@@ -259,7 +259,7 @@ sub makeBling {
       $bpHash{$i}=0;
       push (@jArray, $j);
     }
-    elsif ($bpPos eq '(') { 
+    elsif ($bpPos eq '(') {
       $bpHash{$i}=1;
       $j++;
       push (@jArray, $j);
@@ -267,18 +267,18 @@ sub makeBling {
     elsif ($bpPos eq ')') {
       $bpHash{$i}=1;
       push (@jArray, $j);
-      $j--;     
+      $j--;
    }
    $i++;
   }
-  
+
   # Create the base unannotated SS Image with RNAplot
   open(my $fh, ">", "$RNAplot" ) or die "$RNAplot";
-  print $fh (">$rfam_acc\n$MIS\n$SScons\n"); 
+  print $fh (">$rfam_acc\n$MIS\n$SScons\n");
   close $fh;
 
   chdir($location);
-  
+
   use IPC::Run qw(run);
   my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
@@ -302,9 +302,9 @@ sub makeBling {
                       34 => "255,141,0",   35 => "255,105,0",   36 => "255,70,0",
                       37 => "255,0,0");
 
-  # Perform calculations to generate the following different SS annotations 
-  # where annotation is a hash with the position as a key and a RGB colour 
-  # as the value. We must also record max value for some annotations 
+  # Perform calculations to generate the following different SS annotations
+  # where annotation is a hash with the position as a key and a RGB colour
+  # as the value. We must also record max value for some annotations
   # and scale accordingly.
 
   # 1) Sequence coonservation
@@ -349,7 +349,7 @@ sub makeBling {
   foreach my $covariationValue (@covariation) {
     if ($bpHash{$k} eq 0) {
       $covariationColour{$k} = "-";
-    }   
+    }
     else{
       $rgbColourNumber = int(((($covariationValue+2)*9)+1) + 0.5);
       $covariationColour{$k} = $colours{$rgbColourNumber};
@@ -357,7 +357,7 @@ sub makeBling {
     $k++;
   }
 
-  # Image 4: Sequence Entropy 
+  # Image 4: Sequence Entropy
   my @SeqEntropy = $msa->Bio::Easel::MSA::pos_entropy();
   my $maxEntropy = 0.001;
   my %SeqEntropyColour;
@@ -369,13 +369,13 @@ sub makeBling {
     $rgbColourNumber = int(((($SeqEntValue/$maxEntropy)*36)+1) + 0.5);
     $SeqEntropyColour{$k} = $colours{$rgbColourNumber};
     $k++;
-  } 
+  }
 
   # Image 5: Maximum Parse of CM Model
   my $cmemitPath = $config->infernalPath . "cmemit";
   my $cmalignPath = $config->infernalPath . "cmalign";
   my $out_tfile = "$location/$rfam_acc.tfile";
-  my $clen = $self->_mxrp_parent->family->CM->cmHeader->{clen};  #consensus length of the CM 
+  my $clen = $self->_mxrp_parent->family->CM->cmHeader->{clen};  #consensus length of the CM
   my @escAR = ();
   my @cseqAR = ();
   my $cpos;
@@ -419,13 +419,13 @@ sub makeBling {
   }
 
   my %maxCMparseColour;
-  my $maxMaxCMparseValue = 0.0; 
+  my $maxMaxCMparseValue = 0.0;
   for($cpos = 0; $cpos < $clen; $cpos++) {
-    if($escAR[$cpos]  eq "") { 
-      die "ERROR, did not fill esc for consensus position $cpos"; 
+    if($escAR[$cpos]  eq "") {
+      die "ERROR, did not fill esc for consensus position $cpos";
     }
-    if($cseqAR[$cpos] eq "") { 
-      die "ERROR, did not fill cseq for consensus position $cpos"; 
+    if($cseqAR[$cpos] eq "") {
+      die "ERROR, did not fill cseq for consensus position $cpos";
     }
     if($escAR[$cpos] > $maxMaxCMparseValue) {
       $maxMaxCMparseValue = ($escAR[$cpos]);
@@ -437,8 +437,8 @@ sub makeBling {
     $maxCMparseColour{$cpos}= $colours{$rgbColourNumber};
   }
 
-  unlink $out_tfile;  
-  
+  unlink $out_tfile;
+
   my $maxCMletters = join("",@cseqAR);
   open(my $maxcm_fh, ">", "$RNAplot_maxCM" ) or die "$RNAplot_maxCM";
   print $maxcm_fh (">$rfam_acc.maxcm\n$maxCMletters\n$SScons\n");
@@ -446,7 +446,7 @@ sub makeBling {
 
   chdir($location);
 
-  run \@cmd2, '<', $RNAplot_maxCM; 
+  run \@cmd2, '<', $RNAplot_maxCM;
 
   unless(-e $RNAplot_img_maxCM) {
     die ("Error in creating original RNA SVG image \n")
@@ -473,7 +473,7 @@ sub makeBling {
                 $normalColourHash{$k} = $blockColour;
               }
               else {
-                # New colour as we are on a new stem              
+                # New colour as we are on a new stem
                 $block++;
                 $blockColour = $colours{((76-$block)%38)};
                 $normalColourHash{$i} = $blockColour;
@@ -487,7 +487,7 @@ sub makeBling {
               $normalColourHash{$i} = $blockColour;
               $normalColourHash{$k} = $blockColour;
             }
-          }       
+          }
         }
         else {$k++}
       }
@@ -521,7 +521,7 @@ sub makeBling {
                      [$entropySVG,'ent'],
                      [$normalSVG,'norm'],
                      [$maxCMparseSVG,'maxcm']);
- 
+
   open ($conservationSVGhandle, '>', $conservationSVG) or die ("Unable to open $conservationSVGhandle");
   print $conservationSVGhandle $conservationSVGobj;
   close ($conservationSVGhandle) or die ("Unable to close $conservationSVGhandle");
@@ -541,7 +541,7 @@ sub makeBling {
   open ($normalSVGhandle, '>', $normalSVG) or die ("Unable to open $normalSVGhandle");
   print $normalSVGhandle $normalSVGobj;
   close ($normalSVGhandle) or die ("Unable to close $normalSVGhandle");
-  
+
   open ($maxCMSVGhandle, '>', $maxCMparseSVG) or die ("Unable to open $maxCMSVGhandle");
   print $maxCMSVGhandle $maxCMparseSVGobj;
   close ($maxCMSVGhandle) or die ("Unable to close $maxCMSVGhandle");
@@ -576,11 +576,11 @@ sub makeBling {
   unlink($CM_loc);
 
 }
- 
+
 # Sub for creating the legend for bling images as an SVG group element which contains the legend
 sub SVGLegend {
   my ($legend_name,$min_value,$max_value,$colours) = @_;
-  
+
   $max_value = sprintf("%.2f", $max_value);
   $min_value = sprintf("%.2f", $min_value);
 
@@ -595,7 +595,7 @@ sub SVGLegend {
                                                             'font-size'    => "14px",
                                                             'text-anchor'  => "middle",
                                                             'fill'         => "dimgrey" } )->cdata($legend_name);
-  my $leftLegendNumber = $legendElementsGroup->text( 
+  my $leftLegendNumber = $legendElementsGroup->text(
                                                 id     => 'leftLegendNumber',
                                                 x      => 0,
                                                 y      => -2,
@@ -616,7 +616,7 @@ sub SVGLegend {
                                               y  =>  0 );
   my $xPos = 0;
   my $yPos = 0;
-  
+
   my @colourKeys = keys % {$colours};
   foreach my $colourKey (sort {$a<=>$b} @colourKeys) {
     $legendBox->rectangle(  x     =>  $xPos,
@@ -624,21 +624,21 @@ sub SVGLegend {
                             width =>  4,
                             height => 15,
                             style => { 'fill' => "rgb(".$ {$colours} {$colourKey}.")" } ) ;
-    $xPos = $xPos + 4;   
-  }  
+    $xPos = $xPos + 4;
+  }
   return $tmpLegendObj;
-}                      
+}
 
 # Subroutine for annotating an image given the SVG image and an annotation hash
 sub annotateSVG {
   my ($svgFile, $annotationHash, $SVGlegend) = @_;
-  
+
   # Create a reference to the legend group
   my $legendElements;
-  if (defined $SVGlegend) { 
+  if (defined $SVGlegend) {
     $legendElements = $SVGlegend->getElementByID("legendElements");
   }
-  
+
   my $svg_text=read_file($svgFile);
   my $parser=new SVG::Parser();
   my $svg=$parser->parse($svg_text);
@@ -652,7 +652,7 @@ sub annotateSVG {
   my $SVGfirstChild=$svg->getFirstChild();
   my @scriptElements = $SVGfirstChild->getElements("script");
   my $scriptElement = $scriptElements[0];
-  
+
   # Change with width & height of the SVG to allow addition of the legend
   # The default from RNAplot is 452 x 452  so we increase it to 500 x 600
   my $SVGwidth  = "700";
@@ -660,7 +660,7 @@ sub annotateSVG {
   $SVGwidth     = $SVGfirstChild->setAttribute('width',$SVGwidth);
   $SVGheight    = $SVGfirstChild->setAttribute('height',$SVGheight);
 
-  # Move the image over to allow space for the legend 
+  # Move the image over to allow space for the legend
   my $transformAttribute=$seqElementParent->getAttribute('transform');
   $transformAttribute =~ /translate\((-?\d+.\d+),(-?\d+.\d+)\)/;
   my $xTranslate = $1;
@@ -668,15 +668,15 @@ sub annotateSVG {
   $xTranslate = $xTranslate + 100;
   $yTranslate = $yTranslate + 25;
   $transformAttribute =~ s/translate\(-?\d+.\d+,-?\d+.\d+\)/translate($xTranslate,$yTranslate)/;
-  $transformAttribute = $seqElementParent->setAttribute('transform', $transformAttribute); 
- 
+  $transformAttribute = $seqElementParent->setAttribute('transform', $transformAttribute);
+
   # Dereference the annotation hash
   my %annotationColour = %$annotationHash;
- 
+
   # Change the stroke width of the lines
   $outlineElements->setAttribute('style', 'fill: none; stroke: black; stroke-width: 0.75');
   $pairsElements->setAttribute('style', 'fill: none; stroke: black; stroke-width: 0.75');
- 
+
   # Change the font of the nucleotides
   $seqElements->setAttribute('style','font-family: Arial,Helvetica');
 
@@ -695,7 +695,7 @@ sub annotateSVG {
   my $fiveCoordy  = ($seqPosHash{0}->{'Y'})-15;
   my $threeCoordx = ($seqPosHash{$pos-1}->{'X'})+4;
   my $threeCoordy = ($seqPosHash{$pos-1}->{'Y'})-15;
-  
+
   my $fivePrime = $seqElements->text(
                                  id     => 'fivePrime',
                                  x      => $fiveCoordx,
@@ -704,7 +704,7 @@ sub annotateSVG {
                                              'font-size'    => "10px",
                                              'text-ancor'   => "middle",
                                              'fill'         => "dimgrey" } )->cdata("5'");
- 
+
   my $threePrime = $seqElements->text(
                                  id     => 'threePrime',
                                  x      => $threeCoordx,
@@ -729,10 +729,10 @@ sub annotateSVG {
                                                          'fill'=>"rgb($annotationColour{$key})"});
     }
   }
-  
+
   # Place the groups in the correct position within the SVG DOM
   $seqElementParent->insertBefore($circleElementsGroup, $outlineElements);
-  
+
   if (defined $SVGlegend) {
     $SVGfirstChild->insertBefore($legendElements, $seqElementParent);
   }
@@ -747,8 +747,8 @@ sub annotateSVG {
         function click() {
              var seq = document.getElementById("seq");
              var lines = document.getElementById("outline");
-             var pairs = document.getElementById("pairs");         
-   
+             var pairs = document.getElementById("pairs");
+
              if (shown==1) {
                seq.setAttribute("style", "font-family: Arial,Helvetica; visibility: hidden");
                lines.setAttribute("style", "fill: none; stroke: black; stroke-width: 0.75; visibility: visible");
@@ -761,10 +761,10 @@ sub annotateSVG {
                lines.setAttribute("style", "fill: none; stroke: black; stroke-width: 0.75; visibility: hidden");
 
                shown = 3;
-             } else if (shown==3) { 
+             } else if (shown==3) {
                seq.setAttribute("style", "font-family: Arial,Helvetica; visibility: visible");
                lines.setAttribute("style", "fill: none; stroke: black; stroke-width: 0.75; visibility: visible");
-               pairs.setAttribute("style", "fill: none; stroke: black; stroke-width: 0.75; visibility: visible"); 
+               pairs.setAttribute("style", "fill: none; stroke: black; stroke-width: 0.75; visibility: visible");
                shown = 1;
              }
          }
@@ -781,7 +781,7 @@ return $outputSVG;
 }
 
 #---------------------------------------------------------------------------
-# Subroutine for adding coordinates to the coordinate hash 
+# Subroutine for adding coordinates to the coordinate hash
 sub addSeqPosObj {
   my ($seqPosHashRef,$position,$xCoord,$yCoord)  = @_;
   $seqPosHashRef->{$position} = {
