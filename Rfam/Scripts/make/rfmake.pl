@@ -258,7 +258,7 @@ my @outfile_orderA = ("SCORES", "SEEDSCORES", "outlist", "revoutlist", "seedoutl
                       "repalign", "repalignout", "comparison", "lostoutlist", "newoutlist", "lostspecies", "newspecies"); 
 $outfileH{"SCORES"}      = "tabular list of all hits above GA threshold";
 $outfileH{"SEEDSCORES"}  = "tabular list of all hits in SEED above GA threshold";
-$outfileH{"outlist"}     = "sorted list of all hits from TBLOUT";
+$outfileH{"outlist"}     = "sorted list of all hits from TBLOUT and SEEDTBLOUT";
 $outfileH{"revoutlist"}  = "sorted list of all hits from REVTBLOUT";
 $outfileH{"seedoutlist"} = "sorted list of all hits from SEEDTBLOUT";
 $outfileH{"species"}     = "same as outlist, but with additional taxonomic information";

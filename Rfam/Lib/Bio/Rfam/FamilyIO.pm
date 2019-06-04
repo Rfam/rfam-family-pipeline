@@ -3879,7 +3879,7 @@ sub validate_outlist_format {
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }
     if(defined $line) { 
       chomp $line;
-      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\w+\s+\S+\s+\S+\s+\d+\s+\d+\s+[\-+]\s+\d+\s+\d+\s+\S+\s+\S+\s+/) { 
+      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\d+\s+\d+\s+[\-+]\s+\d+\s+\d+\s+\S+\s+\S+\s+/) { 
         $passed = 1;
       }
       else { 
@@ -3943,7 +3943,7 @@ sub validate_species_format {
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }
     if(defined $line) { 
       chomp $line;
-      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\w+\s+\S+\s+\S+\s+\S+.+  .*$/) { 
+      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+.+  .*$/) { 
         $passed = 1;
       }
       else { 
