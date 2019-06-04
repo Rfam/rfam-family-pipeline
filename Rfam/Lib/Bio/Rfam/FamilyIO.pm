@@ -103,6 +103,7 @@ sub loadRfamFromLocalFile {
   return ($famObj);
 }
 
+
 sub loadRfamFromLocalFile_preSEED {
   my ( $self, $family, $dir, $source ) = @_;
 
@@ -112,15 +113,17 @@ sub loadRfamFromLocalFile_preSEED {
 
   my %params;
   foreach my $f ( @{ $self->{config}->mandatoryFiles } ) {
-    unless ( -e "$dir/$family/$f" ) {
-      confess("Could not find $dir/$family/$f\n");
-    }
-    my $fh;
+    if(($f ne "SEEDTBLOUT") && ($f ne "SEEDSCORES")) { 
+      unless ( -e "$dir/$family/$f" ) {
+        confess("Could not find $dir/$family/$f\n");
+      }
+      my $fh;
 
-    #print "Opening $dir/$family/$f\n";
-    open( $fh, "$dir/$family/$f" )
-      or confess("Could not open $dir/$family/$f:[$!]");
-    $params{$f} = $fh;
+      #print "Opening $dir/$family/$f\n";
+      open( $fh, "$dir/$family/$f" )
+          or confess("Could not open $dir/$family/$f:[$!]");
+      $params{$f} = $fh;
+    }
   }
 
   if ($source) {
@@ -216,8 +219,27 @@ sub loadRfamFromSVN {
     $client->catFile( $family, $f, $fh );
     close($fh);
   }
-# TEMP!
-#  my $famObj = $self->loadRfamFromLocalFile( $family, $dir, 'svn' );
+  my $famObj = $self->loadRfamFromLocalFile( $family, $dir, 'svn' );
+
+  return $famObj;
+}
+
+
+sub loadRfamFromSVN_preSEED {
+  my ( $self, $family, $client ) = @_;
+
+  my $dir = File::Temp->newdir( 'CLEANUP' => 1 );
+  mkdir("$dir/$family") or confess("Could not make $dir/$family:[$!]");
+
+  foreach my $f ( @{ $self->{config}->mandatoryFiles } ) {
+    if(($f ne "SEEDTBLOUT") && ($f ne "SEEDSCORES")) { 
+      my $fh;
+      open( $fh, ">$dir/$family/$f" ) or die "Could not open $dir/$f";
+      $client->catFile( $family, $f, $fh );
+      close($fh);
+    }
+  }
+#my $famObj = $self->loadRfamFromLocalFile( $family, $dir, 'svn' );
   my $famObj = $self->loadRfamFromLocalFile_preSEED( $family, $dir, 'svn' );
 
   return $famObj;

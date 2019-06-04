@@ -16,11 +16,12 @@ use Bio::Rfam::QC;
 #-------------------------------------------------------------------------------
 # Deal with all of the options
 
-my ( $message, @ignore, $onlydesc, $help, $addToClan, $removeFromClan );
+my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan );
 
 &GetOptions(
   "m=s"              => \$message,
   "i=s"              => \@ignore,
+  "preseed"          => \$preseed,
   "onlydesc"         => \$onlydesc,
   "add_to_clan"      => \$addToClan,
   "remove_from_clan" => \$removeFromClan,
@@ -89,10 +90,20 @@ my ( $oldFamilyObj, $upFamilyObj );
 my $familyIO = Bio::Rfam::FamilyIO->new;
 
 $upFamilyObj = $familyIO->loadRfamFromLocalFile( $family, $pwd );
-print STDERR "Successfully loaded local copy $family through middleware\n";
+print STDERR "Successfully loaded local copy of $family through middleware\n";
 
 #Now load the remote family
-$oldFamilyObj = $familyIO->loadRfamFromSVN( $family, $client );
+if($preseed) { 
+  # once all families have been updated to the 'outside seeds' strategy
+  # remove the --preseed option and the two subroutines with the suffix
+  # '_preSEED' in FamilyIO.pm:
+  # loadRfamFromSVN_preSEED()
+  # loadRfamFromLocalFile_preSEED()
+  $oldFamilyObj = $familyIO->loadRfamFromSVN_preSEED( $family, $client );
+}
+else { 
+  $oldFamilyObj = $familyIO->loadRfamFromSVN( $family, $client );
+}
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
 
 #-------------------------------------------------------------------------------
@@ -114,7 +125,7 @@ if ( $upFamilyObj->DESC->ID ne $oldFamilyObj->DESC->ID ) {
 }
 
 #-------------------------------------------------------------------------------
-#Clan sainity checks 
+#Clan sanity checks 
 if ( defined($upFamilyObj->DESC->CL) and !defined($oldFamilyObj->DESC->CL)){
   #The updated family has a clan line
   unless($addToClan){
@@ -167,9 +178,6 @@ if ($onlydesc) {
                                     $config, $overrideHashRef, $overlapIgnore );
   die "Failed QC.\n" if($error);
 }
-
-printf("FAMILY PASSES!\n");
-exit 0;
 
 #-------------------------------------------------------------------------------
 #If we get here, then great! We can now check the family in!
