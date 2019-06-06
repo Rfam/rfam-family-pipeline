@@ -4038,7 +4038,7 @@ sub fetch_seed_sequence_info {
 
   foreach $seed_name (@seed_name_A) { 
     if($seed_name_info_HH{$seed_name}{"ncbi_id"} eq "-") { 
-      my ($is_urs_taxid, $rnacentral_urs, $rnacentral_taxid) = Bio::Utils::rnacentral_urs_taxid_breakdown($seed_name);
+      my ($is_urs_taxid, $rnacentral_urs, $rnacentral_taxid) = Bio::Rfam::Utils::rnacentral_urs_taxid_breakdown($seed_name);
       if($is_urs_taxid) { 
         $seed_name_info_HH{$seed_name}{"ncbi_id"} = $rnacentral_taxid;
         my (undef, undef, $rnacentral_description, $rnacentral_length) = Bio::Rfam::Utils::rnacentral_id_lookup($rnacentral_urs);

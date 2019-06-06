@@ -2327,7 +2327,7 @@ sub genbank_nse_lookup_and_md5 {
     }
   }
   elsif($got_url !~ m/^>/) { 
-    # this shouldn't happen, if the sequence doesn't exist then we $got_url should be undefined
+    # this shouldn't happen, if the sequence doesn't exist then $got_url should be undefined
     die "ERROR in genbank_nse_lookup_and_md5() get() returned a value that is not a sequence"; 
   }
   else { 
@@ -2401,6 +2401,10 @@ sub genbank_fetch_seq_info {
     die "ERROR in $sub_name undefined info_HHR";
   }
 
+  # initialize, and also determine if all of the sequences look 
+  # like RNAcentral IDs, if so, we don't expect the GenBank query to 
+  # fetch anything
+  my $all_look_like_rnacentral = 1; # set to 0 below if >= 1 ID does NOT look like RNAcentral
   my $name_str = "";
   foreach my $name (@{$name_AR}) { 
     %{$info_HHR->{$name}} = ();
@@ -2410,73 +2414,78 @@ sub genbank_fetch_seq_info {
     $info_HHR->{$name}{"description"} = "-";
     $info_HHR->{$name}{"length"}      = "-";
     $info_HHR->{$name}{"mol_type"}    = "-";
+    if(! id_looks_like_rnacentral($name)) { $all_look_like_rnacentral = 0; }
   }
 
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
   my $xml_string = get($genbank_url);
 
   if(! defined $xml_string) { 
-    # if NCBI is being hit by a bunch of requests, the get() command
-    # may fail in that $got_url may be undefined. If that happens we
-    # wait a few seconds ($nseconds) and try again (up to
-    # $nattempts) times BUT we only do this for sequences that
-    # don't look like they are RNAcentral ids. For sequences that
-    # look like they are RNAcentral ids we do not do more attempts.
-    my $attempt_ctr = 1;
-    while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
-      sleep($nseconds);
-      $xml_string = get($genbank_url);
-      $attempt_ctr++;
-    }
-    if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
-      croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
+    if(! $all_look_like_rnacentral) { 
+      # if NCBI is being hit by a bunch of requests, the get() command
+      # may fail in that $got_url may be undefined. If that happens we
+      # wait a few seconds ($nseconds) and try again (up to
+      # $nattempts) times BUT we only do this if at least 1 sequence
+      # does not look like a RNAcentral ids. If all sequences look like
+      # RNAcentral ids, we do not do more attempts.
+      my $attempt_ctr = 1;
+      while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+        sleep($nseconds);
+        $xml_string = get($genbank_url);
+        $attempt_ctr++;
+      }
+      if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
+        croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
+      }
     }
   }
+  else { 
+    # if we get here: we know that $xml_string is defined
+    my $xml = XML::LibXML->load_xml(string => $xml_string);
 
-  my $xml = XML::LibXML->load_xml(string => $xml_string);
+    foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
+      my $accver = $gbseq->findvalue('./GBSeq_accession-version');
+      if(! defined $accver) { 
+        die "ERROR in $sub_name problem parsing XML, no accession-version read"; 
+      }
+      if(! exists $info_HHR->{$accver}) { 
+        die "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver"; 
+      }
 
-  foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
-    my $accver = $gbseq->findvalue('./GBSeq_accession-version');
-    if(! defined $accver) { 
-      die "ERROR in $sub_name problem parsing XML, no accession-version read"; 
-    }
-    if(! exists $info_HHR->{$accver}) { 
-      die "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver"; 
-    }
+      my $description = $gbseq->findvalue('./GBSeq_definition');
+      if(! defined $description) { 
+        die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
+      }
+      $info_HHR->{$accver}{"description"} = $description;
 
-    my $description = $gbseq->findvalue('./GBSeq_definition');
-    if(! defined $description) { 
-      die "ERROR in $sub_name problem parsing XML, no definition (description) read"; 
-    }
-    $info_HHR->{$accver}{"description"} = $description;
+      my $length = $gbseq->findvalue('./GBSeq_length');
+      if(! defined $length) { 
+        die "ERROR in $sub_name problem parsing XML, no length read";
+      }
+      $info_HHR->{$accver}{"length"} = $length;
 
-    my $length = $gbseq->findvalue('./GBSeq_length');
-    if(! defined $length) { 
-      die "ERROR in $sub_name problem parsing XML, no length read";
-    }
-    $info_HHR->{$accver}{"length"} = $length;
+      my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
+      if(! defined $taxid) { 
+        die "ERROR in $sub_name did not read taxon info for $accver";
+      }
+      # ensure we get exactly 1 match (not 0, not more than 1)
+      if($taxid =~ /^taxon\:(\d+)$/) { 
+        $taxid = $1;
+        $info_HHR->{$accver}{"ncbi_id"} = $taxid;
+      }
+      else { 
+        die "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
+      }
 
-    my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
-    if(! defined $taxid) { 
-      die "ERROR in $sub_name did not read taxon info for $accver";
-    }
-    # ensure we get exactly 1 match (not 0, not more than 1)
-    if($taxid =~ /^taxon\:(\d+)$/) { 
-      $taxid = $1;
-      $info_HHR->{$accver}{"ncbi_id"} = $taxid;
-    }
-    else { 
-      die "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
-    }
+      my $mol_type = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
+      if(! defined $mol_type) { 
+        die "ERROR in $sub_name did not read mol_type info for $accver";
+      }
+      $info_HHR->{$accver}{"mol_type"} = $mol_type;
 
-    my $mol_type = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
-    if(! defined $mol_type) { 
-      die "ERROR in $sub_name did not read mol_type info for $accver";
+      $info_HHR->{$accver}{"source"} = "SEED:GenBank";
     }
-    $info_HHR->{$accver}{"mol_type"} = $mol_type;
-
-    $info_HHR->{$accver}{"source"} = "SEED:GenBank";
-  }
+  } # end of 'else' entered if $xml_string is defined
 
   return;
 }
@@ -2519,7 +2528,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $taxid_H{$taxid} = 1;
     }
   }
-
+  
   my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
   my $xml_string = get($genbank_url);
 
@@ -2604,10 +2613,13 @@ sub ncbi_taxonomy_fetch_taxinfo {
       }
       $i++;
     }
-    if($superkingdom_i == -1) { 
-      croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid";
+    my $tax_string = "Unclassified"; # overwritten below if we read LineageEx/Taxon info into @lineage_A
+    if($superkingdom_i != -1) { 
+      $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
     }
-    my $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
+    elsif($species !~ /^unclassified sequences/) { 
+      croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
+    }
 
     if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
       %{$tax_table_HHR->{$taxid}} = ();
