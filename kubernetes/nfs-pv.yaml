@@ -10,5 +10,5 @@ spec:
   nfs:
   	path: /nfs
   	server: nfs_server_ip
-  	readOnly: false
+  	readOnly: true
 
