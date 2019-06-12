@@ -23,7 +23,8 @@ my $client = Bio::Rfam::SVN::Client->new({config => $config});
 #Need to put a transaction around this block
 my $guard = $rfamdb->txn_scope_guard;
 
-my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+#my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+my $familyObj = $familyIO->loadRfamFromSVN_preSEED($family, $client);
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
 
 # call subroutine that we modified to additionally calculate md5s

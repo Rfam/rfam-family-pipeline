@@ -2617,9 +2617,12 @@ sub ncbi_taxonomy_fetch_taxinfo {
     if($superkingdom_i != -1) { 
       $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
     }
-    elsif($species !~ /^unclassified sequences/) { 
-      croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
-    }
+    # commented out this check: could be 'unclassified sequences' or 'marine metagenome' or maybe others? 
+    # this check used to verify it was an expected species value, but I commented it out because I 
+    # didn't want to need to list them all
+    #elsif($species !~ /^unclassified sequences/) { # could also 
+    #  croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
+    #}
 
     if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
       %{$tax_table_HHR->{$taxid}} = ();

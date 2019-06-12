@@ -197,11 +197,11 @@ sub _commitEntry {
                       # (see fetch_seed_sequence_info() for details)
     Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH);
     
-    $rfamdb->resultset('SeedRegion')->updateSeedRegionsFromFamilyObj( $familyObj );
-    $self->{logger}->debug( 'updated seed regions' );
+    # rfamseq should be updated before seed_region and rnacentral_matches 
     $rfamdb->resultset('Rfamseq')->updateRfamseqFromFamilyObj( $familyObj, \%seed_info_HH );
     $self->{logger}->debug( 'updated Rfamseq' );
-    # rfamseq should be updated before rnacentral_matches
+    $rfamdb->resultset('SeedRegion')->updateSeedRegionsFromFamilyObj( $familyObj );
+    $self->{logger}->debug( 'updated seed regions' );
     $rfamdb->resultset('RnacentralMatch')->updateRnacentralMatchesFromFamilyObj( $familyObj );
     $self->{logger}->debug( 'updated Rfamseq' );
     $rfamdb->resultset('Taxonomy')->updateTaxonomyFromFamilyObj( $familyObj, \%seed_info_HH );
