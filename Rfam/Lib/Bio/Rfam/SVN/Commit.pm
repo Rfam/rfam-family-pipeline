@@ -196,18 +196,18 @@ sub _commitEntry {
                       # 2D keys are many of the field names in Rfamseq and Taxonomy tables 
                       # (see fetch_seed_sequence_info() for details)
     Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH);
-    
-    # rfamseq should be updated before seed_region and rnacentral_matches 
+
+    # order of updates: taxonomy, rfamseq, seed_region, full_region, rnacentral_matches
+    $rfamdb->resultset('Taxonomy')->updateTaxonomyFromFamilyObj( $familyObj, \%seed_info_HH );
+    $self->{logger}->debug( 'updated taxonomy' );
     $rfamdb->resultset('Rfamseq')->updateRfamseqFromFamilyObj( $familyObj, \%seed_info_HH );
     $self->{logger}->debug( 'updated Rfamseq' );
     $rfamdb->resultset('SeedRegion')->updateSeedRegionsFromFamilyObj( $familyObj );
     $self->{logger}->debug( 'updated seed regions' );
-    $rfamdb->resultset('RnacentralMatch')->updateRnacentralMatchesFromFamilyObj( $familyObj );
-    $self->{logger}->debug( 'updated Rfamseq' );
-    $rfamdb->resultset('Taxonomy')->updateTaxonomyFromFamilyObj( $familyObj, \%seed_info_HH );
-    $self->{logger}->debug( 'updated taxonomy' );
     $rfamdb->resultset('FullRegion')->updateFullRegionsFromFamilyObj( $familyObj );
     $self->{logger}->debug( 'updated full regions' );
+    $rfamdb->resultset('RnacentralMatch')->updateRnacentralMatchesFromFamilyObj( $familyObj );
+    $self->{logger}->debug( 'updated RnacentralMatch' );
     eval {
       $rfamdb->resultset('FamilyFile')->uploadFilesFromFamilyObj( $familyObj );
     };
