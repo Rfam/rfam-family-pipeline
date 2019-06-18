@@ -47,6 +47,12 @@ def main():
     	"        tier: backend\n"
         "        jobname: %s\n"
     	"    spec:\n"
+        "      volumes:\n"
+        "        - name: nfs-volue\n"
+        "          nfs:\n"
+        "            server: 193.62.55.42\n"
+        "            path: /nfs\n"
+        "            port: \"2049\"\n"
     	"      containers:\n"
     	"      - name: %s\n"
     	"        image: ikalvari/rfam-cloud:kubes\n"
@@ -63,12 +69,17 @@ def main():
     	"        command: [\"sh\", \"-c\", \"%s\"]\n"
     	"        imagePullPolicy: IfNotPresent\n"
     	"        volumeMounts:\n"
+                "        - name: nfs-pv\n"
+                "          mountPath: /Rfam/rfamseq\n"
 		"        - name: %s\n" # this one must match the volume name of the pvc
 		"          mountPath: /workdir\n"
 		"      volumes:\n"
 		"      - name: %s\n"
 		"        persistentVolumeClaim:\n"
 		"          claimName: %s\n"
+                "      - name: nfs-pv\n"
+                "        persistentVolumeClaim:\n"
+                "          claimName: nfs-pvc\n"
 		"      restartPolicy: OnFailure")
 
     
