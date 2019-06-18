@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use Sys::Hostname;
 use File::stat;
+use File::Spec;
 use Carp;
 
 use Cwd;
@@ -90,6 +91,8 @@ sub submit_nonmpi_job {
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
   elsif($location eq "CLOUD"){
+
+
     # temporarily minimize memory to 6GB only to work with the test cloud
     if ($reqMb >= 24000){
       $reqMb = 6000;
@@ -168,7 +171,7 @@ sub submit_mpi_job {
     $submit_cmd = "qsub -N $jobname -e $errPath -o /dev/null -b y -cwd -V -pe impi $nproc " . $queue_opt . "\"mpirun -np $nproc $cmd\" > /dev/null";
   }
   elsif ($location eq "CLOUD"){
-  	die "ERROR MPI is unavailable on CLOUD. Please launch rfsearch again using -cnompi option";
+  	die "ERROR: MPI unavailable on CLOUD. Consider using -cnompi option";
   }
   else { 
     die "ERROR unknown location $location in submit_mpi_job()";
