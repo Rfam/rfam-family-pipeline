@@ -7,8 +7,11 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadOnlyMany
+  claimRef:
+    namespace: default
+    name: nfs-pvc
   nfs:
-  	path: /nfs
-  	server: nfs_server_ip
-  	readOnly: true
+    path: /nfs
+    server: nfs_server_ip
+    readOnly: true
 
