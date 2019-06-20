@@ -26,7 +26,8 @@ my $seqDBObj = $config->rfamseqObj;
 select *STDOUT;
 $| = 1;
 
-my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+#my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+my $familyObj = $familyIO->loadRfamFromSVN_preSEED($family, $client);
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
 
 my $nfail = Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj, 1); # the '1' tells the sub to 'be_verbose'
