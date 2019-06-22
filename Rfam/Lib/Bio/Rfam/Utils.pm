@@ -2416,7 +2416,7 @@ sub genbank_fetch_seq_info {
 
     my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
     my $xml_string = get($genbank_url);
-    
+
     if(! defined $xml_string) { 
       if(! $looks_like_rnacentral) { 
         # if NCBI is being hit by a bunch of requests, the get() command
@@ -2438,6 +2438,12 @@ sub genbank_fetch_seq_info {
     }
     else { 
       # if we get here: we know that $xml_string is defined
+      # to save memory, remove sequence info from the xml_string
+      # since we don't need it
+      # remove <GBSeq_sequence> lines
+      $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+      # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+      $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
       my $xml = XML::LibXML->load_xml(string => $xml_string);
       
       foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
@@ -2484,7 +2490,7 @@ sub genbank_fetch_seq_info {
       }
     } # end of 'else' entered if $xml_string is defined
   } # end of 'for' loop over seq names for fetching and adding data per seq name
-  
+
   return;
 }
 
