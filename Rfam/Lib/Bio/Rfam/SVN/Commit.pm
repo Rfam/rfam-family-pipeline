@@ -196,6 +196,7 @@ sub _commitEntry {
                       # 2D keys are many of the field names in Rfamseq and Taxonomy tables 
                       # (see fetch_seed_sequence_info() for details)
     Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH);
+    $self->{logger}->debug( 'fetched seed sequence info' );
 
     # order of updates: taxonomy, rfamseq, seed_region, full_region, rnacentral_matches
     $rfamdb->resultset('Taxonomy')->updateTaxonomyFromFamilyObj( $familyObj, \%seed_info_HH );
