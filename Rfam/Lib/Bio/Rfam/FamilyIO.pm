@@ -1446,17 +1446,17 @@ sub makeAndWriteScores_helper {
         croak "ERROR invalid truncation string $tstr";
       }
 
-      if ($type eq "SEED-DB") {
+      if ($type eq "FULL-SEED") {
         $stype = "seed";
       } elsif ($type eq "SEED") {
         $stype = "seed";
       } elsif ($type eq "FULL") {
         $stype = "full";
-      } elsif ($type ne "SEED-MSA") { 
+      } elsif ($type ne "SEED") { 
         croak "ERROR invalid type $type";
       }
 
-      if($type ne "SEED-MSA") { # skip hits in outlist that are to SEED alignment seqs
+      if($type ne "SEED") { # skip hits in outlist that are to SEED alignment seqs
         push(@{$scoresAAR->[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
         if ($start <= $end) {
           $nres += ($end - $start + 1);
@@ -1730,7 +1730,7 @@ sub writeTbloutDependentFiles {
     # determine seqLabel
     my $seqLabel = 'FULL';
     if($seedmsa->get_sqidx($name) != -1) { 
-      $seqLabel = 'SEED-MSA';
+      $seqLabel = 'SEED';
       ($ncbiId, $species, $shortSpecies, $taxString, $description) = ("-", "-", "-", "-", "-");
       if(defined $seed_info_HH{$name}) { 
         if(defined $seed_info_HH{$name}{"description"}) { 
@@ -1755,7 +1755,7 @@ sub writeTbloutDependentFiles {
       my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
       if ($seed_seq ne "") { 
         if ($overlapExtent > 0.1) {
-          $seqLabel = 'SEED-DB';
+          $seqLabel = 'FULL-SEED';
         }
       }
     }
@@ -3201,7 +3201,7 @@ sub parseOutlistAndSpecies {
       
       if((! defined $minsc || $minsc eq "")            || # no minimum being enforced
          ($out_elA[0] >= $minsc)                       || # we're above our minimum
-         ($do_allseed && $out_elA[2] eq "SEED-MSA")) {    # we're forcing info collection on all seed seqs and we've got one here        
+         ($do_allseed && $out_elA[2] eq "SEED")) {    # we're forcing info collection on all seed seqs and we've got one here        
         #sanity check
         for($i = 0; $i <= 3; $i++) { 
           if($out_elA[$i] ne $spc_elA[$i]) { 
@@ -3216,8 +3216,8 @@ sub parseOutlistAndSpecies {
         
         # determine group
         $group = "";
-        if   ($out_elA[2] eq "SEED-MSA")  { $group = "SEED"; } 
-        elsif($out_elA[2] eq "SEED-DB")   { $group = undef;  } # a hit in the DB to a seed seq, we should have also seen a SEED-MSA hit, so we skip to avoiad double counting
+        if   ($out_elA[2] eq "SEED")      { $group = "SEED"; } 
+        elsif($out_elA[2] eq "FULL-SEED") { $group = undef;  } # a hit in the DB to a seed seq, we should have also seen a SEED hit, so we skip to avoid double counting
         elsif($out_elA[0] >= $ga)         { $group = "FULL"; } 
         elsif($out_elA[1] <= $emax)       { $group = "OTHER"; } 
         if((defined $groupOHAR) && (defined $group)) { push(@{$groupOHAR->{$group}}, $name); }
