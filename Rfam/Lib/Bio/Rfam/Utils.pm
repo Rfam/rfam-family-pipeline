@@ -2416,21 +2416,43 @@ sub genbank_fetch_seq_info {
     $info_HHR->{$name}{"mol_type"}    = "-";
 
     my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
+    my $xml = undef;
+    printf("Trying to fetch for $name\n");
     my $xml_string = get($genbank_url);
+    # to save memory, remove sequence info from the xml_string since we don't need it
+    # remove <GBSeq_sequence> lines
+    $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+    # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+    $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+    my $xml_valid = 0;
+    if(defined $xml_string) { 
+      $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+      if($@) { $xml_valid = 0; }
+      else   { $xml_valid = 1; }
+    }
 
-    printf("NAME: $name\n");
-    if(! defined $xml_string) { 
+    if(! $xml_valid) { 
       if(! $looks_like_rnacentral) { 
-        # if NCBI is being hit by a bunch of requests, the get() command
-        # may fail in that $got_url may be undefined. If that happens we
+        # the get() command either failed (returned undef) or
+        # returned an invalid xml string, either way we
         # wait a few seconds ($nseconds) and try again (up to
-        # $nattempts) times BUT we only do this if at least 1 sequence
-        # does not look like a RNAcentral ids. If all sequences look like
-        # RNAcentral ids, we do not do more attempts.
+        # $nattempts) times BUT we only do this if the ID doesn't look 
+        # like a RNAcentral ids. If it does, we do not do more attempts.
         my $attempt_ctr = 1;
-        while((! defined $xml_string) && ($attempt_ctr < $nattempts)) { 
+        while((! $xml_valid) && ($attempt_ctr < $nattempts)) { 
           sleep($nseconds);
+          printf("Retrying to fetch for $name\n");
           $xml_string = get($genbank_url);
+          # to save memory, remove sequence info from the xml_string since we don't need it
+          # remove <GBSeq_sequence> lines
+          $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+          # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+          $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+          if(defined $xml_string) { 
+            $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+            if($@) { $xml_valid = 0; }
+            else   { $xml_valid = 1; }
+          }
           $attempt_ctr++;
         }
         if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
@@ -2439,20 +2461,8 @@ sub genbank_fetch_seq_info {
       }
     }
     else { 
-      # if we get here: we know that $xml_string is defined
-      # to save memory, remove sequence info from the xml_string
-      # since we don't need it
-      # remove <GBSeq_sequence> lines
-      usleep(0.1);
-      $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
-      # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
-      $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
-
-      my $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-      my $failed_flag = $@;
-      printf("failed_flag: $failed_flag\n");
-      if($failed_flag) { die "failed"; }
-
+      # if we get here: we know that $xml_string is defined and valid
+      # and $xml is ready for parsing
       foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
         my $accver = $gbseq->findvalue('./GBSeq_accession-version');
         if(! defined $accver) { 
