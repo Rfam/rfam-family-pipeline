@@ -2445,7 +2445,6 @@ sub genbank_fetch_seq_info {
       # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
       $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
       my $xml = XML::LibXML->load_xml(string => $xml_string);
-      
       foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
         my $accver = $gbseq->findvalue('./GBSeq_accession-version');
         if(! defined $accver) { 
@@ -2466,26 +2465,58 @@ sub genbank_fetch_seq_info {
           croak "ERROR in $sub_name problem parsing XML, no length read";
         }
         $info_HHR->{$accver}{"length"} = $length;
-        
-        my $taxid = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
-        if(! defined $taxid) { 
+
+        # for taxid and mol_type, we have to fetch from Quailifier_values, and may have more than 1
+        # in that case, they will be concatenated together
+        my $taxid_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
+        my $taxid = undef;
+        my $orig_taxid_val = $taxid_val;
+        if(! defined $taxid_val) { 
           croak "ERROR in $sub_name did not read taxon info for $accver";
         }
-        # ensure we get exactly 1 match (not 0, not more than 1)
-        if($taxid =~ /^taxon\:(\d+)$/) { 
-          $taxid = $1;
-          $info_HHR->{$accver}{"ncbi_id"} = $taxid;
+        # $taxid_val will be concatenation of taxon:<\d+> N >= 1 times, we want tomake sure <\d+> is equivalent all N instances
+        while($taxid_val =~ /^taxon\:(\d+)/) { 
+          my $cur_taxid = $1;
+          if(! defined $taxid) { # first taxid
+            $taxid = $cur_taxid; 
+          }
+          elsif($cur_taxid != $taxid) { 
+            croak "ERROR in $sub_name for $accver, > 1 taxids read: $taxid and $cur_taxid\nFull taxon values read: $orig_taxid_val\n";
+          }
+          $taxid_val =~ s/^taxon\:(\d+)//;
         }
-        else { 
-          croak "ERROR unable to fetch exactly 1 taxid for $accver from GenBank XML";
+        if($taxid_val ne "") { 
+          croak "ERROR in $sub_name could not parse taxon info $accver\nFull taxon values read: $orig_taxid_val\n";
         }
-        
-        my $mol_type = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
-        if(! defined $mol_type) { 
-          croak "ERROR in $sub_name did not read mol_type info for $accver";
+        $info_HHR->{$accver}{"ncbi_id"} = $taxid;
+
+        # mol_type is like taxid but more complicated because we don't have the 'taxon:' at the beginning to use, if we have more than 
+        # 1 mol_type qualifiers, they will just be concatenated together: e.g. "genomic DNAgenomic DNAgenomic DNA"
+        my $mol_type_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
+        my $mol_type = undef;
+        my $orig_mol_type_val = $mol_type_val;
+        my $nmol_type = $gbseq->findvalue('count(./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value)');
+        # the value we want ($mol_type) is concatenated $nmol_type times together in $mol_type_val, determine what it is, croaking if we can't
+        if((length($mol_type_val) % ($nmol_type)) != 0) { 
+          croak "ERROR in $sub_name could not parse mol_type info $mol_type_val\n";
+        }
+        my $mol_type_len = int((length($mol_type_val) / $nmol_type) + 0.01);
+        my $mol_type_val_start = 0;
+        while($mol_type_val_start < $mol_type_len) { 
+          my $cur_mol_type = substr($mol_type_val, $mol_type_val_start, $mol_type_len);
+          if(! defined $mol_type) { 
+            $mol_type = $cur_mol_type; 
+          }
+          elsif($cur_mol_type ne $mol_type) { 
+            croak "ERROR in $sub_name for $accver, > 1 mol_types read: $mol_type and $cur_mol_type\nFull mol_type values read: $orig_mol_type_val\n";
+          }
+          $mol_type_val_start += $mol_type_len;
+        }
+        if($mol_type_val_start != $mol_type_len) { 
+          croak "ERROR in $sub_name could not parse mol_type value for $accver\nFull mol_type values read: $orig_mol_type_val\n";
         }
         $info_HHR->{$accver}{"mol_type"} = $mol_type;
-        
+
         $info_HHR->{$accver}{"source"} = "SEED:GenBank";
       }
     } # end of 'else' entered if $xml_string is defined
@@ -2556,7 +2587,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
   my $xml = XML::LibXML->load_xml(string => $xml_string);
 
   foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
-    my $cur_taxid       = $taxon->findvalue('./TaxId');
+    my $cur_taxid = $taxon->findvalue('./TaxId');
     if(! defined $cur_taxid) { 
       croak "ERROR in $sub_name unable to parse taxid from xml";
     }
@@ -2587,7 +2618,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
       croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
     }
 
-    my $lineage         = $taxon->findvalue('./Lineage');
+    my $lineage = $taxon->findvalue('./Lineage');
     if(! defined $lineage) { 
       croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
     }
