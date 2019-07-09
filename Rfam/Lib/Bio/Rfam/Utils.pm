@@ -14,6 +14,7 @@ use Digest::MD5 qw(md5_hex);
 use LWP::Simple;                
 use JSON qw( decode_json );     
 use XML::LibXML;
+use Time::HiRes qw(sleep);
 
 use Cwd;
 use Data::Dumper;
@@ -2432,7 +2433,7 @@ sub genbank_fetch_seq_info {
           $attempt_ctr++;
         }
         if(($attempt_ctr >= $nattempts) && (! defined $xml_string)) { 
-        croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
+          croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
         }
       }
     }
@@ -2441,9 +2442,11 @@ sub genbank_fetch_seq_info {
       # to save memory, remove sequence info from the xml_string
       # since we don't need it
       # remove <GBSeq_sequence> lines
+      sleep(0.1);
       $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
       # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
       $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+
       my $xml = XML::LibXML->load_xml(string => $xml_string);
       foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
         my $accver = $gbseq->findvalue('./GBSeq_accession-version');
@@ -2474,7 +2477,7 @@ sub genbank_fetch_seq_info {
         if(! defined $taxid_val) { 
           croak "ERROR in $sub_name did not read taxon info for $accver";
         }
-        # $taxid_val will be concatenation of taxon:<\d+> N >= 1 times, we want tomake sure <\d+> is equivalent all N instances
+        # $taxid_val will be concatenation of taxon:<\d+> N >= 1 times, we want to make sure <\d+> is equivalent all N instances
         while($taxid_val =~ /^taxon\:(\d+)/) { 
           my $cur_taxid = $1;
           if(! defined $taxid) { # first taxid
@@ -2490,8 +2493,14 @@ sub genbank_fetch_seq_info {
         }
         $info_HHR->{$accver}{"ncbi_id"} = $taxid;
 
-        # mol_type is like taxid but more complicated because we don't have the 'taxon:' at the beginning to use, if we have more than 
-        # 1 mol_type qualifiers, they will just be concatenated together: e.g. "genomic DNAgenomic DNAgenomic DNA"
+        # mol_type is like taxid in that we may fetch more than one value concatenated together
+        # but more complicated because we don't have the 'taxon:' at the beginning to use to parse
+        # to determine the single value that we want
+        # For example if we have more than 3 mol_type qualifiers, they will just be concatenated 
+        # together like "genomic DNAgenomic DNAgenomic DNA" and the single value we want is
+        # "genomic DNA". To figure out the single value we assume it is repeated N times,
+        # determine N, then determine its length, use substr to get it, and then verify 
+        # we have that same single value concatenated N times.
         my $mol_type_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
         my $mol_type = undef;
         my $orig_mol_type_val = $mol_type_val;
