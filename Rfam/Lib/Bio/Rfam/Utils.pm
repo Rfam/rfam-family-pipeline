@@ -2448,7 +2448,11 @@ sub genbank_fetch_seq_info {
       # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
       $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
 
-      my $xml = XML::LibXML->load_xml(string => $xml_string);
+      my $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+      my $failed_flag = $@;
+      printf("failed_flag: $failed_flag\n");
+      if($failed_flag) { die "failed"; }
+
       foreach my $gbseq ($xml->findnodes('//GBSeq')) { 
         my $accver = $gbseq->findvalue('./GBSeq_accession-version');
         if(! defined $accver) { 
