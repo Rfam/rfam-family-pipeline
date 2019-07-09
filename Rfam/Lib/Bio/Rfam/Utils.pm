@@ -14,7 +14,7 @@ use Digest::MD5 qw(md5_hex);
 use LWP::Simple;                
 use JSON qw( decode_json );     
 use XML::LibXML;
-use Time::HiRes qw(sleep);
+use Time::HiRes qw(usleep);
 
 use Cwd;
 use Data::Dumper;
@@ -2418,6 +2418,7 @@ sub genbank_fetch_seq_info {
     my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
     my $xml_string = get($genbank_url);
 
+    printf("NAME: $name\n");
     if(! defined $xml_string) { 
       if(! $looks_like_rnacentral) { 
         # if NCBI is being hit by a bunch of requests, the get() command
@@ -2442,7 +2443,7 @@ sub genbank_fetch_seq_info {
       # to save memory, remove sequence info from the xml_string
       # since we don't need it
       # remove <GBSeq_sequence> lines
-      sleep(0.1);
+      usleep(0.1);
       $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
       # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
       $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
