@@ -443,7 +443,7 @@ if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't
 # Preliminary check: verify that all sequences in the SEED are from GenBank, ENA or RNAcentral, unless -relax
 ##############################################################################################
 if (! $relax_about_seed) { 
-  print "# Validating all SEED seqs exist in GenBank or RNAcentral (skip with -relax) ... " 
+  print "# Validating all SEED seqs exist in GenBank or RNAcentral (skip with -relax) ... ";
   my $nfail = Bio::Rfam::QC::checkSEEDSeqs($famObj, $config->rfamseqObj, 0); # the '0' tells the sub not to 'be_verbose'
   if($nfail > 0) { 
     die "ERROR: $nfail sequences in SEED sequence is/are not in any of GenBank, ENA or RNAcentral (permit this with -relax)"; 
