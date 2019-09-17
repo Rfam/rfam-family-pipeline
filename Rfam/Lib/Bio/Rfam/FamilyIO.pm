@@ -1365,7 +1365,8 @@ sub moveFamilyInRDB {
 sub makeAndWriteScores {
   my ($self, $famObj, $outlistLocation) = @_;
   my @scoresAA = ();
-  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, \@scoresAA);
+  my $ignore_seed = 1; # ignore hits that are to SEED seqs in $outlistLocation file
+  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, $ignore_seed, \@scoresAA);
 
   my $scoresObj = Bio::Rfam::Family::Scores->new(
                                                  {
@@ -1383,7 +1384,8 @@ sub makeAndWriteScores {
 sub makeAndWriteSeedScores {
   my ($self, $famObj, $outlistLocation) = @_;
   my @scoresAA = ();
-  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, \@scoresAA);
+  my $ignore_seed = 0; # do NOT ignore hits that are to SEED seqs in $outlistLocation file
+  my ($n, $nres) = $self->makeAndWriteScores_helper($famObj, $outlistLocation, $ignore_seed, \@scoresAA);
 
   my $scoresObj = Bio::Rfam::Family::Scores->new(
                                                  {
@@ -1400,7 +1402,7 @@ sub makeAndWriteSeedScores {
 }
 
 sub makeAndWriteScores_helper {
-  my ($self, $famObj, $outlistLocation, $scoresAAR) = @_;
+  my ($self, $famObj, $outlistLocation, $ignore_seed, $scoresAAR) = @_;
 
   my $n    = 0;                 # number of hits
   my $nres = 0;                 # total number of residues in all hits
@@ -1456,7 +1458,10 @@ sub makeAndWriteScores_helper {
         croak "ERROR invalid type $type";
       }
 
-      if($type ne "SEED") { # skip hits in outlist that are to SEED alignment seqs
+      if(($ignore_seed) && ($type eq "SEED")) { # skip hits in outlist that are to SEED alignment seqs if $ignore_seed
+        ; # do nothing
+      }
+      else { # do not skip
         push(@{$scoresAAR->[$n]}, ($name, $start, $end, $id, $bits, $evalue, $qstart, $qend, $tcode, $stype));
         if ($start <= $end) {
           $nres += ($end - $start + 1);
