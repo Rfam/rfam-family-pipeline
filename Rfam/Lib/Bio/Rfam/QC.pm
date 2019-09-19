@@ -1088,7 +1088,7 @@ sub ssStats {
 
   Title    : checkSEEDSeqs
   Incept   : EPN, Fri Mar  1 18:04:58 2019
-  Usage    : Bio::Rfam::QC::NEWcheckSEEDSeqs($familyObj, $seqDBObj)
+  Usage    : Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj, $be_verbose)
   Function : Checks that all SEED sequencs are valid based on md5
            : To be valid, each SEED sequence must exist and 
            : (be identical to) the same (sub)sequence in one
@@ -1112,20 +1112,47 @@ sub checkSEEDSeqs {
 
   if(! defined $be_verbose) { $be_verbose = 0; }
 
+  return checkSEEDSeqs_helper($familyObj->SEED, $seqDBObj, $be_verbose);
+}
+
+#------------------------------------------------------------------------------
+=head2 checkSEEDSeqs_helper
+
+  Title    : checkSEEDSeqs_helper
+  Incept   : EPN, Thu Sep 19 16:09:22 2019
+  Usage    : Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj)
+  Function : Does actual work for checkSEEDSeqs()
+           : Checks that all SEED sequencs are valid based on md5
+           : To be valid, each SEED sequence must exist and 
+           : (be identical to) the same (sub)sequence in one
+           : or more of: 
+           : - rfamseq
+           : - GenBank
+           : - RNAcentral
+  Args     : Bio::Easel::MSA object, Bio::Rfam::Family object, Bio::Rfam::SeqDB object
+           : $be_verbose: if '1' print info to stdout, if '0' print warnings only if nec.
+  Returns  : 1 on error, 0 on successully passing check
+  
+=cut
+sub checkSEEDSeqs_helper {
+  my ( $seed, $seqDBObj, $be_verbose ) = @_;
+
   # stats collected and only output if $be_verbose is 1 
   my $nrfm_pass = 0;
   my $ngbk_pass = 0;
   my $nrnc_pass = 0;
   my $nfail = 0; 
 
-  my $nseq  = $familyObj->SEED->nseq;
+  if(! defined $be_verbose) { $be_verbose = 0; }
+
+  my $nseq  = $seed->nseq;
   my @fail_A = ();
   # look-up each SEED sequence
   for ( my $i = 0 ; $i < $nseq; $i++ ) {
-    my $nse  = $familyObj->SEED->get_sqname($i);
+    my $nse  = $seed->get_sqname($i);
     my ($is_nse, $name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($nse);
 
-    my $seed_msa_seq = $familyObj->SEED->get_sqstring_unaligned($i);
+    my $seed_msa_seq = $seed->get_sqstring_unaligned($i);
     my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
     
     # lookup in rfamseq
