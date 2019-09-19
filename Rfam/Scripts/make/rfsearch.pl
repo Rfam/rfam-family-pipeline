@@ -750,7 +750,7 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
 
   # We want to use the options in DESC's SM unless user set -ignoresm
   # remove default options that always get set automatically by rfsearch:
-  # -Z <f>, --FZ <f>, --cpu <n>, --verbose, --nohmmonly, --mxsize <f>
+  # -Z <f>, --FZ <f>, --cpu <n>, --verbose, --nohmmonly
   # we defined $desc_searchopts way above, when we were processing cmdline options
 
   # Currently we may need to convert a search E-value threshold in the DESC's SM
@@ -766,11 +766,6 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $e_opt_bitsc      = undef;
   my $ga_opt_bitsc     = undef
   my $thr_searchopts   = undef;
-  # unless --mxsize set on command line, set it to the default
-  if(! defined $mxsize_opt) { 
-    # use --mxsize=512 for models > 2000 (currently only LSU) and --mxsize=128 for all other models 
-    $mxsize_opt = ($cm->{cmHeader}->{clen} >= 2000) ? 512 : 128; 
-  }
 
   # are we going to ignore the SM methods? If not, then we will use the -E or -T
   # from that line. We checked for this above during option processing/checking.
@@ -838,7 +833,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   $rev_searchopts  = $searchopts . $rev_Zopt;
   $searchopts     .= $Zopt;
   # and finally, add the --mxsize opt, added relatively close to 12.0 release (after nearly all families were done, to deal with LSU (EPN, Fri May 30 14:53:47 2014))
-  $searchopts     .= " --mxsize $mxsize_opt "; 
+  if(defined $mxsize_opt) { 
+    $searchopts     .= " --mxsize $mxsize_opt "; 
+  }
 
   $searchopts     .= $extra_searchopts;
   $rev_searchopts .= $extra_searchopts;
@@ -868,11 +865,11 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my @seed_cmsOA    = (); # names of cmsearch output files for SEED search
   my @seed_errOA    = (); # names of error files for SEED search
 
-  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
+  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cm->{cmHeader}->{w}, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
-    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
+    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cm->{cmHeader}->{w}, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
   }
-  submit_or_run_cmsearch_jobs($config, 1, "ss.",  $searchopts, $cmfile, \@seed_dbfileA, \@seed_jobnameA, \@seed_tblOA, \@seed_cmsOA, \@seed_errOA, $ssopt_str, $q_opt, $do_all_local);
+  submit_or_run_cmsearch_jobs($config, 1, "ss.",  $searchopts, $cm->{cmHeader}->{w}, $cmfile, \@seed_dbfileA, \@seed_jobnameA, \@seed_tblOA, \@seed_cmsOA, \@seed_errOA, $ssopt_str, $q_opt, $do_all_local);
   
   my @all_jobnameA = @jobnameA;
   my @all_tblOA    = @tblOA;
@@ -1052,15 +1049,14 @@ exit(0);
 ######################################################################
 
 sub submit_or_run_cmsearch_jobs {
-  my ($config, $ndbfiles, $prefix, $searchopts, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
+  my ($config, $ndbfiles, $prefix, $searchopts, $w, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
   my ($idx, $file_idx, $dbfile);
 
-  # determine Gb of memory we need per thread based on $searchopts, if it contains '--mxsize <d>' with <d> > 500
-  # use 8Gb, otherwise use 3gb. This step was implemented this to deal with Eukaryotic LSU, which requires more 
-  # than 3Gb per thread
+  # determine Gb of memory we need per thread based on $w, if it's >= 1000, require 8Gb,
+  # otherwise use 3gb.
   my $gbPerThread = 3.0;
-  if($searchopts =~ /\-\-mxsize\s+(\d+)/) { 
-    if($1 > 500) { $gbPerThread = 8.0; }
+  if($w >= 1000) { 
+    $gbPerThread = 8.0; 
   }
 
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
