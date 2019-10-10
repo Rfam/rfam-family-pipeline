@@ -6,6 +6,7 @@ use Getopt::Long;
 use File::stat;
 use Data::Printer;
 use File::Copy;
+use File::Spec;
 use Carp;
 
 use Bio::Rfam::Config;
@@ -138,6 +139,9 @@ if (! defined $user || length($user) == 0) {
   die "FATAL: failed to run [getlogin or getpwuid($<)]!\n[$!]";
 }
 
+# get the bsolute path of the working directory
+my $workdir = File::Spec->rel2abs();
+
 # setup variables 
 my $io     = Bio::Rfam::FamilyIO->new;
 
@@ -238,6 +242,7 @@ if((! defined $t_sm) && (! defined $e_sm)) {
     }
   }
 }
+
 # make sure that user didn't specify -T, -E, --cut_ga, --cut_tc, --cut_nc with -cmos or -cmod
 my $extra_searchopts = "";
 if($do_hmmonly) { $extra_searchopts = "--hmmonly "; }
@@ -430,8 +435,6 @@ Bio::Rfam::Utils::log_output_progress_column_headings($logFH, "per-stage progres
 my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
 # we also run everything locally is if location is set to the empty string or to 'docker'
 if($config->location eq "")       { $do_all_local = 1; } 
-if($config->location eq "docker") { $do_all_local = 1; }
-if($config->location eq "cloud")  { $do_all_local = 1; } # don't use MPI in the Cloud
 if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
 ###########################################################################################################
@@ -587,8 +590,8 @@ my $calibrate_wall_secs     = 0;
 my $calibrate_cpu_secs      = 0;
 my $calibrate_elp_secs      = 0;
 my $calibrate_max_wait_secs = 0;
-my $calibrateO     = "c.$$.out"; # cmcalibrate output file
-my $calibrate_errO = "c.$$.err"; # error output
+my $calibrateO     = "c-$$.out"; # cmcalibrate output file
+my $calibrate_errO = "c-$$.err"; # error output
 my $did_calibrate = 0;
 if(! defined $ncpus_cmcalibrate) { $ncpus_cmcalibrate = ($calibrate_nompi) ? 8 : 81; }
 my $do_calibrate = 
@@ -602,17 +605,17 @@ if($do_calibrate) {
   my $calibrate_start_time = time();
 #  Calibration prediction time not currently used, since we can't accurately predict search time anyway
   my $predicted_minutes = Bio::Rfam::Infernal::cmcalibrate_wrapper($config, 
-                                                                  "c.$$",                 # job name
-                                                                   "",                    # options for cmcalibrate, NOTE: we don't allow ANY 
-                                                                   "CM",                  # path to CM file
-                                                                   $calibrateO,           # path to output file 
-                                                                   $calibrate_errO,       # path to error output file 
-                                                                   $ncpus_cmcalibrate,    # number of processors
-                                                                   $q_opt,                # queue to use, "" for default, ignored if location eq "EBI"
-                                                                   (! $calibrate_nompi),  # use MPI? 
-                                                                   ($do_all_local));      # run job locally?
-  my @jobnameA = ("c.$$");
-  my @outnameA = ("c.$$.out");
+                                                                  "c-$$",                 		# job name
+                                                                   "",                    		# options for cmcalibrate, NOTE: we don't allow ANY 
+                                                                   File::Spec->rel2abs("CM"), 		# absolute path to CM file
+                                                                   File::Spec->rel2abs($calibrateO),     # path to output file 
+                                                                   File::Spec->rel2abs($calibrate_errO),# path to error output file 
+                                                                   $ncpus_cmcalibrate,    		# number of processors
+                                                                   $q_opt,                		# queue to use, "" for default, ignored if location eq "EBI"
+                                                                   (! $calibrate_nompi),  		# use MPI? 
+                                                                   ($do_all_local));      		# run job locally?
+  my @jobnameA = ("c-$$");
+  my @outnameA = ("c-$$.out");
   my @errnameA = ("$calibrate_errO"); 
   #$calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@jobnameA, \@outnameA, "[ok]", "cmcalibrate-mpi", $logFH, 
                                                                 #sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
@@ -867,9 +870,12 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my @rev_cmsOA    = (); # names of cmsearch output files for reversed searches
   my @rev_errOA    = (); # names of error files for reversed searches
 
-  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
+  # before doing this, clean up completed ones
+  #Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+
+  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s-",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
-    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
+    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs-", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
   }
   my @all_jobnameA = @jobnameA;
   my @all_tblOA    = @tblOA;
@@ -894,7 +900,10 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $all_cmsO     = "searchout";
   my $all_rev_cmsO = "revsearchout";
 
-  if(! $do_all_local) { 
+  # clean up completed ones
+  #Bio::Rfam::Utils::delete_completed_k8s_jobs($user, "backend");
+
+  if(! $do_all_local && $config->location ne "CLOUD"){ 
     # if we ran jobs on the cluster, first create the concatenated error file, if it's not empty we'll die before creating TBLOUT
     Bio::Rfam::Utils::concatenate_files(\@all_errOA, $all_errO, (! $do_dirty)); # '1' says delete original files after concatenation, unless -dirty
     if(-s $all_errO) { 
@@ -929,9 +938,10 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   # write TBLOUT-dependent files
   my $require_tax = 0;
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
+  
   $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
-
-  # End of block for submitting/running and processing cmsearch jobs
+  
+ # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
 }
 # update DESC
@@ -1051,11 +1061,11 @@ sub submit_or_run_cmsearch_jobs {
 
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
     $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 0..$ndbfiles-1
-    $jobnameAR->[$idx] = $prefix . "$$.$file_idx";  
-    $tblOAR->[$idx]    = $prefix . "$$.$file_idx.tbl";
-    $cmsOAR->[$idx]    = $prefix . "$$.$file_idx.cmsearch";
-    $errOAR->[$idx]    = $prefix . "$$.$file_idx.err";
-    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . $tblOAR->[$idx] . " " . $searchopts, $cmfile, $dbfileAR->[$idx], $cmsOAR->[$idx], $errOAR->[$idx], $ssopt_str, $q_opt, $do_local, $gbPerThread);  
+    $jobnameAR->[$idx] = $prefix . "$$-$file_idx";  
+    $tblOAR->[$idx]    = $prefix . "$$-$file_idx.tbl";
+    $cmsOAR->[$idx]    = $prefix . "$$-$file_idx.cmsearch";
+    $errOAR->[$idx]    = $prefix . "$$-$file_idx.err";
+    Bio::Rfam::Infernal::cmsearch_wrapper($config, $jobnameAR->[$idx], "--tblout " . File::Spec->rel2abs($tblOAR->[$idx]) . " " . $searchopts, File::Spec->rel2abs($cmfile), $dbfileAR->[$idx], File::Spec->rel2abs($cmsOAR->[$idx]), File::Spec->rel2abs($errOAR->[$idx]), $ssopt_str, $q_opt, $do_local, $gbPerThread);  
   }
 }
 

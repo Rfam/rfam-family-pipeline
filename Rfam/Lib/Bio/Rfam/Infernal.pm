@@ -139,7 +139,7 @@ sub cmcalibrate_wrapper {
       if ($config->location eq 'CLOUD'){
       $requiredMb = 6000;
       }
-
+      # if the job is run in the cloud, assign the job an index
       Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
   }

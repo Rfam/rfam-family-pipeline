@@ -57,9 +57,7 @@ cpan -f install MooseX::NonMoose && \
 cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
-cpan -f install Term::ReadPassword && \
-cpan -f install SVN::Client && \
-cpan -f install File::Spec
+cpan -f install Term::ReadPassword
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
@@ -177,7 +175,7 @@ cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
 RUN cd /Rfam/software && \
-curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.9.0/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
 tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
 cd /Rfam/software/ncbi-blast-2.9.0+/bin
 #cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.§1
@@ -224,9 +222,9 @@ RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipe
 cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # install kubectl to establish communication with the k8s cluster
-#RUN cd /usr/local/bin && \
-#curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-#release/release/stable.txt)/bin/linux/amd64/kubectl && \
-#chmod +x ./kubectl
+RUN cd /usr/local/bin && \
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
+chmod +x ./kubectl
 
 # install kubernetes client python API
 RUN cd /Rfam && \
@@ -235,9 +233,9 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 cd python && python setup.py install
 
 # set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash centos
-WORKDIR /home/centos
-USER centos
+#RUN useradd --create-home -s /bin/bash centos
+#WORKDIR /home/centos
+#USER centos
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
@@ -248,4 +246,3 @@ ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Eas
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
-

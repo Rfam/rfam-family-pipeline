@@ -1572,7 +1572,7 @@ sub essential {
   }
   
   #TODO - remove this commented out line, once the solution has been found.
-  #$error = checkScoresSeqs($newFamily, $seqDBObj);
+  $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
