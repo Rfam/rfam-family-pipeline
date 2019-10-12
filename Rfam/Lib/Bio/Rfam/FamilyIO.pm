@@ -1764,8 +1764,8 @@ sub writeTbloutDependentFiles {
         }
       }
     }
-    if ($bits < $ga) { 
-      $seqLabel = ($seqLabel eq 'FULL') ? 'NOT' : 'NOT-SEED';
+    if (($bits < $ga) && ($seqLabel = "FULL")) { 
+      $seqLabel = 'NOT';
     }
 
     # print out threshold line if nec
