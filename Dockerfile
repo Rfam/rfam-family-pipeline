@@ -224,15 +224,15 @@ RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipe
 cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # install kubectl to establish communication with the k8s cluster
-#RUN cd /usr/local/bin && \
-#curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-#release/release/stable.txt)/bin/linux/amd64/kubectl && \
-#chmod +x ./kubectl
+RUN cd /usr/local/bin && \
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-#release/release/stable.txt)/bin/linux/amd64/kubectl && \
+chmod +x ./kubectl
 
 # install kubernetes client python API
 RUN cd /Rfam && \
 git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
-cd python && python setup.py install
+cd python && python setup.py install 
 
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash centos
