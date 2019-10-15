@@ -234,10 +234,21 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
 cd python && python setup.py install 
 
+# install R-scape v.1.2.3
+RUN cd /Rfam/software && \
+wget http://eddylab.org/software/rscape/rscape.tar.gz && \
+tar xf rscape.tar.gz && \
+cd rscape_v1.2.3 && \
+./configure --prefix=/Rfam/software/rscape_v1.2.3 && \
+make && make install
+
 # set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash centos
-WORKDIR /home/centos
-USER centos
+RUN useradd --create-home -s /bin/bash rfam-user
+WORKDIR /home/rfam-user
+USER rfam-user
+
+# move to /workdir
+RUN cd /workdir
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
