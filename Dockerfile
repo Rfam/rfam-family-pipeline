@@ -246,6 +246,9 @@ cd rscape_v1.4.0-081019 && \
 make && \
 make install
 
+RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
+cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
+
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
 WORKDIR /home/rfam-user
