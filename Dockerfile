@@ -19,7 +19,9 @@ RUN apt-get update && apt-get install -y curl \
     gfortran \
     default-jdk \
     r-base \
-    r-base-dev
+    r-base-dev \
+    less \
+    fort77
 
 RUN apt-get install -y libimage-size-perl \
   libtest-most-perl \
@@ -58,7 +60,7 @@ cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
-cpan -f install SVN::Client && \
+#cpan -f install SVN::Client && \
 cpan -f install File::Spec
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
@@ -199,8 +201,9 @@ cp RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
 #TCOFFEE installation -- test and fix
 RUN cd /Rfam/software && \
 git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
-cd tcoffee/compile && \
-make t_coffee
+cd tcoffee/t_coffee/src && \
+make t_coffee && \
+mv t_coffee /Rfam/software/bin/.
 
 # install Bio-Easel
 RUN cd /Rfam && \
@@ -224,8 +227,8 @@ RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipe
 cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # install kubectl to establish communication with the k8s cluster
-RUN cd /usr/local/bin && \
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-#release/release/stable.txt)/bin/linux/amd64/kubectl && \
+RUN cd /Rfam/software/bin && \
+curl -LO curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && \
 chmod +x ./kubectl
 
 # install kubernetes client python API
@@ -234,24 +237,25 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
 cd python && python setup.py install 
 
-# install R-scape v.1.2.3
+# install R-scape v.1.4.0
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar xf rscape.tar.gz && \
-cd rscape_v1.2.3 && \
-./configure --prefix=/Rfam/software/rscape_v1.2.3 && \
-make && make install
+cd rscape_v1.4.0-081019 && \
+./configure --prefix=/Rfam/software/rscape_v1.4.0-081019 && \
+make && \
+make install
 
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
 WORKDIR /home/rfam-user
 USER rfam-user
 
-# move to /workdir
-RUN cd /workdir
+# add command to bashrc to move to /workdir
+RUN echo "cd /workdir" >> ~/.bashrc
 
 # Environment setup
-ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/software/rscape_v1.4.0-081019/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
 ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
