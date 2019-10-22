@@ -3,6 +3,7 @@
 import sys
 import os
 import getpass
+import socket
 
 from kubernetes import client, config, utils
 
@@ -24,7 +25,8 @@ def main():
 
     #convert to milicores
     cpus = cpus * 1000
-    user = getpass.getuser()
+    hostname = socket.gethostname()
+    user = hostname.split('-')[3] # fetch username from pod hostname
     job_name = "rfsearch-job-%s-%s" % (user, job_index)
     pod_name = "rfsearch-pod-%s-%s" % (user, job_index) # check if a uuid is needed
     volume_name = "rfam-pod-storage-%s" % user
