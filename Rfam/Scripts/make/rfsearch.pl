@@ -7,6 +7,7 @@ use File::stat;
 use Data::Printer;
 use File::Copy;
 use File::Spec;
+use Sys::Hostname;
 use Carp;
 
 use Bio::Rfam::Config;
@@ -134,7 +135,17 @@ open($logFH, ">rfsearch.log") || die "ERROR unable to open rfsearch.log for writ
 Bio::Rfam::Utils::log_output_rfam_banner($logFH, $executable, $exec_description, $do_stdout);
 
 # output header
-my $user  = getpwuid($<);
+
+my $user;
+if ($config->location eq "CLOUD"){
+	my $host_string  = hostname;
+	my @elements = split('-', $host_string);
+	$user = $elements[3];
+}
+else{
+	$user = getpwuid($<);
+}
+
 if (! defined $user || length($user) == 0) { 
   die "FATAL: failed to run [getlogin or getpwuid($<)]!\n[$!]";
 }
