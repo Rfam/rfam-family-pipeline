@@ -15,7 +15,7 @@ spec:
       name: rfam-login-pod-$USERID
       labels:
         app: rfam-family-builder-$USERID
-        user: ikalvari
+        user: $USERID
         tier: frontend  
     spec:
       containers:
@@ -26,15 +26,10 @@ spec:
         volumeMounts:
         - name: rfam-login-pod-storage-$USERID # this one must match the volume name of the pvc
           mountPath: /workdir
-        - name: nfs-pv
-          mountPath: /Rfam/rfamseq
         stdin: true
         tty: true
       volumes:
       - name: rfam-login-pod-storage-$USERID
         persistentVolumeClaim:
           claimName: rfam-pvc-$USERID # this one must match the pvc name
-      - name: nfs-pv
-        persistentVolumeClaim:
-          claimName: nfs-pvc
       restartPolicy: Always
