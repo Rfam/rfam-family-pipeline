@@ -43,10 +43,10 @@ RUN mkdir /Rfam/rfamseq
 RUN mkdir /workdir
 
 # fetch sequence files
-RUN cd /Rfam/rfamseq && \
-wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/misc/rfamseq14_test.tar.gz && \
-gunzip rfamseq14_test.tar.gz && \
-tar -xvf rfamseq14_test.tar
+#RUN cd /Rfam/rfamseq && \
+#wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/misc/rfamseq14_test.tar.gz && \
+#gunzip rfamseq14_test.tar.gz && \
+#tar -xvf rfamseq14_test.tar
 
 RUN cpan -f install File::ShareDir::Install && \
 cpan -f install Inline::C && \
@@ -79,8 +79,6 @@ make install && \
 cd /Rfam/software/infernal-1.1.2/easel && \
 make install && \
 cd miniapps && \
-
-# create links to make easel tools available in software bin
 cp esl-afetch esl-alimanip esl-alimap esl-alimask esl-alimerge esl-alipid /Rfam/software/bin/. && \
 cp esl-alirev esl-cluster esl-alistat esl-compalign esl-compstruct esl-construct /Rfam/software/bin/. && \
 cp esl-histplot esl-mask esl-reformat esl-selectn esl-seqrange esl-seqstat /Rfam/software/bin/. && \
@@ -241,8 +239,8 @@ cd python && python setup.py install
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar xf rscape.tar.gz && \
-cd rscape_v1.4.0-081019 && \
-./configure --prefix=/Rfam/software/rscape_v1.4.0-081019 && \
+cd rscape_v1.4.0-221019 && \
+./configure --prefix=/Rfam/software/rscape_v1.4.0-221019 && \
 make && \
 make install
 
@@ -258,7 +256,7 @@ USER rfam-user
 RUN echo "cd /workdir" >> ~/.bashrc
 
 # Environment setup
-ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/software/rscape_v1.4.0-081019/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/software/rscape_v1.4.0-221019/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
 ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
@@ -266,4 +264,3 @@ ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Eas
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
-
