@@ -15,7 +15,7 @@ spec:
       name: rfam-login-pod-$USERID
       labels:
         app: rfam-family-builder-$USERID
-        user: ikalvari
+        user: $USERID
         tier: frontend  
     spec:
       containers:
