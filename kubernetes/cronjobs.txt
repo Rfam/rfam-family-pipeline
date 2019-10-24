@@ -22,4 +22,4 @@
 # m h  dom mon dow   command
 
 * * * * * kubectl delete pods --selector=tier=backend --field-selector status.phase=Succeeded
-* * * * * python /home/ubuntu/code/rfam-family-pipeline/kubernetes/k8s_job_sweeper.py
+* * * * * python /path/to/k8s_job_sweeper.py
