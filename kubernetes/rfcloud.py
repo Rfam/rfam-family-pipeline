@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
-
 import os
 import sys
 import argparse
+import subprocess
 
+from subprocess import Popen, PIPE
 #from kubernetes import client, config, utils
 
 
@@ -74,6 +75,30 @@ spec:
 
 # --------------------------------------------------------------------------------------------
 
-if __name__=="__main__":
+def check_k8s_login_deployment_exists(username):
+
+	"""
+	Uses kubectl to check if a login pod for a specific user exists.
+	Returns True if the login pod exists, False otherwise
+
+	username: A valid Rfam cloud account username
+
+	return: Boolean
+	"""
 	
+	k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]	
+	process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        output, err = process.communicate()
+
+        login_pod = output.strip().split('\n')[1:]
+
+	if len(login_pod) == 0:
+		return False
+	
+	return True
+
+# --------------------------------------------------------------------------------------------
+
+if __name__=="__main__":
+
 	pass
