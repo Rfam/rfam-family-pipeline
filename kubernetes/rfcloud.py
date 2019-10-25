@@ -14,7 +14,13 @@ from subprocess import Popen, PIPE
 
 def create_new_user_login_pod(username):
 	"""
-	
+	This function creates a new user login pod using a kubernetes deployment manifest.
+	The purpose of the login pods is to provision the users with interactive sessions
+	and access to the rfam curation pipeline on the Cloud.
+
+	username: A valid Rfam cloud account username
+
+	return: void	
 	"""
 
 	config.load_incluster_config()
