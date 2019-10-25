@@ -4,10 +4,11 @@ import os
 import sys
 import argparse
 import subprocess
+import getpass
+import socket
 
 from subprocess import Popen, PIPE
 #from kubernetes import client, config, utils
-
 
 # --------------------------------------------------------------------------------------------
 
@@ -169,6 +170,32 @@ def get_interactive_rfam_cloud_session(username):
 
 # --------------------------------------------------------------------------------------------
 
+def get_username():
+	"""
+	Function to detect and return the username of an Rfam cloud user.
+
+	return: An Rfam cloud user's username 
+	"""
+	
+	username = ""
+	hostname = socket.gethostname()
+	
+	# check host name to decide if on edge node or in pod 
+	if hostname.find("master") != -1 or hostname.find("edge") != -1:
+		username = getpass.getuser()
+	
+	# check if in pod
+	elif hostname.find("login") != -1:
+		username = hostname.split('-')[3]
+
+	else:
+		sys.exit("Username could not be detected. Unknown location.\n")
+
+	return username
+		
+
+# --------------------------------------------------------------------------------------------
+
 def parse_arguments():
 	"""
 	Uses python's argparse to parse the command line arguments
@@ -193,5 +220,6 @@ if __name__=="__main__":
 	args = parser.parse_args()
 
 	if args.start:
-		username = ""
+		username = get_username()
 		get_interactive_rfam_cloud_session(username)
+	
