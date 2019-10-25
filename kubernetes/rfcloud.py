@@ -143,12 +143,15 @@ def get_interactive_rfam_cloud_session(username):
 	return: void 
 	"""
 	
+	# variable declarations
+	user_login_pod_id = ""
 	exec_cmd = "kubectl exec -it %s bash"
+	
+	# check if the user login pod exists
 	login_exists = check_k8s_login_deployment_exists(username)
 	
 	if login_exists:
 		user_login_pod_id = get_k8s_login_pod_id(username)
-		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
 
 	else:
 		# create a new user login pod
@@ -161,7 +164,8 @@ def get_interactive_rfam_cloud_session(username):
 		# if it reaches this point it means the login pod was created
 		# and we can login to it
 		user_login_pod_id = get_k8s_login_pod_id(username)
-		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+	
+	subprocess.call(exec_cmd % user_login_pod_id, shell=True)
 
 # --------------------------------------------------------------------------------------------
 
