@@ -196,6 +196,51 @@ def get_username():
 
 # --------------------------------------------------------------------------------------------
 
+def copy_items_between_home_pod(item, direction='to'):
+	"""
+	This function helps the Rfam cloud users to copy data between their 
+	home directories and the workdirs in their login pods. It is required
+	that the users are always in their home directories to copy items 
+	from/to their login pods.
+
+	item: The file or directory to be replicated
+	direction: A string speficifying the direction in which to copy 
+	the item (to: from home to pod, from: from pod to home)
+	"""
+	cp_to_cmd = "kubectl cp %s %s:/workdir"
+	cp_from_cmd = "kubectl cp %s:%s ."
+	
+	# get username - in the future lookup the database for auth
+	username = get_username()
+
+	# get login pod id
+	login_pod_id = get_k8s_login_pod_id(username)
+
+	# some sanity checks
+	if login_pod_id is None:
+		sys.exit("\nUnable to detect interactive session. Try using --start option.\n")
+	
+	if direction == "to":
+		try:
+			subprocess.call(cp_to_cmd % (item, login_pod), shell=True)
+		except:
+			print "\nItem %s could not be copied to your home directory!" % item			
+			print "Check if the item exists or the path is correct and try again!\n"
+	elif direction == "from":
+		try:
+			item_pod_path = item
+		
+			# check if we need join the paths
+			if item_pod_path.find("/workdir") == -1:
+				item_pod_path = os.path.join("/workdir", item)
+		
+			subprocess.call(cp_from_cmd % (login_pod, item_pod_path), shell=True)
+		except:
+			print "\nItem %s could not be copied to the pod!" % item
+			print "Check if the item exists or the path is correct and try again!\n"
+
+# --------------------------------------------------------------------------------------------
+
 def parse_arguments():
 	"""
 	Uses python's argparse to parse the command line arguments
