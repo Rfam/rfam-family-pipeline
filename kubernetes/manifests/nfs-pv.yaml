@@ -4,7 +4,7 @@ metadata:
   name: nfs-pv
 spec:
   capacity:
-    storage: 10Gi
+    storage: 600Gi
   accessModes:
     - ReadOnlyMany
   claimRef:
@@ -12,6 +12,6 @@ spec:
     name: nfs-pvc
   nfs:
     path: /nfs
-    server: nfs_server_ip
+    server: 10.0.0.46
     readOnly: true
 
