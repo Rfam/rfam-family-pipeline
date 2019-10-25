@@ -78,8 +78,8 @@ spec:
 	fp.write(login_deployment % username)
 	fp.close()
 
-	k8s_api = utils.create_from_yaml(k8s_client, login_deployment)
-
+	#k8s_api = utils.create_from_yaml(k8s_client, login_deployment)
+	subprocess.call("kubectl create -f %s" % login_deployment, shell=True)
 # --------------------------------------------------------------------------------------------
 
 def check_k8s_login_deployment_exists(username):
