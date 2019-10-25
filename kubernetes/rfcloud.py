@@ -105,6 +105,66 @@ def check_k8s_login_deployment_exists(username):
 
 # --------------------------------------------------------------------------------------------
 
+def get_k8s_login_pod_id(username):
+
+        """
+        This function uses kubectl command to fetch the login pod_id of a specific user of
+	the Rfam cloud infrastructure. It returns the the user's login pod_id, otherwise it
+	returns None. 
+
+        username: A valid Rfam cloud account username
+
+        return: The user login pod_id if it exists, None otherwise 
+        """
+
+        k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]
+        process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        output, err = process.communicate()
+
+        login_pod_line = output.strip().split('\n')[1:]
+
+	if len(login_pod_line)!=0:	
+		login_pod_id = [x for x in login_pod_line[0].split(' ') if x!=''][0]
+       		
+		return login_pod_id
+	
+	return None
+
+# --------------------------------------------------------------------------------------------
+
+def get_interactive_rfam_cloud_session(username):
+	"""
+	This function allows a user to login to their interactive login pod and get access to
+	the Rfam cloud curation pipeline. If the login pod does not exist, a new one will be
+	created and the function waits until the pod is in running state.
+
+	username: A valid Rfam cloud account username
+
+	return: void 
+	"""
+	
+	exec_cmd = "kubectl exec -it %s bash"
+	login_exists = check_k8s_login_deployment_exists(username)
+	
+	if login_exists:
+		user_login_pod_id = get_k8s_login_pod_id(username)
+		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+
+	else:
+		# create a new user login pod
+		create_new_user_login_pod(username)
+		
+		# wait while login pod is being created
+		while (not login_exists):
+			login_exists = check_k8s_login_deployment_exists(username)
+
+		# if it reaches this point it means the login pod was created
+		# and we can login to it
+		user_login_pod_id = get_k8s_login_pod_id(username)
+		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+
+# --------------------------------------------------------------------------------------------
+
 if __name__=="__main__":
 
 	pass
