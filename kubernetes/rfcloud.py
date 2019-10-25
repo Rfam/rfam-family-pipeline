@@ -169,6 +169,29 @@ def get_interactive_rfam_cloud_session(username):
 
 # --------------------------------------------------------------------------------------------
 
+def parse_arguments():
+	"""
+	Uses python's argparse to parse the command line arguments
+	
+	return: Argparse parser object
+	"""
+
+	# create a new argument parser object
+    	parser = argparse.ArgumentParser(description='')
+
+    	parser.add_argument('--start', help='start a new interactive curation session', 
+				action="store_true")
+
+	return parser
+
+# --------------------------------------------------------------------------------------------
+
 if __name__=="__main__":
 
-	pass
+	# create a new argument parser object
+	parser = parse_arguments()
+	args = parser.parse_args()
+
+	if args.start:
+		username = ""
+		get_interactive_rfam_cloud_session(username)
