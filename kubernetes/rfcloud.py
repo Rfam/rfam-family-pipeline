@@ -208,11 +208,11 @@ def copy_items_between_home_pod(item, direction='to'):
 	the item (to: from home to pod, from: from pod to home)
 	"""
 	cp_to_cmd = "kubectl cp %s %s:/workdir"
-	cp_from_cmd = "kubectl cp %s:%s ."
+	cp_from_cmd = "kubectl cp %s:%s %s"
 	
 	# get username - in the future lookup the database for auth
 	username = get_username()
-
+	
 	# get login pod id
 	login_pod_id = get_k8s_login_pod_id(username)
 
@@ -222,21 +222,24 @@ def copy_items_between_home_pod(item, direction='to'):
 	
 	if direction == "to":
 		try:
-			subprocess.call(cp_to_cmd % (item, login_pod), shell=True)
+			subprocess.call(cp_to_cmd % (item, login_pod_id), shell=True)
 		except:
-			print "\nItem %s could not be copied to your home directory!" % item			
+			print "\nItem %s could not be copied to your pod workdir!" % item			
 			print "Check if the item exists or the path is correct and try again!\n"
+	
 	elif direction == "from":
 		try:
 			item_pod_path = item
-		
 			# check if we need join the paths
 			if item_pod_path.find("/workdir") == -1:
 				item_pod_path = os.path.join("/workdir", item)
-		
-			subprocess.call(cp_from_cmd % (login_pod, item_pod_path), shell=True)
+			
+			# get local path to copy item to
+			local_path = os.path.join(os.getcwd(), item)	
+			
+			subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
 		except:
-			print "\nItem %s could not be copied to the pod!" % item
+			print "\nItem %s could not be copied from the pod!" % item
 			print "Check if the item exists or the path is correct and try again!\n"
 
 # --------------------------------------------------------------------------------------------
@@ -253,6 +256,13 @@ def parse_arguments():
 
     	parser.add_argument('--start', help='start a new interactive curation session', 
 				action="store_true")
+	
+	mutually_exclusive = parser.add_mutually_exclusive_group()
+	mutually_exclusive.add_argument("--cp-to", help='copies an existing file to workdir', action="store",
+				type = str)
+	
+	mutually_exclusive.add_argument("--cp-from", help='copies an existing file from workdir', action="store",
+                                type = str)
 
 	return parser
 
@@ -268,3 +278,8 @@ if __name__=="__main__":
 		username = get_username()
 		get_interactive_rfam_cloud_session(username)
 	
+	elif args.cp_to:
+		copy_items_between_home_pod(args.cp_to, direction='to')
+	
+	elif args.cp_from:
+		copy_items_between_home_pod(args.cp_from, direction='from')
