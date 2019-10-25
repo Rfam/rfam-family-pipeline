@@ -258,11 +258,11 @@ def parse_arguments():
 				action="store_true")
 	
 	mutually_exclusive = parser.add_mutually_exclusive_group()
-	mutually_exclusive.add_argument("--cp-to", help='copies an existing file to workdir', action="store",
-				type = str)
+	mutually_exclusive.add_argument("--copy-to", help='copies an existing file/dir to workdir', action="store",
+				type = str, metavar="FILE/DIR")
 	
-	mutually_exclusive.add_argument("--cp-from", help='copies an existing file from workdir', action="store",
-                                type = str)
+	mutually_exclusive.add_argument("--copy-from", help='copies an existing file/dir from workdir', action="store",
+                                type = str, metavar="FILE/DIR")
 
 	return parser
 
