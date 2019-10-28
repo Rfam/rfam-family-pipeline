@@ -247,6 +247,8 @@ make install
 RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
 cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
 
+RUN apt-get update && apt-get install -y nano
+
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
 WORKDIR /home/rfam-user
