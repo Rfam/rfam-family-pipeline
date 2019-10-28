@@ -212,7 +212,6 @@ def copy_items_between_home_pod(item, direction='to'):
 	
 	# get username - in the future lookup the database for auth
 	username = get_username()
-	
 	# get login pod id
 	login_pod_id = get_k8s_login_pod_id(username)
 
@@ -220,6 +219,7 @@ def copy_items_between_home_pod(item, direction='to'):
 	if login_pod_id is None:
 		sys.exit("\nUnable to detect interactive session. Try using --start option.\n")
 	
+	# copy a file or dir from the user's home directory to the workdir in the pod	
 	if direction == "to":
 		try:
 			subprocess.call(cp_to_cmd % (item, login_pod_id), shell=True)
@@ -227,6 +227,7 @@ def copy_items_between_home_pod(item, direction='to'):
 			print "\nItem %s could not be copied to your pod workdir!" % item			
 			print "Check if the item exists or the path is correct and try again!\n"
 	
+	# copy a file or directory from the pd workdir to the user's home directory
 	elif direction == "from":
 		try:
 			item_pod_path = item
@@ -234,9 +235,8 @@ def copy_items_between_home_pod(item, direction='to'):
 			if item_pod_path.find("/workdir") == -1:
 				item_pod_path = os.path.join("/workdir", item)
 			
-			# get local path to copy item to
+			# get local path to copy item to the pod
 			local_path = os.path.join(os.getcwd(), item)	
-			
 			subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
 		except:
 			print "\nItem %s could not be copied from the pod!" % item
@@ -278,8 +278,8 @@ if __name__=="__main__":
 		username = get_username()
 		get_interactive_rfam_cloud_session(username)
 	
-	elif args.cp_to:
-		copy_items_between_home_pod(args.cp_to, direction='to')
+	elif args.copy_to:
+		copy_items_between_home_pod(args.copy_to, direction='to')
 	
-	elif args.cp_from:
-		copy_items_between_home_pod(args.cp_from, direction='from')
+	elif args.copy_from:
+		copy_items_between_home_pod(args.copy_from, direction='from')
