@@ -65,7 +65,60 @@ def setup_kube_dir(username):
 
 
 def create_user_pvc(username, size=2):
-	pass
+
+	user_pvc_manifest="""
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: rfam-pvc-%s
+ labels:
+   user: %s
+ annotations:
+  volume.beta.kubernetes.io/storage-class: gluster-heketi
+spec:
+  accessModes:
+   - ReadWriteMany
+  resources:
+    requests:
+      storage: %sGi"""
+
+	# get the location of the pvc manifest file
+	pvc_manifest_loc = os.path.join("/tmp", username+"_pvc.yml")
+
+	# open a temp file and write the k8s pvc manifest
+	fp = open(os.path.join("/tmp", username+"_pvc.yml"), 'w')
+	fp.write(user_pvc_manifest% (username, username, size))
+	fp.close()
+
+	# check if the pvc manifest was created 
+	if os.path.exists(pvc_manifest_loc):
+		cmd_args = ["kubectl", "create", "-f", pvc_manifest_loc]
+		process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		response, err = process.communicate()
+		
+		# check if pvc was created
+		if str(response).find("created") != -1:
+			# need an infinite loop here to check when the pvc will change status from
+			# Pending to Bound
+			print ("PVC for user %s has been created" % username)		
+			
+			# check if newly created PVC is bound
+			cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
+			response = ""
+			
+			# keep checking while the pvc is not Bound
+			while(str(response).find("Bound") == -1):
+				process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+				response, err = process.communicate()
+
+			print ("PVC of user %s is Bound!" % username)
+		else:
+			sys.exit("ERROR creating pvc manifests for user %s" % username)
+			return False
+
+	# remove pvc manifest when done
+	os.remove(pvc_manifest_loc)
+	return True
 
 # ------------------------------------------------------------------
 
@@ -77,4 +130,4 @@ def create_new_user_login_deployment():
 
 if __name__=='__main__':
 
-	pass
+	create_user_pvc("kostis", size=2)
