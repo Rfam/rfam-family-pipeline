@@ -67,6 +67,17 @@ def setup_kube_dir(username):
 
 
 def create_user_pvc(username, size=2):
+	"""
+	This function creates a new k8s user persistent volume claim (PVC)
+	and prints out relevant messages upon success or failure. The user's
+	username and pvc size is specified as a parameter. If the pvc is
+	created successfully then the function returns true, False otherwise.
+
+	username: A valid Rfam cloud user username
+	size: The size of the volume in Gi
+
+	return: True on success, False on failure 
+	"""
 
 	user_pvc_manifest = k8s_lib.user_pvc_manifest
 
