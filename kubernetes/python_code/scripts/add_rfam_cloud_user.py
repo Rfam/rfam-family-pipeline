@@ -129,5 +129,4 @@ def create_new_user_login_deployment():
 
 
 if __name__=='__main__':
-
-	create_user_pvc("kostis", size=2)
+	pass
