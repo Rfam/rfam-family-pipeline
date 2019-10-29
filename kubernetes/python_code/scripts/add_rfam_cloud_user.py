@@ -81,21 +81,18 @@ def create_user_pvc(username, size=2):
 
 	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
 	user_pvc_manifest = k8s_lib.user_pvc_manifest
-
-
-	# get the location of the pvc manifest file
+	
+	# get pvc manifest temp location
 	pvc_manifest_loc = os.path.join("/tmp", username+"_pvc.yml")
-	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-	response, err = process.communicate()	
 
 	# check if the pvc exists and is Bound
 	if check_pvc_exists(username) is True:
-		print ("PVC of user %s already exists!" %s)
+		print ("PVC of user %s already exists!" % username)
 		
 		return True
 
 	# open a temp file and write the k8s pvc manifest
-	fp = open(os.path.join("/tmp", username+"_pvc.yml"), 'w')
+	fp = open(pvc_manifest_loc, 'w')
 	fp.write(user_pvc_manifest% (username, username, size))
 	fp.close()
 
