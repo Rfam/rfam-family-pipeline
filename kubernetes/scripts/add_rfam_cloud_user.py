@@ -39,18 +39,28 @@ def create_new_rfam_user(username, expire_date, group):
 	
 	cmd = "useradd --create-home --expiredate %s --shell /usr/bin/bash --password %s %s" 
 
+	# TODO - return passwork or update the database
+	# need to email users with username and password
 	password = generate_random_password()
-	
+
 	# Create a user with password and shell information
 	# potentially load this information from the database
 	subprocess.call(cmd % (expire_date, password, username), shell=True)
 	
 # ------------------------------------------------------------------
-	
 
-def setup_home_dir():
+def setup_kube_dir(username):
 	# creates .kube dir and sets the config file
-	pass
+	home_dir_path = os.path.join("/home", username)
+
+	# create .kube dir
+	kube_dir = os.path.join(home_dir_path, ".kube")
+	os.mkdir(kube_dir)
+	os.chmod(444) # make read only for all
+	
+	# TODO
+	# create .kube/config
+	
 # ------------------------------------------------------------------
 
 
