@@ -1454,7 +1454,7 @@ sub makeAndWriteScores_helper {
         $stype = "seed";
       } elsif ($type eq "FULL") {
         $stype = "full";
-      } elsif ($type ne "SEED") { 
+      } else { 
         croak "ERROR invalid type $type";
       }
 
@@ -1625,7 +1625,7 @@ sub writeTbloutDependentFiles {
 
       # print out threshold line if nec
       if (($bits < $ga) && ($ga <= $prv_bits)) {
-        $outline = _commentLineForOutlistOrSpecies (" CURRENT THRESHOLD: $ga BITS ");
+        $outline = _commentLineForOutlistOrSpecies (" CURRENT GA THRESHOLD: $ga BITS ");
         push(@{$seed_outAA[$nlines_cur]}, ($outline));
         push(@{$seed_spcAA[$nlines_cur]}, ($outline));
         $printed_thresh=1;
@@ -1689,7 +1689,7 @@ sub writeTbloutDependentFiles {
     } # closes 'while($tblline'
 
     if (! $printed_thresh) { 
-      $outline = _commentLineForOutlistOrSpecies(" CURRENT THRESHOLD: $ga BITS ");
+      $outline = _commentLineForOutlistOrSpecies(" CURRENT GA THRESHOLD: $ga BITS ");
       push(@{$seed_outAA[$nlines_cur]}, ($outline));
       $nlines_cur++;
     }
@@ -1760,17 +1760,17 @@ sub writeTbloutDependentFiles {
       my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
       if ($seed_seq ne "") { 
         if ($overlapExtent > 0.1) {
-          $seqLabel = 'FULL-SEED';
+          $seqLabel = ($bits < $ga) ? 'OTHER-SEED' : 'FULL-SEED';
         }
       }
     }
-    if (($bits < $ga) && ($seqLabel = "FULL")) { 
-      $seqLabel = 'NOT';
+    if (($bits < $ga) && ($seqLabel eq "FULL")) { 
+      $seqLabel = 'OTHER';
     }
 
     # print out threshold line if nec
     if (($bits < $ga) && ($ga <= $prv_bits)) {
-      $outline = _commentLineForOutlistOrSpecies (" CURRENT THRESHOLD: $ga BITS ");
+      $outline = _commentLineForOutlistOrSpecies (" CURRENT GA THRESHOLD: $ga BITS ");
       push(@{$outAA[$nlines_cur]}, ($outline));
       push(@{$spcAA[$nlines_cur]}, ($outline));
       printf RIN  "%0.2f\tTHRESH\t.\n", $ga;
@@ -1802,7 +1802,7 @@ sub writeTbloutDependentFiles {
 
   # if we haven't printed the threshold yet, do it
   if (! $printed_thresh) { 
-    $outline = _commentLineForOutlistOrSpecies(" CURRENT THRESHOLD: $ga BITS ");
+    $outline = _commentLineForOutlistOrSpecies(" CURRENT GA THRESHOLD: $ga BITS ");
     push(@{$outAA[$nlines_cur]}, ($outline));
     push(@{$spcAA[$nlines_cur]}, ($outline));
     printf RIN "%0.2f\tTHRESH\t\.\n", $ga;
@@ -3222,7 +3222,8 @@ sub parseOutlistAndSpecies {
         # determine group
         $group = "";
         if   ($out_elA[2] eq "SEED")      { $group = "SEED"; } 
-        elsif($out_elA[2] eq "FULL-SEED") { $group = undef;  } # a hit in the DB to a seed seq, we should have also seen a SEED hit, so we skip to avoid double counting
+        elsif($out_elA[2] eq "FULL-SEED") { $group = undef;  } # a hit in the DB >= GA to a seed seq, we should have also seen a SEED hit, so we skip to avoid double counting
+        elsif($out_elA[2] eq "OTHER-SEED"){ $group = undef;  } # a hit in the DB <  GA to a seed seq, we should have also seen a SEED hit, so we skip to avoid double counting
         elsif($out_elA[0] >= $ga)         { $group = "FULL"; } 
         elsif($out_elA[1] <= $emax)       { $group = "OTHER"; } 
         if((defined $groupOHAR) && (defined $group)) { push(@{$groupOHAR->{$group}}, $name); }
