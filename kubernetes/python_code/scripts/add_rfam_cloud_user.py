@@ -85,12 +85,11 @@ def create_user_pvc(username, size=2):
 
 	# get the location of the pvc manifest file
 	pvc_manifest_loc = os.path.join("/tmp", username+"_pvc.yml")
-
 	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        response, err = process.communicate()	
+	response, err = process.communicate()	
 
 	# check if the pvc exists and is Bound
-	if str(response).find("Bound") != -1:
+	if check_pvc_exists(username) is True:
 		print ("PVC of user %s already exists!" %s)
 		
 		return True
@@ -113,13 +112,10 @@ def create_user_pvc(username, size=2):
 			print ("PVC for user %s has been created" % username)		
 			
 			# check if newly created PVC is bound
-			cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
-			response = ""
-			
+			response = False			
 			# keep checking while the pvc is not Bound
-			while(str(response).find("Bound") == -1):
-				process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-				response, err = process.communicate()
+			while(not response):
+				response = check_pvc_exists(username)
 
 			print ("PVC of user %s is Bound!" % username)
 		else:
@@ -128,7 +124,7 @@ def create_user_pvc(username, size=2):
 	
 	else:
 		sys.exit("ERROR creating pvc manifest file for user %s" % username)
-                        return False
+		return False
 
 	# remove pvc manifest when done
 	os.remove(pvc_manifest_loc)
@@ -149,7 +145,7 @@ def check_pvc_exists(username):
 	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
 	
 	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        response, err = process.communicate()
+	response, err = process.communicate()
 
 	if str(response).find("Bound") != -1:
 		return True
@@ -165,4 +161,4 @@ def create_new_user_login_deployment():
 
 if __name__=='__main__':
 
-	pass
+	create_user_pvc("koullis", size=2)
