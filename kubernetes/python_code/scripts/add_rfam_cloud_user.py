@@ -9,7 +9,7 @@ import subprocess
 import lib.k8s_manifests as k8s_lib
 from subprocess import Popen, PIPE
 
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
 
 def generate_random_password(length=10):
 	"""
@@ -25,7 +25,7 @@ def generate_random_password(length=10):
 
 	return random_password
 
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
 
 def create_new_rfam_user(username, expire_date, group):
 	"""
@@ -49,7 +49,7 @@ def create_new_rfam_user(username, expire_date, group):
 	# potentially load this information from the database
 	subprocess.call(cmd % (expire_date, password, username), shell=True)
 	
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
 
 def setup_kube_dir(username):
 	# creates .kube dir and sets the config file
@@ -63,7 +63,7 @@ def setup_kube_dir(username):
 	# TODO
 	# create .kube/config
 	
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
 
 
 def create_user_pvc(username, size=2):
@@ -134,7 +134,29 @@ def create_user_pvc(username, size=2):
 	os.remove(pvc_manifest_loc)
 	return True
 
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------
+
+def check_pvc_exists(username):
+	"""
+	This function checks if a user persistent volume claim (PVC) already exists.
+	Returns True if the PVC exists, False otherwise.
+
+	username: The username of an Rfam cloud user
+	
+	return: Boolean
+	"""
+	
+	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
+	
+	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        response, err = process.communicate()
+
+	if str(response).find("Bound") != -1:
+		return True
+
+	return False
+
+# -----------------------------------------------------------------
 
 def create_new_user_login_deployment():
 	pass
