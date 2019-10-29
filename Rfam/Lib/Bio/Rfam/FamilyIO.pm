@@ -1585,8 +1585,8 @@ sub writeTbloutDependentFiles {
       # determine if this reverse hit overlaps with any positive hits
       my $overlap_str = _outlist_species_get_overlap_string(\%tbloutHA, $name, $start, $end, $bits, 1); # '1' says this is a reversed hit
 
-      push(@{$rev_outAA[$nlines_cur]}, ($bits, $evalue, "REV", $name, $overlap_str, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description));
-      push(@{$rev_spcAA[$nlines_cur]}, ($bits, $evalue, "REV", $name, $overlap_str, $ncbiId, $species, $taxString));
+      push(@{$rev_outAA[$nlines_cur]}, ($bits, $evalue, "REV", $name, $overlap_str, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, "-", $description));
+      push(@{$rev_spcAA[$nlines_cur]}, ($bits, $evalue, "REV", $name, $overlap_str, $ncbiId, $species, "-", $taxString));
       $nlines_cur++;
       # TODO?: change so top scoring rev hit that does not overlap with any other hits is marked up, not just top rev hit
       #         if($overlap_str eq "-" && $rev_evalue eq "") { # first hit that does not overlap with a true hit of higher value
@@ -1623,6 +1623,14 @@ sub writeTbloutDependentFiles {
       my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString, $got_tax) = 
           processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); # '0, 0' says: this is not a reversed search and don't require tax info
 
+      my $gaLabel   = undef; # set to 'GA:A' if bit score >= $ga, else set to 'GA:B'
+      my $revLabel  = undef; # set to 'RV:A' if E-value <= $rev_evalue, else set to 'RV:B'
+                             # note we don't use bit-score because REV db is 10X smaller than actual DB, 
+                             # so expected bit-score of top REV hit in a db same size as actual DB is > top REV hit in REV db (by about 3 bits)
+      my $seedLabel = "SO:SELF"; # fixed for hits in SEED.fa
+      $gaLabel   = ($bits < $ga) ? "GA:B" : "GA:A";
+      $revLabel  = (($rev_evalue ne "") && ($evalue > $rev_evalue)) ? "RV:B": "RV:A";
+
       # print out threshold line if nec
       if (($bits < $ga) && ($ga <= $prv_bits)) {
         $outline = _commentLineForOutlistOrSpecies (" CURRENT GA THRESHOLD: $ga BITS ");
@@ -1631,7 +1639,7 @@ sub writeTbloutDependentFiles {
         $printed_thresh=1;
         $nlines_cur++;
       }
-      if ( $rev_evalue ne "" && $evalue > $rev_evalue && $prv_evalue <= $rev_evalue) {
+      if (($rev_evalue ne "") && ($evalue > $rev_evalue) && ($prv_evalue <= $rev_evalue)) {
         $outline = _commentLineForOutlistOrSpecies(" BEST REVERSED HIT E-VALUE: $rev_evalue ");
         push(@{$seed_outAA[$nlines_cur]}, ($outline));
         push(@{$seed_spcAA[$nlines_cur]}, ($outline));
@@ -1675,8 +1683,9 @@ sub writeTbloutDependentFiles {
         }
       }
 
-      push(@{$seed_outAA[$nlines_cur]}, ($bits, $evalue, "SEED", $name, "?", $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description));
-      push(@{$seed_spcAA[$nlines_cur]}, ($bits, $evalue, "SEED", $name, "?", $ncbiId, $species, $taxString));
+      my $extraLabel = $gaLabel . ";" . $revLabel . ";" . $seedLabel;
+      push(@{$seed_outAA[$nlines_cur]}, ($bits, $evalue, "SEED", $name, "?", $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $extraLabel, $description));
+      push(@{$seed_spcAA[$nlines_cur]}, ($bits, $evalue, "SEED", $name, "?", $ncbiId, $species, $extraLabel, $taxString));
 
       $nlines_cur++;
       if($nlines_cur % $chunksize == 0) { 
@@ -1732,10 +1741,24 @@ sub writeTbloutDependentFiles {
     my $domainKingdom = Bio::Rfam::Utils::tax2kingdom($taxString . '; ' . $species . ';');
     $kingdomCounts{$domainKingdom}++;
 
-    # determine seqLabel
-    my $seqLabel = 'FULL';
+    # determine seqLabel, gaLabel, revLabel, seedLabel
+    # set defaults first
+    my $seqLabel  = 'FULL';
+
+    my $gaLabel   = undef; # set to 'GA:A' if bit score >= $ga, else set to 'GA:B'
+    my $revLabel  = undef; # set to 'RV:A' if E-value <= $rev_evalue, else set to 'RV:B'
+                           # note we don't use bit-score because REV db is 10X smaller than actual DB, 
+                           # so expected bit-score of top REV hit in a db same size as actual DB is > top REV hit in REV db (by about 3 bits)
+    my $seedLabel = undef; # set to 'SO:Y[0.<x>]' if hit is in db and overlaps with SEED seq by <x> fraction
+                           # set to 'SO:N[0.000]' if hit is in db and does not overlaps with SEED seq at all
+                           # set to 'SO:SELF' if hit is to SEED.fa
+    $gaLabel   = ($bits < $ga) ? "GA:B" : "GA:A";
+    $revLabel  = (($rev_evalue ne "") && ($evalue > $rev_evalue)) ? "RV:B": "RV:A";
+    # seedLabel updated below
+
     if($seedmsa->get_sqidx($name) != -1) { 
-      $seqLabel = 'SEED';
+      $seqLabel  = 'SEED';
+      $seedLabel = 'SO:SELF';
       ($ncbiId, $species, $shortSpecies, $taxString, $description) = ("-", "-", "-", "-", "-");
       if(defined $seed_info_HH{$name}) { 
         if(defined $seed_info_HH{$name}{"description"}) { 
@@ -1756,9 +1779,11 @@ sub writeTbloutDependentFiles {
       }
     } # end of 'if($seedmsa->get_sqidx($name) != -1)'
     else { 
+      $seedLabel = "SO:N[0.000]";
       my $nse = $name . "/" . $start . "-" . $end;
       my ($seed_seq, $overlapExtent) = $seedmsa->nse_overlap($nse);
       if ($seed_seq ne "") { 
+        $seedLabel = sprintf("SO:Y[%.3f]", $overlapExtent);
         if ($overlapExtent > 0.1) {
           $seqLabel = ($bits < $ga) ? 'OTHER-SEED' : 'FULL-SEED';
         }
@@ -1786,8 +1811,9 @@ sub writeTbloutDependentFiles {
     $prv_bits = $bits;
     $prv_evalue = $evalue;
 
-    push(@{$outAA[$nlines_cur]}, ($bits, $evalue, $seqLabel, $name, $overlap_str, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description));
-    push(@{$spcAA[$nlines_cur]}, ($bits, $evalue, $seqLabel, $name, $overlap_str, $ncbiId, $species, $taxString));
+    my $extraLabel = $gaLabel . ";" . $revLabel . ";" . $seedLabel;
+    push(@{$outAA[$nlines_cur]}, ($bits, $evalue, $seqLabel, $name, $overlap_str, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $extraLabel, $description));
+    push(@{$spcAA[$nlines_cur]}, ($bits, $evalue, $seqLabel, $name, $overlap_str, $ncbiId, $species, $extraLabel, $taxString));
     $nlines_cur++;
     if($nlines_cur % $chunksize == 0) { 
       writeOutlistOrSpeciesChunk($outFH, \@outAA, 1);
@@ -2223,10 +2249,10 @@ sub writeOutlistOrSpeciesChunk {
 
   my @headA = ();
   if($is_outlist) { 
-    @headA = ("# bits", "evalue", "seqLabel", "name", "overlap", "start", "end", "str", "qstart", "qend", "trunc", "species", "description");
+    @headA = ("# bits", "evalue", "seqLabel", "name", "overlap", "start", "end", "str", "qstart", "qend", "trunc", "species", "extra", "description");
   }
   else { # species data 
-    @headA = ("# bits", "evalue", "seqLabel", "name", "overlap", "ncbiId", "species", "taxString");
+    @headA = ("# bits", "evalue", "seqLabel", "name", "overlap", "ncbiId", "species", "extra", "taxString");
   }
     
   my $nels = scalar(@headA);
@@ -2273,7 +2299,7 @@ sub writeOutlistOrSpeciesChunk {
     }
     else { 
       if($is_outlist) { 
-        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %*s  %*s  %*s  %*s  %*s  %-*s  %-s\n", 
+        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %*s  %*s  %*s  %*s  %*s  %-*s  %-*s  %-s\n", 
                     $widthA[0], $aR->[0], 
                     $widthA[1], $aR->[1], 
                     $widthA[2], $aR->[2], 
@@ -2286,10 +2312,11 @@ sub writeOutlistOrSpeciesChunk {
                     $widthA[9], $aR->[9],
                     $widthA[10], $aR->[10],
                     $widthA[11], $aR->[11],
-                    $aR->[12]); # final column doesn't need to be fixed-width, just flush left
+                    $widthA[12], $aR->[12],
+                    $aR->[13]); # final column doesn't need to be fixed-width, just flush left
       }
       else { # species line
-        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %-*s  %-s\n",
+        printf $fh ("%*s  %*s  %-*s  %-*s  %*s  %*s  %-*s  %-*s  %-s\n",
                     $widthA[0], $aR->[0], 
                     $widthA[1], $aR->[1], 
                     $widthA[2], $aR->[2], 
@@ -2297,7 +2324,8 @@ sub writeOutlistOrSpeciesChunk {
                     $widthA[4], $aR->[4], 
                     $widthA[5], $aR->[5], 
                     $widthA[6], $aR->[6], 
-                    $aR->[7]); # final column doesn't need to be fixed-width, just flush left
+                    $widthA[7], $aR->[7], 
+                    $aR->[8]); # final column doesn't need to be fixed-width, just flush left
       }
     }
   }
@@ -3873,7 +3901,7 @@ sub validate_outlist_format {
     # # bits  evalue   seqLabel  name            overlap  start    end      str  qstart  qend  trunc  species                            description                                                                                                  
     $line = <IN>;
     chomp $line;
-    if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+start\s+end\s+str\s+qstart\s+qend\s+trunc\s+species\s+description/) { 
+    if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+start\s+end\s+str\s+qstart\s+qend\s+trunc\s+species\s+extra\s+description/) { 
       die "ERROR unable to validate outlist format (second line invalid); rerun rfmake.pl"; 
     }
   }
@@ -3885,7 +3913,7 @@ sub validate_outlist_format {
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }
     if(defined $line) { 
       chomp $line;
-      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\d+\s+\d+\s+[\-+]\s+\d+\s+\d+\s+\S+\s+\S+\s+/) { 
+      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\d+\s+\d+\s+[\-+]\s+\d+\s+\d+\s+\S+\s+\S+\s+\S+\s+/) { 
         $passed = 1;
       }
       else { 
@@ -3937,7 +3965,7 @@ sub validate_species_format {
     # # bits  evalue   seqLabel  name            overlap  ncbiId  species                                                         taxString
     $line = <IN>;
     chomp $line;
-    if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+ncbiId\s+species\s+taxString/) { 
+    if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+ncbiId\s+species\s+extra\s+taxString/) { 
       die "ERROR unable to validate species format (second line invalid); rerun rfmake.pl"; 
     }
   } 
@@ -3949,7 +3977,7 @@ sub validate_species_format {
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }
     if(defined $line) { 
       chomp $line;
-      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+.+  .*$/) { 
+      if($line =~ m/^\s*\-?\d*\.\d\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+.+  .*$/) { 
         $passed = 1;
       }
       else { 
