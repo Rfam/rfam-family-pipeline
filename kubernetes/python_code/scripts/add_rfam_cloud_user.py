@@ -5,6 +5,8 @@ import sys
 import string
 import random
 import subprocess
+
+import lib.k8s_manifests as k8s_lib
 from subprocess import Popen, PIPE
 
 # ------------------------------------------------------------------
@@ -66,21 +68,7 @@ def setup_kube_dir(username):
 
 def create_user_pvc(username, size=2):
 
-	user_pvc_manifest="""
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
- name: rfam-pvc-%s
- labels:
-   user: %s
- annotations:
-  volume.beta.kubernetes.io/storage-class: gluster-heketi
-spec:
-  accessModes:
-   - ReadWriteMany
-  resources:
-    requests:
-      storage: %sGi"""
+	user_pvc_manifest = k8s_lib.user_pvc_manifest
 
 	# get the location of the pvc manifest file
 	pvc_manifest_loc = os.path.join("/tmp", username+"_pvc.yml")
@@ -127,6 +115,6 @@ def create_new_user_login_deployment():
 
 # ------------------------------------------------------------------
 
-
 if __name__=='__main__':
+
 	pass
