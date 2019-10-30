@@ -186,6 +186,24 @@ def create_new_user_login_deployment(username, multi=False):
  
 # ------------------------------------------------------------------
 
+def parse_arguments():
+	"""
+	Uses python's argparse to parse the command line arguments
+	
+	return: Argparse parser object
+	"""
+
+	# create a new argument parser object
+	parser = argparse.ArgumentParser(description='Tool to create new Rfam cloud users')
+
+	parser.add_argument('-f', help='a file containing all necessary information to create Rfam cloud user accounts', 
+		action="store", type = str, metavar="FILE")
+	
+	return parser
+
+# ------------------------------------------------------------------
+
+
 if __name__=='__main__':
 
 	pass
