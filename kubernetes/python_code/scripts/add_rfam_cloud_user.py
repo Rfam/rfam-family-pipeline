@@ -7,6 +7,7 @@ import random
 import subprocess
 
 import lib.k8s_manifests as k8s_lib
+import rfcloud
 from subprocess import Popen, PIPE
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -151,11 +152,40 @@ def check_pvc_exists(username):
 
 # -----------------------------------------------------------------
 
-def create_new_user_login_deployment():
-	pass
+def create_new_user_login_deployment(username, multi=False):
+	"""
+	Creates a new login deployment for a specified user if one does
+	not already exist. 
 
+	username: The username of an existing Rfam cloud user
+	multi: 
+	"""
+
+	# check if login pod already exists
+	login_pod_exists = check_k8s_login_deployment_exists(username)
+
+	if login_pod_exists is True:
+		if multi is True:
+			print("User %s login pod already exists" % username)
+                	return get_k8s_login_pod_id(username)
+		# if single user print message and exit
+		else:
+			sys.exit("User %s login pod already exists" % username)
+	# there's no login pod for user specified by username	
+	else:
+		# create a new login pod for user 
+		rfcloud.create_new_user_login_pod(username)
+		
+		check_pod_exists = check_k8s_login_deployment_exists(username)
+
+		# keep checking until the pod gets created
+		while (not check_pod_exists):
+			check_pod_exists = check_k8s_login_deployment_exists(username)
+
+		print ("Login pod for user %s has been created!\n" % username)
+ 
 # ------------------------------------------------------------------
 
 if __name__=='__main__':
 
-	create_user_pvc("koullis", size=2)
+	pass
