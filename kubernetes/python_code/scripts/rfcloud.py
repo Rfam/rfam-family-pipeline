@@ -57,27 +57,26 @@ def check_k8s_login_deployment_exists(username):
 
 	if len(login_pod) == 0:
 		return False
-	
-	return True
+
+		return True
 
 # --------------------------------------------------------------------------------------------
 
 def get_k8s_login_pod_id(username):
-
-        """
-        This function uses kubectl command to fetch the login pod_id of a specific user of
+	"""
+	This function uses kubectl command to fetch the login pod_id of a specific user of
 	the Rfam cloud infrastructure. It returns the the user's login pod_id, otherwise it
-	returns None. 
+	returns None.
 
-        username: A valid Rfam cloud account username
+	username: A valid Rfam cloud account username
 
-        return: The user login pod_id if it exists, None otherwise 
-        """
-	
+	return: The user login pod_id if it exists, None otherwise
+	"""
+
 	k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]
 	process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	output, err = process.communicate()
-	
+
 	login_pod_line = output.strip().split('\n')[1:]
 
 	if len(login_pod_line) != 0:
@@ -120,8 +119,8 @@ def get_interactive_rfam_cloud_session(username):
 		# if it reaches this point it means the login pod was created
 		# and we can login to it
 		user_login_pod_id = get_k8s_login_pod_id(username)
-	
-	subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+
+		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
 
 # --------------------------------------------------------------------------------------------
 
@@ -138,7 +137,7 @@ def get_username():
 	# check host name to decide if on edge node or in pod 
 	if hostname.find("master") != -1 or hostname.find("edge") != -1:
 		username = getpass.getuser()
-	
+
 	# check if in pod
 	elif hostname.find("login") != -1:
 		username = hostname.split('-')[3]
@@ -147,7 +146,7 @@ def get_username():
 		sys.exit("Username could not be detected. Unknown location.\n")
 
 	return username
-		
+
 
 # --------------------------------------------------------------------------------------------
 
@@ -173,27 +172,31 @@ def copy_items_between_home_pod(item, direction='to'):
 	# some sanity checks
 	if login_pod_id is None:
 		sys.exit("\nUnable to detect interactive session. Try using --start option.\n")
-	
+
 	# copy a file or dir from the user's home directory to the workdir in the pod	
 	if direction == "to":
+
 		try:
 			subprocess.call(cp_to_cmd % (item, login_pod_id), shell=True)
+		
 		except:
 			print "\nItem %s could not be copied to your pod workdir!" % item			
 			print "Check if the item exists or the path is correct and try again!\n"
-	
+
 	# copy a file or directory from the pd workdir to the user's home directory
 	elif direction == "from":
+
 		try:
 			item_pod_path = item
-			# check if we need join the paths
+				# check if we need join the paths
 			if item_pod_path.find("/workdir") == -1:
 				item_pod_path = os.path.join("/workdir", item)
-			
-			# get local path to copy item to the pod
-			local_path = os.path.join(os.getcwd(), item)	
-			subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
+
+				# get local path to copy item to the pod
+				local_path = os.path.join(os.getcwd(), item)	
+				subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
 		except:
+
 			print "\nItem %s could not be copied from the pod!" % item
 			print "Check if the item exists or the path is correct and try again!\n"
 
@@ -207,17 +210,17 @@ def parse_arguments():
 	"""
 
 	# create a new argument parser object
-    	parser = argparse.ArgumentParser(description='')
+	parser = argparse.ArgumentParser(description='')
 
-    	parser.add_argument('--start', help='start a new interactive curation session', 
-				action="store_true")
+	parser.add_argument('--start', help='start a new interactive curation session', 
+		action="store_true")
 	
 	mutually_exclusive = parser.add_mutually_exclusive_group()
 	mutually_exclusive.add_argument("--copy-to", help='copies an existing file/dir to workdir', action="store",
-				type = str, metavar="FILE/DIR")
+		type = str, metavar="FILE/DIR")
 	
 	mutually_exclusive.add_argument("--copy-from", help='copies an existing file/dir from workdir', action="store",
-                                type = str, metavar="FILE/DIR")
+		type = str, metavar="FILE/DIR")
 
 	return parser
 
@@ -232,9 +235,9 @@ if __name__=="__main__":
 	if args.start:
 		username = get_username()
 		get_interactive_rfam_cloud_session(username)
-	
+
 	elif args.copy_to:
 		copy_items_between_home_pod(args.copy_to, direction='to')
-	
+
 	elif args.copy_from:
 		copy_items_between_home_pod(args.copy_from, direction='from')
