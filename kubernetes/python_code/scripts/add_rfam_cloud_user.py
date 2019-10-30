@@ -221,6 +221,50 @@ def parse_arguments():
 
 # ------------------------------------------------------------------
 
+def activate_login_pod_in_user_home(username):
+	"""
+	Modifies .bashrc and .profile files in the user's home directory
+	to directly access the interactive login pod when connecting the
+	Rfam cloud edge node. 
+
+	username: An existing Rfam cloud username
+	"""
+
+	user_login_pod_id = ""
+
+	# check login pod exists and get its id
+	if check_k8s_login_deployment_exists(username):
+		user_login_pod_id = get_k8s_login_pod_id(username)
+	else:
+		sys.exit("ERROR: Login pod of user %s does not exist" % username)
+
+	# get the user home directory and check it exists
+	user_home_dir = os.path.join("/home", username)
+
+	# some sanity checks
+	if not os.path.exists(user_home_dir):
+		sys.exit("ERROR: Home directory of user %s does not exist" % username)
+
+	bashrc_path = os.path.join(user_home_dir, ".bashrc")
+	profile_path = os.path.join(user_home_dir, ".profile")
+	
+	kubectl_exec_cmd = "kubectl exec -it %s bash" % username
+
+	# call kubectl exec in user bashrc
+	try:
+		subprocess.call("echo %s >> %s" % (kubectl_exec_cmd, bashrc_path), shell=True)
+	except:
+		sys.exit("ERROR: User %s bashrc file could not be updated" % username)
+
+
+	# call kubectl exec in user profile
+	try:
+		subprocess.call("echo %s >> %s" % (kubectl_exec_cmd, profile_path), shell=True)
+	except:
+		sys.exit("ERROR: User %s profile file could not be updated" % username)
+
+
+# ------------------------------------------------------------------
 if __name__=='__main__':
 
 	parser = parse_arguments()
