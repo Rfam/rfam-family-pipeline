@@ -180,8 +180,8 @@ def copy_items_between_home_pod(item, direction='to'):
 			subprocess.call(cp_to_cmd % (item, login_pod_id), shell=True)
 		
 		except:
-			print "\nItem %s could not be copied to your pod workdir!" % item			
-			print "Check if the item exists or the path is correct and try again!\n"
+			print ("\nItem %s could not be copied to your pod workdir!" % item)
+			print ("Check if the item exists or the path is correct and try again!\n")
 
 	# copy a file or directory from the pd workdir to the user's home directory
 	elif direction == "from":
@@ -197,8 +197,8 @@ def copy_items_between_home_pod(item, direction='to'):
 				subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
 		except:
 
-			print "\nItem %s could not be copied from the pod!" % item
-			print "Check if the item exists or the path is correct and try again!\n"
+			print ("\nItem %s could not be copied from the pod!" % item)
+			print ("Check if the item exists or the path is correct and try again!\n")
 
 # --------------------------------------------------------------------------------------------
 
