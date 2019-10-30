@@ -5,10 +5,11 @@ import sys
 import string
 import random
 import subprocess
+import argparse
 
-import lib.k8s_manifests as k8s_lib
-import rfcloud
 from subprocess import Popen, PIPE
+import rfcloud
+import lib.k8s_manifests as k8s_lib
 
 # ----------------------------------------------------------------------------------------------------------------
 
@@ -167,7 +168,7 @@ def create_new_user_login_deployment(username, multi=False):
 	if login_pod_exists is True:
 		if multi is True:
 			print("User %s login pod already exists" % username)
-                	return get_k8s_login_pod_id(username)
+			return get_k8s_login_pod_id(username)
 		# if single user print message and exit
 		else:
 			sys.exit("User %s login pod already exists" % username)
