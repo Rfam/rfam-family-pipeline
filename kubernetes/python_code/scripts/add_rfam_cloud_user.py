@@ -186,6 +186,23 @@ def create_new_user_login_deployment(username, multi=False):
  
 # ------------------------------------------------------------------
 
+def is_file(param):
+        """
+        Function to support argparse functionality. Checks if parameter provided is
+        actually a file.
+
+        param: Argparse parameter
+
+        return: The parameter
+        """
+
+        if not os.path.isfile(param):
+                raise argparse.ArgumentTypeError('Parameter much be a .txt file')
+
+        return param
+
+# ------------------------------------------------------------------
+
 def parse_arguments():
 	"""
 	Uses python's argparse to parse the command line arguments
@@ -197,13 +214,16 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Tool to create new Rfam cloud users')
 
 	parser.add_argument('-f', help='a file containing all necessary information to create Rfam cloud user accounts', 
-		action="store", type = str, metavar="FILE")
+		action="store", type = is_file(), metavar="FILE")
 	
 	return parser
 
 # ------------------------------------------------------------------
 
-
 if __name__=='__main__':
 
-	pass
+	parser = parse_arguments()
+	args = parser.parse_args()
+
+	if args.f:
+		pass
