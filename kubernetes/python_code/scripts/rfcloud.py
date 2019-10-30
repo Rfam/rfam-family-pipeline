@@ -9,7 +9,6 @@ import socket
 
 import lib.k8s_manifests as k8s_lib
 from subprocess import Popen, PIPE
-#from kubernetes import client, config, utils
 
 # --------------------------------------------------------------------------------------------
 
@@ -23,9 +22,6 @@ def create_new_user_login_pod(username):
 
 	return: void	
 	"""
-
-	config.load_incluster_config()
-    	k8s_client = client.ApiClient()
 
 	k8s_deployment_str = k8s_lib.user_login_deployment_str
 
