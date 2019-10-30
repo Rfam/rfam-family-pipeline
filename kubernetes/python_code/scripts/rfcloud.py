@@ -51,9 +51,9 @@ def check_k8s_login_deployment_exists(username):
 	
 	k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]	
 	process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        output, err = process.communicate()
+	output, err = process.communicate()
 
-        login_pod = output.strip().split('\n')[1:]
+	login_pod = output.strip().split('\n')[1:]
 
 	if len(login_pod) == 0:
 		return False
@@ -73,18 +73,17 @@ def get_k8s_login_pod_id(username):
 
         return: The user login pod_id if it exists, None otherwise 
         """
-
-        k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]
-        process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        output, err = process.communicate()
-
-        login_pod_line = output.strip().split('\n')[1:]
-
-	if len(login_pod_line)!=0:	
-		login_pod_id = [x for x in login_pod_line[0].split(' ') if x!=''][0]
-       		
-		return login_pod_id
 	
+	k8s_cmd_args = ["kubectl", "get", "pods", "--selector=user=%s,tier=frontend" % username]
+	process = Popen(k8s_cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	output, err = process.communicate()
+	
+	login_pod_line = output.strip().split('\n')[1:]
+
+	if len(login_pod_line) != 0:
+		login_pod_id = [x for x in login_pod_line[0].split(' ') if x!=''][0]
+		return login_pod_id
+
 	return None
 
 # --------------------------------------------------------------------------------------------
