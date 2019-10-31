@@ -79,7 +79,7 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 		# Check if homedir exists
 		if not os.path.exists(user_home_dir):
 			print ("ERROR: Unable to create an account for %s. Account already exists!" % username)
-                	return False
+			return False
 
 	except:
 		print("ERROR: Unable to create an account for user %s" % username)
@@ -333,11 +333,9 @@ if __name__=='__main__':
 			curation_level = user_info[1]
 			expire_date = user_info[2]
 
-			print (user_info)
 			# create a new Rfam cloud user account
-			#new_account_status = create_new_rfam_user(username, expire_date, "")
+			new_account_status = create_new_rfam_user(username, expire_date, "")
 
-			new_account_status = False		
 			# check if account was created successfully
 			if new_account_status is True:
 				print ("Account for user %s created successfully" % username)
