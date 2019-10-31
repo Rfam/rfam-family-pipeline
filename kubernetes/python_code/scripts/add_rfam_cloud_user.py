@@ -254,7 +254,7 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Tool to create new Rfam cloud users')
 
 	parser.add_argument('-f', help='a file containing all necessary information to create Rfam cloud user accounts', 
-		action="store", type = is_file(), metavar="FILE")
+		action="store", type = is_file, metavar="FILE")
 	
 	return parser
 
