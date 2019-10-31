@@ -316,5 +316,14 @@ if __name__=='__main__':
 			# TODO username\tuid\tcuration_level\texpire_date\group
 			# username, curation_level,expire_date for now
 			user_info = user_line.strip().split('\t')
+			username = user_info[0]
+			curation_level = user_info[1]
+			expire_date = user_info[2]
+			# create a new Rfam cloud user account
+			new_account_status = create_new_rfam_user(username, expire_date, "")
+			
+			# check if account was created successfully
+			if new_account_status is True:
+				print ("Account for user %s created successfully" % username)
 
 		user_list_fp.close()			
