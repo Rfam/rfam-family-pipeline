@@ -57,10 +57,10 @@ def create_new_rfam_user(username, expire_date, group):
 	
 	cmd = "useradd --create-home --expiredate %s --shell /usr/bin/bash --password %s %s" 
 
-	user_home_dir = os.path.join("/home", username):
+	user_home_dir = os.path.join("/home", username)
 	
 	# check account does not already exist
-	if os.path.exists(user_home_dir)
+	if os.path.exists(user_home_dir):
 		print ("ERROR: Unable to create an account for %s. Account already exists!" % username)
 		return False
 
@@ -222,8 +222,8 @@ def email_new_rfam_user_account_credentials(username, password, email):
 	return void
 	"""
 
+	pass
 	
- 
 # ------------------------------------------------------------------
 
 def is_file(param):
