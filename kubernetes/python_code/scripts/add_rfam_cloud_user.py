@@ -40,7 +40,7 @@ def generate_random_password(length=10):
 
 # ----------------------------------------------------------------------------------------------------------------
 
-def create_new_rfam_user(username, expire_date, group):
+def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	"""
 	Uses useradd tool to create a new user account with expire date
 	a password and a home directory. Returns True if the account was 
@@ -55,7 +55,7 @@ def create_new_rfam_user(username, expire_date, group):
 
 	# TODO - generate a uid too
 	
-	cmd = "useradd --create-home --expiredate %s --shell /usr/bin/bash --password %s %s" 
+	cmd = "useradd --create-home --expiredate %s --password %s --shell /usr/bin/%s %s" 
 
 	user_home_dir = os.path.join("/home", username)
 	
@@ -66,11 +66,24 @@ def create_new_rfam_user(username, expire_date, group):
 
 	# TODO - return passwork or update the database
 	# need to email users with username and password
-	password = generate_random_password()
 
 	# Create a user with password and shell information
 	# potentially load this information from the database
-	subprocess.call(cmd % (expire_date, password, username), shell=True)
+	try:
+		password = generate_random_password(length=10)
+		subprocess.call(cmd % (expire_date, password, shell, username), shell=True)
+
+		# at this point the user was created successfully
+		# set a new password for the user with username
+
+		# Check if homedir exists
+		if not os.path.exists(user_home_dir):
+			print ("ERROR: Unable to create an account for %s. Account already exists!" % username)
+                	return False
+
+	except:
+		print("ERROR: Unable to create an account for user %s" % username)
+		return False
 
 	return True	
 
@@ -319,9 +332,12 @@ if __name__=='__main__':
 			username = user_info[0]
 			curation_level = user_info[1]
 			expire_date = user_info[2]
+
+			print (user_info)
 			# create a new Rfam cloud user account
-			new_account_status = create_new_rfam_user(username, expire_date, "")
-			
+			#new_account_status = create_new_rfam_user(username, expire_date, "")
+
+			new_account_status = False		
 			# check if account was created successfully
 			if new_account_status is True:
 				print ("Account for user %s created successfully" % username)
