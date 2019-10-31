@@ -237,7 +237,7 @@ def is_file(param):
         """
 
         if not os.path.isfile(param):
-                raise argparse.ArgumentTypeError('Parameter much be a .txt file')
+                raise argparse.ArgumentTypeError('Parameter much be a tab delimited .txt file')
 
         return param
 
