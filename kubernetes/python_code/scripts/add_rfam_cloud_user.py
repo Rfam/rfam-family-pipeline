@@ -11,7 +11,7 @@ import smtplib
 import rfcloud
 import lib.k8s_manifests as k8s_lib
 
-from email.message import EmailMessage
+#from email.message import EmailMessage
 from subprocess import Popen, PIPE
 
 # ----------------------------------------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 
 	# TODO - generate a uid too
 	
-	cmd = "useradd --create-home --expiredate %s --password %s --shell /usr/bin/%s %s" 
+	cmd = "useradd --create-home --expiredate %s --password %s --shell /bin/%s %s" 
 
 	user_home_dir = os.path.join("/home", username)
 	
@@ -72,13 +72,11 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	try:
 		password = generate_random_password(length=10)
 		subprocess.call(cmd % (expire_date, password, shell, username), shell=True)
-
 		# at this point the user was created successfully
-		# set a new password for the user with username
 
 		# Check if homedir exists
 		if not os.path.exists(user_home_dir):
-			print ("ERROR: Unable to create an account for %s. Account already exists!" % username)
+			print ("ERROR: Unable to create an account for %s." % username)
 			return False
 
 	except:
@@ -339,5 +337,23 @@ if __name__=='__main__':
 			# check if account was created successfully
 			if new_account_status is True:
 				print ("Account for user %s created successfully" % username)
+				user_pvc_exists = check_pvc_exists(username)
+
+				# create a new pvc if none exists
+				if not user_pvc_exists:
+					pvc_size = ACCOUNT_SIZE[curation_level]
+					pvc_success = create_user_pvc(username, size=pvc_size)
+					
+					# check if pvc creation was successful
+					if not pvc_success:
+						print ("ERROR: PVC for user %s could not be created" % username)
+					
+					# wait until pvc is bound
+					while (not user_pvc_exists):
+						user_pvc_exists = check_pvc_exists(username)
+
+			else:
+				print ("ERROR: Account for user %s could not be created" % username)
+
 
 		user_list_fp.close()			
