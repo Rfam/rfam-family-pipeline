@@ -115,7 +115,6 @@ def create_user_pvc(username, size=2):
 	return: True on success, False on failure 
 	"""
 
-	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
 	user_pvc_manifest = k8s_lib.user_pvc_manifest
 	
 	# get pvc manifest temp location
