@@ -61,7 +61,7 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	
 	# check account does not already exist
 	if os.path.exists(user_home_dir):
-		print ("WARNING: Use account %s already exists!" % username)
+		print ("WARNING: User account %s already exists!" % username)
 		return True
 
 	# TODO - return passwork or update the database
@@ -334,9 +334,8 @@ if __name__=='__main__':
 			# create a new Rfam cloud user account
 			new_account_status = create_new_rfam_user(username, expire_date, "")
 
-			# check if account was created successfully
+			# check if account was created successfully or account already exists
 			if new_account_status is True:
-				print ("Account for user %s created successfully" % username)
 				user_pvc_exists = check_pvc_exists(username)
 
 				# create a new pvc if none exists
