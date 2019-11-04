@@ -152,11 +152,11 @@ def create_user_pvc(username, size=2):
 
 			print ("PVC of user %s is Bound!" % username)
 		else:
-			sys.exit("ERROR creating pvc manifests for user %s" % username)
+			print ("ERROR creating pvc manifest for user %s" % username)
 			return False
 	
 	else:
-		sys.exit("ERROR creating pvc manifest file for user %s" % username)
+		print ("ERROR creating pvc manifest file for user %s" % username)
 		return False
 
 	# remove pvc manifest when done
