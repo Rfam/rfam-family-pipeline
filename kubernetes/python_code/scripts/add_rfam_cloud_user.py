@@ -61,8 +61,8 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	
 	# check account does not already exist
 	if os.path.exists(user_home_dir):
-		print ("ERROR: Unable to create an account for %s. Account already exists!" % username)
-		return False
+		print ("WARNING: Use account %s already exists!" % username)
+		return True
 
 	# TODO - return passwork or update the database
 	# need to email users with username and password
