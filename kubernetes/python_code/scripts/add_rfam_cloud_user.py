@@ -175,8 +175,7 @@ def check_pvc_exists(username):
 	return: Boolean
 	"""
 	
-	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
-	
+	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s" % username]
 	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	response, err = process.communicate()
 
