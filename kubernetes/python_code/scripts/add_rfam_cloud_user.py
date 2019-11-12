@@ -6,12 +6,23 @@ import string
 import random
 import subprocess
 import argparse
+import smtplib
 
-from subprocess import Popen, PIPE
 import rfcloud
 import lib.k8s_manifests as k8s_lib
 
-# ----------------------------------------------------------------------------------
+#from email.message import EmailMessage
+from subprocess import Popen, PIPE
+
+# ----------------------------------------------------------------------------------------------------------------
+
+# user account sizes based on expertise level
+ACCOUNT_SIZE = {"beginner": 1,
+		"intermediate": 1,
+		"expert": 2,
+		"guru": 5}
+
+# ----------------------------------------------------------------------------------------------------------------
 
 def generate_random_password(length=10):
 	"""
@@ -29,29 +40,53 @@ def generate_random_password(length=10):
 
 # ----------------------------------------------------------------------------------
 
-def create_new_rfam_user(username, expire_date, group):
+def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	"""
 	Uses useradd tool to create a new user account with expire date
-	a password and a home directory 
+	a password and a home directory. Returns True if the account was 
+	created successfully, False otherwise.
 	
 	username: A valid non existing username
 	expire_date: The date the user account will expire (YYYY-MM-DD)
 	group: The group the user belongs to (beginner, intermediate, expert, guru)
 
-	return: void
+	return: Boolean
 	"""
+
+	# TODO - generate a uid too
 	
-	cmd = "useradd --create-home --expiredate %s --shell /usr/bin/bash --password %s %s" 
+	cmd = "useradd --create-home --expiredate %s --password %s --shell /bin/%s %s" 
+
+	user_home_dir = os.path.join("/home", username)
+	
+	# check account does not already exist
+	if os.path.exists(user_home_dir):
+		print ("WARNING: User account %s already exists!" % username)
+		return True
 
 	# TODO - return passwork or update the database
 	# need to email users with username and password
-	password = generate_random_password()
 
 	# Create a user with password and shell information
 	# potentially load this information from the database
-	subprocess.call(cmd % (expire_date, password, username), shell=True)
 	
-# ----------------------------------------------------------------------------------
+	try:
+		password = generate_random_password(length=10)
+		subprocess.call(cmd % (expire_date, password, shell, username), shell=True)
+		# at this point the user was created successfully
+
+		# Check if homedir exists
+		if not os.path.exists(user_home_dir):
+			print ("ERROR: Unable to create an account for %s." % username)
+			return False
+
+	except:
+		print("ERROR: Unable to create an account for user %s" % username)
+		return False
+
+	return True	
+
+# ----------------------------------------------------------------------------------------------------------------
 
 def setup_kube_dir(username):
 	# creates .kube dir and sets the config file
@@ -81,7 +116,6 @@ def create_user_pvc(username, size=2):
 	return: True on success, False on failure 
 	"""
 
-	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
 	user_pvc_manifest = k8s_lib.user_pvc_manifest
 	
 	# get pvc manifest temp location
@@ -118,11 +152,11 @@ def create_user_pvc(username, size=2):
 
 			print ("PVC of user %s is Bound!" % username)
 		else:
-			sys.exit("ERROR creating pvc manifests for user %s" % username)
+			print ("ERROR creating pvc manifest for user %s" % username)
 			return False
 	
 	else:
-		sys.exit("ERROR creating pvc manifest file for user %s" % username)
+		print ("ERROR creating pvc manifest file for user %s" % username)
 		return False
 
 	# remove pvc manifest when done
@@ -141,8 +175,7 @@ def check_pvc_exists(username):
 	return: Boolean
 	"""
 	
-	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s"%username]
-	
+	cmd_args = ["kubectl", "get", "pvc", "--selector=user=%s" % username]
 	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	response, err = process.communicate()
 
@@ -185,7 +218,24 @@ def create_new_user_login_deployment(username, multi=False):
 
 		print ("Login pod for user %s has been created!\n" % username)
  
-# ----------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------------------------------
+
+def email_new_rfam_user_account_credentials(username, password, email):
+	"""
+	Emails a new Rfam cloud user their account credentials to
+	access the system.
+
+	username: An existing Rfam cloud username
+	password: The newly created account password
+	email: A valid user's email address
+
+	return void
+	"""
+
+	pass
+	
+# ------------------------------------------------------------------
 
 def is_file(param):
     """
@@ -197,8 +247,8 @@ def is_file(param):
 	return: The parameter
 	"""
 
-	if not os.path.isfile(param):
-		raise argparse.ArgumentTypeError('Parameter much be a .txt file')
+        if not os.path.isfile(param):
+                raise argparse.ArgumentTypeError('Parameter much be a tab delimited .txt file')
 
 	return param
 
@@ -215,7 +265,7 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Tool to create new Rfam cloud users')
 
 	parser.add_argument('-f', help='a file containing all necessary information to create Rfam cloud user accounts', 
-		action="store", type = is_file(), metavar="FILE")
+		action="store", type = is_file, metavar="FILE")
 	
 	return parser
 
@@ -271,4 +321,38 @@ if __name__=='__main__':
 	args = parser.parse_args()
 
 	if args.f:
-		pass
+		user_list_fp = open(args.f, 'r')
+	
+		for user_line in user_list_fp:
+			# TODO username\tuid\tcuration_level\texpire_date\group
+			# username, curation_level,expire_date for now
+			user_info = user_line.strip().split('\t')
+			username = user_info[0]
+			curation_level = user_info[1]
+			expire_date = user_info[2]
+
+			# create a new Rfam cloud user account
+			new_account_status = create_new_rfam_user(username, expire_date, "")
+
+			# check if account was created successfully or account already exists
+			if new_account_status is True:
+				user_pvc_exists = check_pvc_exists(username)
+
+				# create a new pvc if none exists
+				if not user_pvc_exists:
+					pvc_size = ACCOUNT_SIZE[curation_level]
+					pvc_success = create_user_pvc(username, size=pvc_size)
+					
+					# check if pvc creation was successful
+					if not pvc_success:
+						print ("ERROR: PVC for user %s could not be created" % username)
+					
+					# wait until pvc is bound
+					while (not user_pvc_exists):
+						user_pvc_exists = check_pvc_exists(username)
+
+			else:
+				print ("ERROR: Account for user %s could not be created" % username)
+
+
+		user_list_fp.close()			
