@@ -11,7 +11,7 @@ from subprocess import Popen, PIPE
 import rfcloud
 import lib.k8s_manifests as k8s_lib
 
-# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def generate_random_password(length=10):
 	"""
@@ -27,7 +27,7 @@ def generate_random_password(length=10):
 
 	return random_password
 
-# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def create_new_rfam_user(username, expire_date, group):
 	"""
@@ -51,7 +51,7 @@ def create_new_rfam_user(username, expire_date, group):
 	# potentially load this information from the database
 	subprocess.call(cmd % (expire_date, password, username), shell=True)
 	
-# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def setup_kube_dir(username):
 	# creates .kube dir and sets the config file
@@ -65,7 +65,7 @@ def setup_kube_dir(username):
 	# TODO
 	# create .kube/config
 	
-# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 
 def create_user_pvc(username, size=2):
@@ -129,7 +129,7 @@ def create_user_pvc(username, size=2):
 	os.remove(pvc_manifest_loc)
 	return True
 
-# ----------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def check_pvc_exists(username):
 	"""
@@ -151,7 +151,7 @@ def check_pvc_exists(username):
 
 	return False
 
-# -----------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def create_new_user_login_deployment(username, multi=False):
 	"""
@@ -185,24 +185,24 @@ def create_new_user_login_deployment(username, multi=False):
 
 		print ("Login pod for user %s has been created!\n" % username)
  
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def is_file(param):
-        """
-        Function to support argparse functionality. Checks if parameter provided is
-        actually a file.
+    """
+	Function to support argparse functionality. Checks if parameter provided is
+	actually a file.
 
-        param: Argparse parameter
+	param: Argparse parameter
 
-        return: The parameter
-        """
+	return: The parameter
+	"""
 
-        if not os.path.isfile(param):
-                raise argparse.ArgumentTypeError('Parameter much be a .txt file')
+	if not os.path.isfile(param):
+		raise argparse.ArgumentTypeError('Parameter much be a .txt file')
 
-        return param
+	return param
 
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def parse_arguments():
 	"""
@@ -219,7 +219,7 @@ def parse_arguments():
 	
 	return parser
 
-# ------------------------------------------------------------------
+# ----------------------------------------------------------------------------------
 
 def activate_login_pod_in_user_home(username):
 	"""
@@ -263,8 +263,8 @@ def activate_login_pod_in_user_home(username):
 	except:
 		sys.exit("ERROR: User %s profile file could not be updated" % username)
 
+# ----------------------------------------------------------------------------------
 
-# ------------------------------------------------------------------
 if __name__=='__main__':
 
 	parser = parse_arguments()

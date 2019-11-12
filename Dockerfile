@@ -33,6 +33,7 @@ RUN apt-get install -y libimage-size-perl \
   libsearch-queryparser-perl \
   libcatalyst-action-renderview-perl \
   libx11-6 \
+  libsvn-perl \
   && apt-get clean
 
 # create an Rfam directory where all software will be installed
@@ -60,7 +61,6 @@ cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
-#cpan -f install SVN::Client && \
 cpan -f install File::Spec
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
