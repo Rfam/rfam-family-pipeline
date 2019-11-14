@@ -29,10 +29,10 @@ fi
 #printf "Welcome to %s (%s %s %s)\n" "$DISTRIB_DESCRIPTION" "$(uname -o)" "$(uname -r)" "$(uname -m)"
 
 
-printf "\n\n ____    __\n"                   
-printf "|  _ \\  / _|  __ _  _ __ ___\n"  
-printf "| |_) || |_  / _\` || \`_ \` _ \\" 
-printf "\n|  _ < |  _|| (_| || | | | | |\n"
-printf "|_| \\_\\|_|   \\__,_||_| |_| |_|\n"
+printf "\n\n  ____    __\n"                   
+printf " |  _ \\  / _|  __ _  _ __ ___\n"  
+printf " | |_) || |_  / _\` || \`_ \` _ \\" 
+printf "\n |  _ < |  _|| (_| || | | | | |\n"
+printf " |_| \\_\\|_|   \\__,_||_| |_| |_|\n"
 
-printf "\n\nWelcome to the Rfam cloud curation pipeline!\n\n"
+printf "\n\n Welcome to the Rfam cloud curation pipeline!\n\n"
