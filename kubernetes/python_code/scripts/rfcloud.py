@@ -58,7 +58,7 @@ def check_k8s_login_deployment_exists(username):
 	if len(login_pod) == 0:
 		return False
 
-		return True
+	return True
 
 # --------------------------------------------------------------------------------------------
 
@@ -161,7 +161,7 @@ def copy_items_between_home_pod(item, direction='to'):
 	direction: A string speficifying the direction in which to copy 
 	the item (to: from home to pod, from: from pod to home)
 	"""
-	cp_to_cmd = "kubectl cp %s %s:/workdir"
+	cp_to_cmd = "kubectl cp %s %s:workdir"
 	cp_from_cmd = "kubectl cp %s:%s %s"
 	
 	# get username - in the future lookup the database for auth
@@ -188,12 +188,12 @@ def copy_items_between_home_pod(item, direction='to'):
 
 		try:
 			item_pod_path = item
-				# check if we need join the paths
-			if item_pod_path.find("/workdir") == -1:
-				item_pod_path = os.path.join("/workdir", item)
+			# check if we need to join the paths
+			if item_pod_path.find("workdir") == -1:
+				item_pod_path = os.path.join("workdir", item)
 
 				# get local path to copy item to the pod
-				local_path = os.path.join(os.getcwd(), item)	
+				local_path = item	
 				subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
 		except:
 
