@@ -1576,7 +1576,10 @@ sub writeTbloutDependentFiles {
   if(-s $rtblI) { 
     my @rev_outAA = (); # we'll fill this with data for revoutlist
     my @rev_spcAA = (); # we'll fill this with data for revspecies
-    open(RTBL, "grep -v ^'#' $rtblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
+    # if we ever see the sort below failing here, it may be due to multiple spaces being the separator, 
+    # using sed to replace all multiple spaces with single spaces should fix the problem, but
+    # then we'll need to do some reformatting to get nice human-readable spacing back
+    open(RTBL, "grep -v ^'#' $rtblI | sort -k 15,15rn -k 16,16g | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
     while ($tblline = <RTBL>) {
       # extract data from this REVTBLOUT line into variables we'll print out using processTbloutLine() subroutine
       my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString) = 
@@ -1617,7 +1620,10 @@ sub writeTbloutDependentFiles {
   if(-s $stblI) { 
     my @seed_outAA = (); # we'll fill this with data for seedoutlist
     my @seed_spcAA = (); # we'll fill this with data for seedspecies
-    open(STBL, "grep -v ^'#' $stblI | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
+    # if we ever see the sort below failing here, it may be due to multiple spaces being the separator, 
+    # using sed to replace all multiple spaces with single spaces should fix the problem, but
+    # then we'll need to do some reformatting to get nice human-readable spacing back
+    open(STBL, "grep -v ^'#' $stblI | sort -k 15,15rn -k 16,16g | ") || croak "FATAL: could not open pipe for reading $rtblI\n[$!]";
     while ($tblline = <STBL>) {
       # extract data from this SEEDTBLOUT line into variables we'll print out using processTbloutLine() subroutine
       my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString, $got_tax) = 
@@ -1729,7 +1735,10 @@ sub writeTbloutDependentFiles {
   $prv_evalue = 0.;          # previous E-value seen
   $printed_thresh = 0;
   my $nlines_tot = 0;
-  open(TBL, "cat $stblI $tblI | grep -v ^'#' | sort -nrk 15 | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
+  # if we ever see the sort below failing here, it may be due to multiple spaces being the separator, 
+  # using sed to replace all multiple spaces with single spaces should fix the problem, but
+  # then we'll need to do some reformatting to get nice human-readable spacing back
+  open(TBL, "cat $stblI $tblI | grep -v ^'#' | sort -k 15,15rn -k 16,16g | ") || croak "FATAL: could not open pipe for reading $tblI\n[$!]";
   while ($tblline = <TBL>) {
     my ($bits, $evalue, $name, $start, $end, $strand, $qstart, $qend, $trunc, $shortSpecies, $description, $ncbiId, $species, $taxString, $got_tax) = 
         processTbloutLine($tblline, $sthDesc, $sthTax, 0, 0); #'0, 0' says: no this is not a reversed search, taxonomy info is not required
