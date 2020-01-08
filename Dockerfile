@@ -247,6 +247,10 @@ cd rscape_* && \
 make && \
 make install
 
+# copy R-scape to the Rfam bin directory 
+RUN cd /Rfam/software/rscape*/bin && \
+cp R-scape /Rfam/software/bin/.
+
 RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
 cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
 
@@ -261,7 +265,7 @@ USER rfam-user
 RUN echo "cd /workdir" >> ~/.bashrc
 
 # Environment setup
-ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/software/rscape_v1.4.0-221019/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
 ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
