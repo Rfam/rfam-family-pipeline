@@ -61,8 +61,8 @@ cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
-cpan -f install File::Spec && \
-cpan -f install SVN::Client
+cpan -f install File::Spec
+#cpan -f install SVN::Client
 
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
@@ -178,10 +178,10 @@ make -f Makefile.gcc && \
 cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
-RUN cd /Rfam/software && \
-curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-cd /Rfam/software/ncbi-blast-2.9.0+/bin
+#RUN cd /Rfam/software && \
+#curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+#tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+#cd /Rfam/software/ncbi-blast-2.9.0+/bin
 #cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.§1
 
 # ViennaRNA installation
@@ -237,12 +237,13 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
 cd python && python setup.py install 
 
-# install R-scape v.1.4.0
+# install latest version of R-scape
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar xf rscape.tar.gz && \
-cd rscape_v1.4.0-221019 && \
-./configure --prefix=/Rfam/software/rscape_v1.4.0-221019 && \
+cd rscape_* && \
+./configure && \ 
+#--prefix=/Rfam/software/rscape_* && \
 make && \
 make install
 
