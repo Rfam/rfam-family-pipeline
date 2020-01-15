@@ -120,7 +120,7 @@ def get_interactive_rfam_cloud_session(username):
 		# and we can login to it
 		user_login_pod_id = get_k8s_login_pod_id(username)
 
-		subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+	subprocess.call(exec_cmd % user_login_pod_id, shell=True)
 
 # --------------------------------------------------------------------------------------------
 
@@ -226,7 +226,7 @@ def parse_arguments():
 
 # --------------------------------------------------------------------------------------------
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
 	# create a new argument parser object
 	parser = parse_arguments()
