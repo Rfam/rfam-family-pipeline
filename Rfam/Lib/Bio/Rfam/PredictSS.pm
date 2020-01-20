@@ -113,32 +113,40 @@ sub predict_ss {
 	    $fa = &stockholm2fasta($input);
 	    $sto = $input;
 	} elsif ($intype eq "fasta"){
-	    $sto = "$$.sto";
-	    system("esl-reformat stockholm $input > $sto") and die "Can't reformat $input to stockholm\n";
+	    # check number of sequences
 	    $fa = $input;
-	} else {
-#shouldn't get here
-	    die "RNAalifold could not run, check your input file.\n";;
-	}
-#how many sequences?
-	my $seqcount = 0;
-	open (FA, $fa) or die "Can't open fasta file $fa to read $!\n";
-	while (<FA>){
-	    if ($_ =~ m/^>/){
+	    my $seqcount = 0;
+	    open (FA, $fa) or die "Can't open fasta file $fa to read $!\n";
+	    while (<FA>){
+		if ($_ =~ m/^>/){
 		$seqcount++;
-	    } 
-	    if ($seqcount > 1){
+		}
+		if ($seqcount > 1){
 		last;
+		}
 	    }
-	}
-#run rnaalifold
-	if ($seqcount > 1){
+	    if ($seqcount > 1){
+	    $sto = "$$.sto";
+	    my $tmp_sto = "tmp.sto";
+	    # 1. align fasta sequences
+	    system("create_alignment.pl -fasta $input -mu > $tmp_sto");
+	    $input = $tmp_sto;
+
+	    # 2. reformat alignment
+	    system("esl-reformat stockholm $input > $sto") and die "Can't reformat $input to stockholm\n";
+	    #$fa = $input;
+	    unlink($input);
+	    # 3. run RNAalifold
 	    system("$bin/RNAalifold $sto > $outfile") and die "Can't run RNAalifold $!\n";
 	    &parse_rnaalifold($outfile, $fa);
-	} elsif ($seqcount ==1){
-	    die "ERROR: RNAalifold can only be used on >1 aligned sequences. \nYour input file appreas to only contain one sequence\n";
+	}elsif ($seqcount == 1){
+		die "ERROR: RNAalifold can only be used on >1 aligned sequences. \nYour input file appreas to only contain one sequence\n";
 	}
-
+	} # fasta if
+	else { # fasta else
+	#shouldn't get here
+	    die "RNAalifold could not run, check your input file.\n";;
+	} # closes fasta else
     } #end of rnaalifold block 
 
     elsif ($method eq "cmfinder"){
