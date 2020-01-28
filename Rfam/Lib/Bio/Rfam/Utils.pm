@@ -556,7 +556,7 @@ sub wait_for_cluster_light {
           ($jobname, $status) = ($elA[0], $elA[2]);
           
 	  # check if any of the running jobs matches those in the job array
-          for($i = 0; $i < $n; $i++) { #5
+          for($i = 0; $i < $n; $i++) { #5 - TODO: jobnameAR needs to be converted into a dictionary for faster processing
             if((! $successA[$i]) &&              # job didn't successfully complete already 
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  (index($jobname, $jobnameAR->[$i]) != -1) && # jobname match
