@@ -69,7 +69,7 @@ def main():
         #"        - -cpus\n"
         #"        - \"%s\"\n"
     	"        command: [\"sh\", \"-c\", \"%s\"]\n"
-    	"        imagePullPolicy: IfNotPresent\n"
+    	"        imagePullPolicy: Always\n"
     	"        volumeMounts:\n"
                 "        - name: nfs-pv\n"
                 "          mountPath: /Rfam/rfamseq\n"
