@@ -443,7 +443,7 @@ sub wait_for_cluster_light {
 
   my $sleep_nsecs = 30;  # we'll look at file system every 30 seconds
   my $print_freq  = 2; # print update every 2 loop iterations (about every 2*$sleep_nsecs seconds)
-  my @ininfoA = ();
+  my @ininfoA = (); # array to hold information about which job is still in the queue and running
   my @infoA  = ();
   my @elA    = ();
   my $max_wait_secs = 0;
@@ -544,6 +544,7 @@ sub wait_for_cluster_light {
       
       # CHECK THE JOBS RUNNING ON THE CLOUD
       else{
+	      
           $line =~ s/^\s*//;
           @elA = split(/\s+/, $line);
 	  # example of kubectl get output
@@ -561,9 +562,10 @@ sub wait_for_cluster_light {
                  (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
                  (index($jobname, $jobnameAR->[$i]) != -1) && # jobname match
 		 ($status ne "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
-                  $ininfoA[$i] = 1; 
-                  $i = $n;
+                  $ininfoA[$i] = 1; # job with jobname is still running or pending
+                  $i = $n; # skip the rest of the computations
               # check if job is in error status, if it is, then exit
+	      #
               if (($location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed" && $status ne "ContainerCreating")){ die "wait_for_cluster_light(), internal error, kubectl shows Error status: $line"; }
             } #internal if
           } # for loop
@@ -573,7 +575,7 @@ sub wait_for_cluster_light {
       # for any job not still in the queue, it should have successfully finished
       for($i = 0; $i < $n; $i++) {
         $finishedA[$i] = ($ininfoA[$i] == 0) ? 1 : 0; 
-      }
+	}
       sleep(60.); # sleep 1 minute after checking cluster to allow jobs that we think are finished to finish writing output files
     } # end of 'if($do_cluster_check)'
    
@@ -684,7 +686,7 @@ sub wait_for_cluster_light {
               while(($ncheck == 0) || ($finishedA[$i] == 1 && $ncheck < 20 && $successA[$i] == 0)) { # if finishedA[$i] is 1, we'll stay in this loop until we've found the $success_string or checked for it 10 times
                 my $tail= `tail $outnameAR->[$i]`;
 		foreach $line (split ('\n', $tail)) { 
-                  if($line =~ m/\Q$success_string/) {
+		if($line =~ m/\Q$success_string/) {
                     $successA[$i] = 1; 
                     $nsuccess++;
                     if($runningA[$i] == 1) { $runningA[$i] = 0; $nrunning--; }
@@ -706,7 +708,7 @@ sub wait_for_cluster_light {
             } #end of 'if(-s $outnameAR->[$i])'
             else { # $outfile exists but is empty, job is running or failed
               if($finishedA[$i] == 1) {
-                die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] is empty\n";
+		      #die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] is empty\n";
               }
               elsif($runningA[$i] == 0) { 
                 $runningA[$i] = 1; 
@@ -717,7 +719,7 @@ sub wait_for_cluster_light {
           } # end of 'if(-e $outnameAR->[$i])'
           else { # outfile doesn't exist, but errfile does, job is running or failed
             if($finishedA[$i] == 1) { 
-              die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] does not exist\n";
+		    #die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] does not exist\n";
             }
             elsif($runningA[$i] == 0) { 
               $runningA[$i] = 1; 
