@@ -88,7 +88,21 @@ has 'SCORES' => (
   coerce   => 1,
 );
 
+has 'SEEDSCORES' => (
+  is       => 'rw',
+  isa      => 'Bio::Rfam::Family::Scores',
+  required => 0,
+  coerce   => 1,
+);
+
 has 'TBLOUT' => (
+  is       => 'ro',
+  isa      => 'Bio::Rfam::Family::TBLOUT',
+  required => 0,
+  coerce   => 1
+);
+
+has 'SEEDTBLOUT' => (
   is       => 'ro',
   isa      => 'Bio::Rfam::Family::TBLOUT',
   required => 0,
