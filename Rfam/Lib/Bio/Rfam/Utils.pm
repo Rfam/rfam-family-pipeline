@@ -79,8 +79,8 @@ sub submit_nonmpi_job {
   my ($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
 
   my $submit_cmd = "";
-  if(defined $queue && $queue eq "p") { $queue = "production-rh7"; }
-  if(defined $queue && $queue eq "r") { $queue = "research-rh7"; }
+  if(defined $queue && $queue eq "p") { $queue = "production-rh74"; }
+  if(defined $queue && $queue eq "r") { $queue = "research-rh74"; }
 
   if($location eq "EBI") { 
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
