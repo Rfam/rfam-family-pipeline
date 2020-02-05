@@ -35,7 +35,7 @@ my $do_noss     = 0;            # TRUE to allow building of CMs with no structur
 my $do_hand     = 0;            # TRUE to pass --hand to cmbuild
 my $do_enone    = 0;            # TRUE to pass --enone to cmbuild
 my $ignore_bm   = 0;            # TRUE to ignore BM in DESC for cmbuild options
-my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in the database
+my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in GenBank or RNAcentral
 # calibration related options
 my $force_calibrate = 0;        # TRUE to force calibration
 my $ncpus_cmcalibrate;          # number of CPUs for cmcalibrate call
@@ -354,7 +354,7 @@ if($do_noss)                   { push(@opt_lhsA, "# rewrite SEED with zero bp SS
 if($do_hand)                   { push(@opt_lhsA, "# pass --hand to cmbuild: ");             push(@opt_rhsA, "yes [-hand]"); }
 if($do_enone)                  { push(@opt_lhsA, "# pass --enone to cmbuild: ");            push(@opt_rhsA, "yes [-enone]"); }
 if($ignore_bm)                 { push(@opt_lhsA, "# ignore DESC's BM line: ");              push(@opt_rhsA, "yes [-ignorebm]"); }
-if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in database: "); push(@opt_rhsA, "yes [-relax]"); }
+if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in GB/RNAc:");   push(@opt_rhsA, "yes [-relax]"); }
 if($force_calibrate)           { push(@opt_lhsA, "# force cmcalibrate step: ");             push(@opt_rhsA, "yes [-c]"); }
 if($calibrate_nompi)           { push(@opt_lhsA, "# threaded calibration, not MPI: ");      push(@opt_rhsA, "yes [-cnompi]"); }
 if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for cmcalibrate: ");     push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
@@ -940,7 +940,8 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   # write TBLOUT-dependent files
   my $require_tax = 0;
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
-  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
+  my $fetch_seed_info = ($relax_about_seed) ? 0 : 1; # with -relax, don't attempt to fetch seed sequence info from GenBank/RNAcentarl
+  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $fetch_seed_info, $logFH);
 
   # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
@@ -1353,7 +1354,7 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
             -hand      : pass --hand option to cmbuild, SEED must have nongap RF annotation
             -enone     : pass --enone option to cmbuild
             -ignorebm  : ignore build method (BM) in DESC
-            -relax     : relax requirement that all SEED seqs exist in target database
+            -relax     : relax requirement that all SEED seqs exist are in GenBank or RNAcentral
 
             OPTIONS RELATED TO CALIBRATION STEP (cmcalibrate):
 	    -c         : always run cmcalibrate (default: only run if 'CM' is not calibrated)

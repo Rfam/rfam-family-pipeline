@@ -1490,6 +1490,8 @@ sub makeAndWriteScores_helper {
              : $ga:      GA threshold
              : $RPlotScriptPath: path for R plot script
              : $require_tax: '1' to require we find tax info in db for all hits
+             : $fetch_seed_info: '1' to fetch SEED info from GenBank/RNAcentral
+             :                   '0' to not (e.g. if SEED seqs are not in those DBs (rfsearch -relax)))
              : $logFH:   log output file handle
     Returns  : void
     Dies     : upon file input/output error
@@ -1497,7 +1499,7 @@ sub makeAndWriteScores_helper {
 =cut
 
 sub writeTbloutDependentFiles {
-  my ($self, $famObj, $rfdbh, $seedmsa, $ga, $RPlotScriptPath, $require_tax, $logFH) = @_;
+  my ($self, $famObj, $rfdbh, $seedmsa, $ga, $RPlotScriptPath, $require_tax, $fetch_seed_info, $logFH) = @_;
 
   if (! defined $famObj->TBLOUT->fileLocation) { die "TBLOUT's fileLocation not set"; }
 
@@ -1541,7 +1543,9 @@ sub writeTbloutDependentFiles {
   my %seed_info_HH = (); # 1D key is SEED sequence name in name/start-end format
                          # 2D keys are "ncbi_id", "description", "species", "align_display_name", "tax_string"
 
-  fetch_seed_sequence_info($seedmsa, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
+  if($fetch_seed_info) { 
+    fetch_seed_sequence_info($seedmsa, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
+  }
 
   # open OUTPUT files
   my $outFH; 
@@ -1658,12 +1662,20 @@ sub writeTbloutDependentFiles {
       if($strand eq "+") { 
         my $seed_idx = $seedmsa->get_sqidx($name);
         if($seed_idx == -1) { croak "FATAL: could not find sequence $name read from SEEDTBLOUT in SEED alignment"; }
-        $shortSpecies = $seed_info_HH{$name}{"align_display_name"};
-        $description  = $seed_info_HH{$name}{"description"};
-        $ncbiId       = $seed_info_HH{$name}{"ncbi_id"};
-        $species      = $seed_info_HH{$name}{"species"};
-        $taxString    = $seed_info_HH{$name}{"tax_string"};
-
+        if($fetch_seed_info) { 
+          $shortSpecies = $seed_info_HH{$name}{"align_display_name"};
+          $description  = $seed_info_HH{$name}{"description"};
+          $ncbiId       = $seed_info_HH{$name}{"ncbi_id"};
+          $species      = $seed_info_HH{$name}{"species"};
+          $taxString    = $seed_info_HH{$name}{"tax_string"};
+        }
+        else { 
+          $shortSpecies = "-";
+          $description  = "-";
+          $ncbiId       = "-";
+          $species      = "-";
+          $taxString    = "-";
+        }
         my $hit_len  = abs($end - $start) + 1;
         my $seed_len = (length($seedmsa->get_sqstring_unaligned($seed_idx)));
         my $is_full_length = ($hit_len == $seed_len) ? 1 : 0;
@@ -1861,13 +1873,14 @@ sub writeTbloutDependentFiles {
     
   # complain loudly if seed sequences are missing from the output, if 
   # we have tax info for all hits (i.e. if we're doing a standard Rfam 
-  # search)
+  # search) *AND* we fetched info for the seeds, which we may not have
+  # done if, for example, we think seeds are not in GenBank/RNAcentral (rfsearch -relax)
   # store warnings in separate arrays so we can print them out in order, for easier interpretation by user
   my @warnings_case1A = ();
   my @warnings_case2A = ();
   my @warnings_case3A = ();
   my @warnings_case4A = ();
-  if($require_tax) { 
+  if(($require_tax) && ($fetch_seed_info)) { 
     # for each SEED sequence, determine which of the following 5 cases applies:
     #
     # 0)             full-length hit to SEED exists >= GA (this is good)

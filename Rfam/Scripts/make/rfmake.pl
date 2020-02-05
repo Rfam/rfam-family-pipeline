@@ -72,6 +72,7 @@ my $do_dirty = 0;               # TRUE to not unlink files
 my $do_stdout = 1;              # TRUE to output to STDOUT
 my $do_quiet  = 0;              # TRUE to not output anything to STDOUT
 my $do_forcethr = 0;            # TRUE to force GA threshold, even if not hits exist above/below GA
+my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in GenBank or RNAcentral
 my $do_help = 0;                # TRUE to print help and exit, if -h used
 
 my $date = scalar localtime();
@@ -109,6 +110,7 @@ my $options_okay =
                  "dirty"        => \$do_dirty,
                  "quiet",       => \$do_quiet,
                  "forcethr"     => \$do_forcethr,
+                 "relax"        => \$relax_about_seed,
                  "queue=s"      => \$q_opt, 
                  "h|help"       => \$do_help );
 
@@ -211,6 +213,7 @@ if($curcompdir ne "")          { push(@opt_lhsA, "# comparing to other results i
 if($do_forcecomp)              { push(@opt_lhsA, "# forcing comparison:");                   push(@opt_rhsA, "yes [-forcecomp]"); }
 if($do_dirty)                  { push(@opt_lhsA, "# do not unlink intermediate files:");     push(@opt_rhsA, "yes [-dirty]"); }
 if($do_forcethr)               { push(@opt_lhsA, "# forcing GA threshold:");                 push(@opt_rhsA, "yes [-forcethr]"); }
+if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in GB/RNAc:");    push(@opt_rhsA, "yes [-relax]"); }
 if($q_opt ne "")               { push(@opt_lhsA, "# submit to queue:");                      push(@opt_rhsA, "$q_opt [-queue]"); }
 my $nopt = scalar(@opt_lhsA);
 my $cwidth = ($nopt > 0) ? Bio::Rfam::Utils::maxLenStringInArray(\@opt_lhsA, $nopt) : 0;
@@ -318,8 +321,9 @@ $ga_evalue = Bio::Rfam::Infernal::cm_bitsc2evalue($cm, $ga_bitsc, $Z, $desc->SM)
 # (we do this no matter what, to be safe)
 my $rfamdb = $config->rfamlive;
 my $require_tax = 0;
+my $fetch_seed_info = ($relax_about_seed) ? 0 : 1; # with -relax, don't attempt to fetch seed sequence info from GenBank/RNAcentarl
 if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
-$io->writeTbloutDependentFiles($famObj, $rfamdb, $famObj->SEED, $ga_bitsc, $config->RPlotScriptPath, $require_tax, $logFH);
+$io->writeTbloutDependentFiles($famObj, $rfamdb, $famObj->SEED, $ga_bitsc, $config->RPlotScriptPath, $require_tax, $fetch_seed_info, $logFH);
 
 # set the thresholds based on outlist, also determine if any SEED seqs are below GA or missed altogether
 my $orig_ga_bitsc = $famObj->DESC->CUTGA;
@@ -1176,6 +1180,7 @@ Options:    -t <f> : set threshold as <f> bits
 	    -dirty       leave temporary files, do not clean up
             -quiet       be quiet; do not output anything to stdout (rfmake.log still created)
             -forcethr    force threshold; even if no hits exist above and/or below GA
+            -relax       relax requirement that all SEED seqs exist are in GenBank or RNAcentral
             -queue <str> specify queue to submit job to as <str> (EBI \'-q <str>\' JFRC: \'-l <str>=true\')
   	    -h|-help     print this help, then exit
 
