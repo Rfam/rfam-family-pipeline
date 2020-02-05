@@ -91,7 +91,7 @@ sub submit_nonmpi_job {
       $submit_cmd .= "-q $queue "; 
     }
     else { 
-      $submit_cmd .= "-q research-rh7 "; 
+      $submit_cmd .= "-q research-rh74 "; 
     }
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
