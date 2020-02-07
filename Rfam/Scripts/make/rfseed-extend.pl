@@ -44,6 +44,7 @@ my $do_list  = 0;       # '1' to read in list file with subset of seqs to extend
 my $listfile = undef;   # set to a name by GetOptions() if -l used
 my $inseed   = "SEED";  # input seed alignment file, 'SEED' by default changeable with -i <s>
 my $outseed  = "SEED";  # output seed alignment file, 'SEED' by default changeable with -o <s>
+my $do_rfendtrim = 0;   # '1' to trim all columns before 1st and after final nongap RF column
 my $do_help  = 0;       # TRUE to print help and exit, if -h used
 
 my @unlinkA = ();      # array of files to unlink before exiting.
@@ -60,6 +61,7 @@ my $options_okay = &GetOptions( "5=s"        => \$n5,
                                 "t"          => \$do_trim,
                                 "i=s"        => \$inseed,
                                 "o=s"        => \$outseed,
+                                "rfendtrim"  => \$do_rfendtrim,
                                 "dbchoice=s" => \$dbchoice,
                                 "dbfile=s"   => \$dbfile,
                                 "h|help"     => \$do_help);
@@ -72,10 +74,20 @@ if(! $options_okay) {
 if(scalar(@ARGV) != 0) { $do_help = 1; }
 if ($do_help) { &help(); exit(1); }
 
-# check that at least one of -5 or -3 was used
-if(! defined $n5 && ! defined $n3) { die "ERROR, at least one of -5 or -3 must be used."; }
-if(defined $n5 && $n5 !~ m/\d+/)   { die "ERROR, with -5 <n>, <n> must be positive integer."; }
-if(defined $n3 && $n3 !~ m/\d+/)   { die "ERROR, with -3 <n>, <n> must be positive integer."; }
+# -rfendtrim requires -t, and is incompatible with 5 and 3
+if($do_rfendtrim) { 
+  if(! $do_trim)  { die "ERROR, -rfendtrim requires -t"; }
+  if(defined $n5) { die "ERROR, -rfendtrim is incompatible with -5"; }
+  if(defined $n3) { die "ERROR, -rfendtrim is incompatible with -3"; }
+}
+else { 
+  # -rfendtrim not used
+  # check that at least one of -5 or -3 was used
+  if(! defined $n5 && ! defined $n3) { die "ERROR, at least one of -5 or -3 must be used."; }
+  if(defined $n5 && $n5 !~ m/\d+/)   { die "ERROR, with -5 <n>, <n> must be positive integer."; }
+  if(defined $n3 && $n3 !~ m/\d+/)   { die "ERROR, with -3 <n>, <n> must be positive integer."; }
+}
+
 # handle -l
 if(defined $listfile) { $do_list = 1; }
 if($do_list && $do_trim) { die "ERROR, -l and -t are incompatible, choose one."; }
@@ -119,11 +131,6 @@ else {
   $fetchfile  = $dbfile;
 }
 
-if(! defined $n5) { $n5 = 0; }
-if(! defined $n3) { $n3 = 0; }
-my $allgap5 = Bio::Rfam::Utils::monocharacterString(".", $n5);
-my $allgap3 = Bio::Rfam::Utils::monocharacterString(".", $n3);
-
 # output preamble: user, date, location, etc.
 # first, determine maximum column width for pretty formatting
 my @opt_lhsA = ();
@@ -131,11 +138,17 @@ my @opt_rhsA = ();
 
 if($do_trim)           { push(@opt_lhsA, "# trimming seed alignment, rather than extending: ");            push(@opt_rhsA, "yes [-t]"); }
 else                   { push(@opt_lhsA, "# extending seed alignment, rather than trimming: ");            push(@opt_rhsA, "yes [default]"); }
+if($do_rfendtrim)      { push(@opt_lhsA, "# trimming columns before 1st and after final nongap RF col: "); push(@opt_rhsA, "yes [-rfendtrim]"); }
 if($inseed ne "SEED")  { push(@opt_lhsA, "# input alignment in file: ");                                   push(@opt_rhsA, "$inseed [-i]"); }
 if($outseed ne "SEED") { push(@opt_lhsA, "# output alignment to file: ");                                  push(@opt_rhsA, "$outseed [-o]"); }
 if(defined $n5)        { push(@opt_lhsA, "# number of residues/columns to extend/trim in 5' direction: "); push(@opt_rhsA, "$n5 [-5]"); }
 if(defined $n3)        { push(@opt_lhsA, "# number of residues/columns to extend/trim in 3' direction: "); push(@opt_rhsA, "$n3 [-3]"); }
 if($do_list)           { push(@opt_lhsA, "# read subset of sequence names to extend from: ");              push(@opt_rhsA, "$listfile [-l]"); }
+
+if(! defined $n5) { $n5 = 0; }
+if(! defined $n3) { $n3 = 0; }
+my $allgap5 = Bio::Rfam::Utils::monocharacterString(".", $n5);
+my $allgap3 = Bio::Rfam::Utils::monocharacterString(".", $n3);
 
 my $nopt = scalar(@opt_lhsA);
 my $cwidth = ($nopt > 0) ? Bio::Rfam::Utils::maxLenStringInArray(\@opt_lhsA, $nopt) : 0;
@@ -180,8 +193,29 @@ if($do_trim) { # trim mode, the easy case, just remove the requested columns
   # we'll keep columns spos..epos where [0..spos..epos..alen-1]
   my $spos = 0;
   my $epos = $oalen-1;
-  if(defined $n5) { $spos += $n5; }
-  if(defined $n3) { $epos -= $n3; }
+  if($do_rfendtrim) { 
+    # removing all columns 5' of first nongap RF column and 3' of final nongap RF column
+    if(! $oseedmsa->has_rf) { 
+      die "ERROR, -rfendtrim requires RF annotation in alignment";
+    }
+    my $rfstr = $oseedmsa->get_rf;
+    my @rf_A = split("", $rfstr);
+    my $gapstr = ".-~";
+    for(my $apos = 0; $apos < $oalen; $apos++) { 
+      if($rf_A[$apos] !~ m/[\Q$gapstr\E]/) { 
+        if($spos == 0) { $spos = $apos; } # first nongap RF position
+        $epos = $apos; # will be final RF position when for loop exits
+      }
+    }
+    # importantly, update $n5 and $n3 so renaming in update_names() works
+    $n5 = $spos;
+    $n3 = ($oalen - $epos) - 1;
+  }
+  else { # $trim_outside_rf is 0
+    # removing a user specified number of columns on 5' end ($n5 via -5) and/or 3' end ($n3 via -3)
+    if(defined $n5) { $spos += $n5; }
+    if(defined $n3) { $epos -= $n3; }
+  }
   if($spos > $epos) { die "ERROR, spos > epos ($spos > $epos)..."; }
   # create usemeA array
   my @usemeA = ();
@@ -442,6 +476,7 @@ Options:    -5 <n>        : extend each sequence <n> residues in 5 prime directi
             -t            : trim alignment instead of extending it [df: extend]
             -i <s>        : input  alignment is file <s> [df: SEED]
             -o <s>        : output alignment to file <s> [df: SEED]
+            -rfendtrim    : with -t, trim away all columns before first and after final nongap RF position
             -dbchoice <s> : database that sequences in seed are from [df: $df_dbchoice]
             -dbfile <s>   : seed sequences are from sequence file <s>
             -h|-help: print this help, then exit
