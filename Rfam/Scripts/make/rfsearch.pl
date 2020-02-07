@@ -533,13 +533,11 @@ if ($do_build) {
   my $cmalign_mapali_file = "ma.$$.stk";
   Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
   Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, "", 1, undef, 0);
-  unlink $emit_fafile;
 
   # add RF annotation from cmalign --mapali output file to original SEED
   # to create a new SEED file 
   # (this subroutine expects the extra consensus sequence in the $cmalign_mapali_file alignment)
   add_rf_and_ss_cons_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen});
-  unlink $cmalign_mapali_file;
 
   # rebuild CM from new SEED
   my $copied_cmfile = $cmfile . ".$$";
@@ -552,8 +550,9 @@ if ($do_build) {
 
   # clean up
   if(! $do_dirty) { 
-    if(-e $outfile)       { unlink $outfile; }
-    if(-e $copied_cmfile) { unlink $copied_cmfile; }
+    foreach my $file2unlink ($outfile, $copied_cmfile, $cmalign_mapali_file, $emit_fafile) { 
+      if(-e $file2unlink) { unlink $file2unlink; }
+    }
   }
 
   $build_wall_secs = time() - $build_start_time;
