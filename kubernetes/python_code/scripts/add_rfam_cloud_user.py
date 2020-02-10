@@ -238,7 +238,7 @@ def email_new_rfam_user_account_credentials(username, password, email):
 # ------------------------------------------------------------------
 
 def is_file(param):
-    """
+	"""
 	Function to support argparse functionality. Checks if parameter provided is
 	actually a file.
 
@@ -246,9 +246,8 @@ def is_file(param):
 
 	return: The parameter
 	"""
-
-        if not os.path.isfile(param):
-                raise argparse.ArgumentTypeError('Parameter much be a tab delimited .txt file')
+	if not os.path.isfile(param):
+		raise argparse.ArgumentTypeError('Parameter much be a tab delimited .txt file')
 
 	return param
 
