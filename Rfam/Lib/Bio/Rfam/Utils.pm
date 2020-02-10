@@ -157,7 +157,7 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research-rh7 queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi-rh7 -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
+    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi-rh74 -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
     # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
     # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
   }
