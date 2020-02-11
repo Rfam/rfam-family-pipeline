@@ -27,14 +27,17 @@ def create_new_user_login_pod(username):
 
 	k8s_deployment_str = k8s_deployment_str.replace("USERID", username)
 
-	login_deployment = os.path.join("/tmp", "rfam_k8s_login.yaml")
+	login_deployment = os.path.join("/home", os.path.join(username,".rfam_k8s_login.yaml"))
 	
 	fp = open(login_deployment, 'w')
-	fp.write(login_deployment % username)
+	fp.write(k8s_deployment_str)
 	fp.close()
 
 	#k8s_api = utils.create_from_yaml(k8s_client, login_deployment)
 	subprocess.call("kubectl create -f %s" % login_deployment, shell=True)
+
+	# delete file when done
+	os.remove(login_deployment)
 
 # --------------------------------------------------------------------------------------------
 
