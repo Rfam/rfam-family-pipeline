@@ -58,7 +58,7 @@ def check_k8s_login_deployment_exists(username):
 
 	login_pod = output.strip().split('\n')[1:]
 
-	if len(login_pod) == 0:
+	if len(login_pod) == 0 or login_pod[0].find("Running") == -1:
 		return False
 
 	return True
