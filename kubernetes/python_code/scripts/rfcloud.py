@@ -150,6 +150,18 @@ def get_username():
 
 	return username
 
+# --------------------------------------------------------------------------------------------
+
+def get_user_jobs(username):
+	"""
+	Function to fetch the jobs of a user
+	
+	return: void
+	"""
+	
+	k8s_cmd = "kubectl get jobs --selector=user=%s --selector=tier=backend"
+
+	subprocess.call(k8s_cmd % username, shell=True)
 
 # --------------------------------------------------------------------------------------------
 
@@ -225,6 +237,8 @@ def parse_arguments():
 	mutually_exclusive.add_argument("--copy-from", help='copies an existing file/dir from workdir', action="store",
 		type = str, metavar="FILE/DIR")
 
+	mutually_exclusive.add_argument("--get-jobs", help='get all k8s jobs of a user', action="store_true")
+
 	return parser
 
 # --------------------------------------------------------------------------------------------
@@ -244,3 +258,7 @@ if __name__ == "__main__":
 
 	elif args.copy_from:
 		copy_items_between_home_pod(args.copy_from, direction='from')
+	
+	elif args.get_jobs:
+		username = get_username()
+		get_user_jobs(username)
