@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk
+FROM ubuntu:xenial
 
 USER root
 
@@ -73,7 +73,7 @@ ENV DISPLAY=0.0
 # Infernal installation
 RUN cd /Rfam/software && \
 curl -OL http://eddylab.org/infernal/infernal-1.1.2.tar.gz && \
-tar -xvzf infernal-1.1.2.tar.gz && \
+tar -xvzf infernal-1.1.2.tar.gz && rm infernal-1.1.2.tar.gz && \
 cd infernal-1.1.2 && \
 ./configure && \
 make && \
@@ -81,6 +81,7 @@ make install && \
 cd /Rfam/software/infernal-1.1.2/easel && \
 make install && \
 cd miniapps && \
+#cp /Rfam/software/infernal-1.1.2/bin/* /Rfam/software/bin/.
 cp esl-afetch esl-alimanip esl-alimap esl-alimask esl-alimerge esl-alipid /Rfam/software/bin/. && \
 cp esl-alirev esl-cluster esl-alistat esl-compalign esl-compstruct esl-construct /Rfam/software/bin/. && \
 cp esl-histplot esl-mask esl-reformat esl-selectn esl-seqrange esl-seqstat /Rfam/software/bin/. && \
@@ -93,7 +94,7 @@ cp cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch cmcalibrate /Rfam/softw
 # CMfinder installation
 RUN cd /Rfam/software && \
 wget http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
-tar -xvf CMfinder_0.2.tgz && \
+tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
 cd CMfinder_0.2 && \
 make && \
 cp bin/cmfinder /Rfam/software/bin/.
@@ -101,7 +102,7 @@ cp bin/cmfinder /Rfam/software/bin/.
 # HMMER installation
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/hmmer/hmmer-3.2.1.tar.gz && \
-tar -xzf hmmer-3.2.1.tar.gz && \
+tar -xzf hmmer-3.2.1.tar.gz && rm hmmer-3.2.1.tar.gz && \
 cd /Rfam/software/hmmer-3.2.1 && \
 ./configure && \
 make && \
@@ -114,7 +115,7 @@ cp jackhmmer makehmmerdb nhmmer nhmmscan phmmer /Rfam/software/bin/.
 # MAFFT installation
 RUN cd /Rfam/software && \
 curl -OL https://mafft.cbrc.jp/alignment/software/mafft-7.402-with-extensions-src.tgz && \
-tar -xzf mafft-7.402-with-extensions-src.tgz && \
+tar -xzf mafft-7.402-with-extensions-src.tgz && rm mafft-7.402-with-extensions-src.tgz && \
 cd mafft-7.402-with-extensions/core && \
 make clean && \
 make && \
@@ -125,7 +126,7 @@ cp mafft.1 /Rfam/software/bin/mafft
 # ERATE installation
 RUN cd /Rfam/software && \
 curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
-tar -xzf erate-v.0.8.tar.gz && \
+tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
 cd erate-v.0.8/phylip3.66-erate/src && \
 make dnaml && \
 cp dnaml /Rfam/software/bin/.
@@ -133,7 +134,7 @@ cp dnaml /Rfam/software/bin/.
 # RNAcode installation
 RUN cd /Rfam/software && \
 curl -OL http://github.com/downloads/wash/rnacode/RNAcode-0.3.tar.gz && \
-tar -xzf RNAcode-0.3.tar.gz && \
+tar -xzf RNAcode-0.3.tar.gz && rm RNAcode-0.3.tar.gz && \
 cd RNAcode-0.3 && \
 ./configure --prefix=/Rfam/software/RNAcode-0.3 && \
 make && \
@@ -143,13 +144,13 @@ cp /Rfam/software/RNAcode-0.3/bin/RNAcode /Rfam/software/bin/.
 # MUSCLE installation
 RUN cd /Rfam/software && \
 curl -OL http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz && \
-tar -zxvf muscle3.8.31_i86linux64.tar.gz && \
+tar -zxvf muscle3.8.31_i86linux64.tar.gz && rm muscle3.8.31_i86linux64.tar.gz && \
 cp /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
 
 # argtable2/ClustalW dependencies
 RUN cd /Rfam/software && \
 curl -OL http://prdownloads.sourceforge.net/argtable/argtable2-13.tar.gz && \
-tar -zxvf argtable2-13.tar.gz && \
+tar -zxvf argtable2-13.tar.gz && rm argtable2-13.tar.gz && \
 cd argtable2-13 && \
 ./configure --prefix=/Rfam/software/argtable2-13 && \
 make && \
@@ -158,7 +159,7 @@ make install
 # ClustalW installation
 RUN cd /Rfam/software && \
 curl -OL http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz && \
-tar -zxvf clustal-omega-1.2.4.tar.gz && \
+tar -zxvf clustal-omega-1.2.4.tar.gz && rm clustal-omega-1.2.4.tar.gz && \
 cd clustal-omega-1.2.4 && \
 ./configure CFLAGS=-I/Rfam/software/argtable2-13/include LDFLAGS=-L/Rfam/software/argtable2-13/lib --prefix=/Rfam/software/clustal-omega-1.2.4 && \
 make && \
@@ -168,7 +169,7 @@ cp /Rfam/software/clustal-omega-1.2.4/bin/clustalo /Rfam/software/bin/.
 # PPFold installation
 RUN cd /Rfam/software && \
 curl -OL http://www.daimi.au.dk/~compbio/pfold/PPfold/PPfold3.1.1.jar && \
-cp PPfold3.1.1.jar /Rfam/software/bin/.
+cp PPfold3.1.1.jar /Rfam/software/bin/. && rm PPfold3.1.1.jar
 
 # RAxML installation
 RUN cd /Rfam/software && \
@@ -187,7 +188,7 @@ cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 # ViennaRNA installation
 RUN cd /Rfam/software && \
 curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
-tar -zxvf ViennaRNA-2.4.9.tar.gz && \
+tar -zxvf ViennaRNA-2.4.9.tar.gz && rm ViennaRNA-2.4.9.tar.gz && \
 cd ViennaRNA-2.4.9 && \
 ./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
 make && \
@@ -223,8 +224,8 @@ python get-pip.py && \
 pip install requests
 
 # clone Rfam repo
-RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
-cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
+#RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+#cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 # install kubectl to establish communication with the k8s cluster
 RUN cd /Rfam/software/bin && \
@@ -232,15 +233,19 @@ curl -LO curl -LO https://storage.googleapis.com/kubernetes-release/release/`cur
 chmod +x ./kubectl
 
 # install kubernetes client python API
-RUN cd /Rfam && \
-git clone --recursive https://github.com/kubernetes-client/python.git && \
+#RUN cd /Rfam && \
+#git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
-cd python && python setup.py install 
+#cd python && python setup.py install 
+
+RUN apt-get install -y python3 && \
+python3 /Rfam/get-pip.py && \
+pip3 install kubernetes
 
 # install latest version of R-scape
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
-tar xf rscape.tar.gz && \
+tar xf rscape.tar.gz && rm rscape.tar.gz && \
 cd rscape_* && \
 ./configure && \ 
 #--prefix=/Rfam/software/rscape_* && \
@@ -251,10 +256,16 @@ make install
 RUN cd /Rfam/software/rscape*/bin && \
 cp R-scape /Rfam/software/bin/.
 
+RUN apt-get update && apt-get install -y nano
+
+RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
+
+# this requires that the repo already exists
 RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
 cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
 
-RUN apt-get update && apt-get install -y nano
+RUN apt-get autoclean
 
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
