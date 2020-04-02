@@ -81,6 +81,10 @@ my $logFH;
 my $config = Bio::Rfam::Config->new;
 my $exec_description = "build, calibrate, and search a CM against a database.";
 
+# make *STDOUT file handle 'hot' so it automatically flushes whenever we print to it
+select *STDOUT;
+$| = 1;
+
 my $options_okay = 
     &GetOptions( "b"          => \$force_build,
                  "onlybuild"  => \$only_build,
@@ -447,9 +451,19 @@ if (! $relax_about_seed) {
   my $nfail = Bio::Rfam::QC::checkSEEDSeqs($famObj, $config->rfamseqObj, 0); # the '0' tells the sub not to 'be_verbose'
   if($nfail > 0) { 
     die "ERROR: $nfail sequences in SEED sequence is/are not in any of GenBank, ENA or RNAcentral (permit this with -relax)"; 
+ }
+  print "done\n";
+}
+else { 
+  # relax_about_seed is 1 (--relax used)
+  print "# Validating SEED sequence names are not present in target db (-relax) ... ";
+  my $err_str = Bio::Rfam::QC::checkSEEDSeqsNameOnly($famObj, $config->rfamseqObj, 1); # the '0' tells the sub not to 'be_verbose'
+  if($err_str ne "") { 
+    die "\nERROR: with -relax:\n$err_str";
   }
   print "done\n";
 }
+  
 
 ##############
 # Build step #

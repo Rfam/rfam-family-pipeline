@@ -1277,6 +1277,52 @@ sub checkSEEDSeqs_helper {
 }
 
 #------------------------------------------------------------------------------
+=head2 checkSEEDSeqsNameOnly
+
+  Title    : checkSEEDSeqsNameOnly
+  Incept   : EPN, Thu Apr  2 16:52:07 2020
+  Usage    : Bio::Rfam::QC::checkSEEDSeqsNameOnly($familyObj, $seqDBObj, $be_verbose)
+  Function : Checks each SEED sequencs to see if a sequence of the
+           : same name exists in rfamseq. Note, doesn't remove "/<start>-<end>"
+           : from the SEED sequence name if it exists, it checks the 
+           : entire sequence name, possibly including "/<start>-<end>"
+           : 
+  Args     : Bio::Rfam::Family object
+           : Bio::Rfam::SeqDB object
+  Returns  : List of sequences that fail the name check, "" on successully passing check
+  
+=cut
+
+sub checkSEEDSeqsNameOnly {
+  my ( $familyObj, $seqDBObj ) = @_;
+
+  #Check we have the correct family object.
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    die "Did not get passed in a Bio::Rfam::Family object\n";
+  }
+
+  my $seed = $familyObj->SEED;
+  my $nseq  = $seed->nseq;
+  my $name_str = "";
+  my $ret_str = "";
+  # look-up each SEED sequence
+  for ( my $i = 0 ; $i < $nseq; $i++ ) {
+    my $name = $seed->get_sqname($i);
+    my $name_exists_in_db = $seqDBObj->check_seq_exists($name) ? 1 : 0;
+    if($name_exists_in_db) { 
+      $name_str .= "\t$name\n";;
+    }
+  }
+  if($name_str ne "") { 
+    $ret_str  = "The following sequence names exist in both the SEED and the target db.\n"; 
+    $ret_str .= "Change their names in SEED, preferable to <name>/<start>-<end>\n";
+    $ret_str .= $name_str;
+  }
+
+  return $ret_str;
+}
+
+#------------------------------------------------------------------------------
 =head2 checkScoresSeqs
 
   Title    : checkScoresSeqs
