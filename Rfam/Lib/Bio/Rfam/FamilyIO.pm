@@ -3244,9 +3244,12 @@ sub parseOutlistAndSpecies {
     if($outline !~ m/^\#/) { 
       $ct++;
       # example outlist line:
-      # 108.5  4.2e-20      SEED  Z97632.3          v:73.4   23636   23554    -       1    83     no  Homo_sapiens_(human)[9606]        Human DNA sequence from clone RP1-196E23 on chromosome Xq26.1-27.2 Description...
+      #
+      ## bits  evalue   seqLabel   name                        overlap  start    end      str  qstart  qend  trunc  species                          extra                  description
+      # 106.5  1.5e-20  SEED       ACML01000054.1/24739-24633        -        1      107    +       1   108     no  -                                GA:A;RV:A;SO:SELF      -
       # example species line:
-      # 108.5  4.2e-20      SEED  Z97632.3          v:73.4    9606  Homo sapiens (human)                                        Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia; Eutheria; Euarchontoglires; Primates; Haplorrhini; Catarrhini; Hominidae; Homo.
+      ## bits  evalue   seqLabel   name                        overlap  ncbiId   species                                        extra                  taxString
+      # 106.5  1.5e-20  SEED       ACML01000054.1/24739-24633        -        -  -                                              GA:A;RV:A;SO:SELF      -
       @out_elA = split(/\s\s+/, $outline); # note: we separate by double spaces
       @spc_elA = split(/\s\s+/, $spcline); # note: we separate by double spaces
 
@@ -3283,7 +3286,7 @@ sub parseOutlistAndSpecies {
           $infoHHR->{$name}{"bitsc"}    = $out_elA[0];
           $infoHHR->{$name}{"evalue"}   = $out_elA[1];
           $infoHHR->{$name}{"sspecies"} = $out_elA[11];
-          $infoHHR->{$name}{"taxstr"}   = $spc_elA[7];
+          $infoHHR->{$name}{"taxstr"}   = $spc_elA[8];
           $infoHHR->{$name}{"trunc"}    = $out_elA[10];
         }
       }
@@ -3920,7 +3923,7 @@ sub validate_outlist_format {
     if($line !~ m/^\#$/) { die "ERROR unable to validate outlist format (first line not \"\#\"); rerun rfmake.pl"; }
     
     # Expected line 2: 
-    # # bits  evalue   seqLabel  name            overlap  start    end      str  qstart  qend  trunc  species                            description                                                                                                  
+    # # bits  evalue   seqLabel  name            overlap  start    end      str  qstart  qend  trunc  species extra description
     $line = <IN>;
     chomp $line;
     if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+start\s+end\s+str\s+qstart\s+qend\s+trunc\s+species\s+extra\s+description/) { 
@@ -3929,7 +3932,7 @@ sub validate_outlist_format {
   }
   else { # requireFull is FALSE, check that first non-comment line has correct format
     # example line
-    # 93.2  5.3e-16      FULL  AAPY01617272.1        -      690      825    +       1   106     no  Tupaia_belangeri_(north..[37347]   Tupaia belangeri cont1.617271, whole genome shotgun sequence.
+    # 93.2  5.3e-16      FULL  AAPY01617272.1        -      690      825    +       1   106     no  Tupaia_belangeri_(north..[37347]   GA:A;RV:A;SO:N[0.000] Tupaia belangeri cont1.617271, whole genome shotgun sequence.
     my $line = <IN>;
     my $passed = 0;
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }
@@ -3984,7 +3987,7 @@ sub validate_species_format {
     if($line !~ m/^\#$/) { die "ERROR unable to validate species format (first line not \"\#\"); rerun rfmake.pl"; }
     
     # Expected line 2: 
-    # # bits  evalue   seqLabel  name            overlap  ncbiId  species                                                         taxString
+    # # bits  evalue   seqLabel  name            overlap  ncbiId  species     extra  taxString
     $line = <IN>;
     chomp $line;
     if($line !~ m/^\#\s+bits\s+evalue\s+seqLabel\s+name\s+overlap\s+ncbiId\s+species\s+extra\s+taxString/) { 
@@ -3993,7 +3996,7 @@ sub validate_species_format {
   } 
   else { # requireFull is FALSE, check that first non-comment line has correct format
     # example line: 
-    # 93.2  5.3e-16      FULL  AAPY01617272.1        -   37347  Tupaia belangeri (northern tree shrew)                      Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia; Eutheria; Euarchontoglires; Scandentia; Tupaiidae; Tupaia.
+    # 93.2  5.3e-16      FULL  AAPY01617272.1        -   37347  Tupaia belangeri (northern tree shrew)         GA:A;RV:A;SO:N[0.000]             Eukaryota; Metazoa; Chordata; Craniata; Vertebrata; Euteleostomi; Mammalia; Eutheria; Euarchontoglires; Scandentia; Tupaiidae; Tupaia.
     my $line = <IN>;
     my $passed = 0;
     while((defined $line) && ($line =~ m/^\#/)) { $line = <IN>; }

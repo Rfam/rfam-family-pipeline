@@ -1007,7 +1007,7 @@ sub write_taxinfo_file_preamble {
   printf $outFH ("# taxinfo: created by 'rfmake.pl', run 'rfmake.pl -h' for a list of cmd-line options that modify behavior\n");
   printf $outFH ("# =======================================================================================================\n");
   printf $outFH ("# family-id:       %s\n", $desc->ID);
-  printf $outFH ("# family-acc:      %s\n", $desc->AC);
+  printf $outFH ("# family-acc:      %s\n", ((defined $desc->AC) ? $desc->AC : "undefined"));
   printf $outFH ("# pwd:             %s\n", getcwd);
   printf $outFH ("# GA bit-score:    $ga\n");
   printf $outFH ("# GA E-value:      %6.1g\n", $evalue);
