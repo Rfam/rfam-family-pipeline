@@ -2456,7 +2456,7 @@ sub genbank_fetch_seq_info {
           $attempt_ctr++;
         }
         if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
-          croak "ERROR trying to fetch sequence data from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
+          croak "ERROR trying to fetch sequence data for sequence $name from genbank, reached maximum allowed number of attempts ($attempt_ctr)"; 
         }
       }
     }
@@ -2616,7 +2616,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
       $attempt_ctr++;
     }
     if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
-      croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)"; 
+      croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid_str\n"; 
     }
   }
 
