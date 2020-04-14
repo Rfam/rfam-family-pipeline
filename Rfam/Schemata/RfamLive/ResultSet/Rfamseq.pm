@@ -47,11 +47,18 @@ sub updateRfamseqFromFamilyObj {
   my $seedmsa = $familyObj->SEED;
   my $nseq = $seedmsa->nseq;
   my @row_AH = (); # array of hashes with info to add to rfamseq table
+  my %seed_names; # hash of seed_names to avoid creating duplicate rfamseq entries
   for($i = 0; $i < $nseq; $i++) { 
     my $seed_nse = $seedmsa->get_sqname($i);
     my ($is_nse, $seed_name, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($seed_nse);
     if(! $is_nse) { 
       croak "ERROR in $sub_name, seed sequence name not in name/start-end format ($seed_nse)"; 
+    }
+
+    if (! exists $seed_names{$seed_name}) {
+        $seed_names{$seed_name} = 1;
+    } else {
+        next;
     }
 
     # check if sequence is already in the Rfamseq table, if it is we do nothing:
