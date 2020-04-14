@@ -70,7 +70,19 @@ my %seed_info_HH; # 1D key is seed sequence name (name/start-end format)
                   # 2D keys are many of the field names in Rfamseq and Taxonomy tables 
                   # (see fetch_seed_sequence_info() for details)
 Bio::Rfam::FamilyIO::fetch_seed_sequence_info($seed, undef, undef, \%seed_info_HH);
-printf("HEYA back from fetch_seed_sequence_info()\n");
+
+for(my $i = 0; $i < $seed->nseq; $i++) { 
+  my $seed_name = $seed->get_sqname($i);
+  printf("$seed_name\n");
+  if(! defined $seed_info_HH{$seed_name}) { 
+    printf("\tNO DATA\n");
+  }
+  else { 
+    foreach my $key (sort keys %{$seed_info_HH{$seed_name}}) { 
+      print("\t$key: $seed_info_HH{$seed_name}{$key}\n");
+    }
+  }
+}
 
 exit 0;
 
