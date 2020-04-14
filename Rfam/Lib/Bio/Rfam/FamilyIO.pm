@@ -4039,7 +4039,7 @@ sub validate_species_format {
            :                   undef to NOT try to fetch from RfamLive taxonomy table
            : $seed_info_HHR:   ref to 2D hash with seed info, FILLED HERE
            :                   1D key is seed name (name/start-end), 2D keys are:
-           :                   "ncbi_id", "description", "species", "align_display_name" and "tax_string"
+           :                   "ncbi_id", "description", "length", "species", "align_display_name" and "tax_string"
   Returns  : void
   Dies     : if there's some problem parsing fetched data
 
@@ -4163,6 +4163,7 @@ sub fetch_seed_sequence_info {
     if(! $is_nse) { $seed_name = $seed_nse; }
     $seed_nse_info_HHR->{$seed_nse}{"ncbi_id"}     = $seed_name_info_HH{$seed_name}{"ncbi_id"};
     $seed_nse_info_HHR->{$seed_nse}{"description"} = $seed_name_info_HH{$seed_name}{"description"};
+    $seed_nse_info_HHR->{$seed_nse}{"length"}      = $seed_name_info_HH{$seed_name}{"length"};
     $taxid_seed = $seed_nse_info_HHR->{$seed_nse}{"ncbi_id"}; # for convenience
     $seed_nse_info_HHR->{$seed_nse}{"species"}            = $taxid_info_HH{$taxid_seed}{"species"};
     $seed_nse_info_HHR->{$seed_nse}{"tree_display_name"}  = $taxid_info_HH{$taxid_seed}{"tree_display_name"};
