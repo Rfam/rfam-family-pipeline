@@ -126,9 +126,9 @@ sub makeRscape{
 		$rscape_img = "$outdir/SEED_1.R2R.sto.svg";
 	}
 
-	my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
+	my $rscape_cyk_img = "$outdir/$rfam_id.fold.R2R.sto.svg";
 	if (not -e $rscape_cyk_img){
-		$rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
+		$rscape_cyk_img = "$outdir/SEED_1.fold.R2R.sto.svg";
 	}
 
 	my $rscapeImgGzipped;
@@ -153,7 +153,7 @@ sub makeRscape{
 
     if (-e $rscape_cyk_img){
 
-	my $cleaned_cyk_r2r = "$outdir/creaned.cyk.R2R.svg";
+	my $cleaned_cyk_r2r = "$outdir/creaned.fold.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_cyk_r2r);
 
 	gzip  $cleaned_cyk_r2r => \$rscapeCykGzipped;

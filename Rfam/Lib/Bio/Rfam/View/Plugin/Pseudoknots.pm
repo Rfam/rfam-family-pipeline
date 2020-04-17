@@ -65,9 +65,9 @@ sub populatePseudoknots{
         if (not -e $rscape_sto){
 		$rscape_sto = "$outdir/SEED_1.R2R.sto";
        	}
-	my $rscape_cyk_sto = "$outdir/$rfam_id.cyk.R2R.sto";	
+	my $rscape_cyk_sto = "$outdir/$rfam_id.fold.R2R.sto";	
 	if (not -e $rscape_cyk_sto){	
-		$rscape_cyk_sto = "$outdir/SEED_1.cyk.R2R.sto";	
+		$rscape_cyk_sto = "$outdir/SEED_1.fold.R2R.sto";	
 	}
 
 	# Find any SEED pseudoknots first
