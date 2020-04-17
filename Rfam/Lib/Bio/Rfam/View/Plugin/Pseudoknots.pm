@@ -53,7 +53,7 @@ sub populatePseudoknots{
 	}
 		                                	
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --cyk $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --fold $seed_loc";
 	print "Making rscape image for $rfam_acc\n";
 	system ($rscape_cmd);
 	

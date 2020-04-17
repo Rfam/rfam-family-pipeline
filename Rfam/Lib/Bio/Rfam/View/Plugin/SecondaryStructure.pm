@@ -110,7 +110,7 @@ sub makeRscape{
         }
 
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --cyk $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --fold $seed_loc";
 
 	print "Making rscape image for $rfam_acc\n";
 
@@ -280,7 +280,7 @@ sub makeBling {
   chdir($location);
 
   use IPC::Run qw(run);
-  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/RNAplot", "-o", "svg");
+  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh74/software/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
 
   unless(-e $RNAplot_img) {
