@@ -216,7 +216,7 @@ sub makeBling {
   my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
   #my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
-  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1/ss_images/$rfam_acc";
+  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1.1/ss_images/$rfam_acc";
   File::Path::make_path($location);
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
