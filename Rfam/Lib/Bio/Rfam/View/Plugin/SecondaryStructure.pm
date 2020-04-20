@@ -136,7 +136,7 @@ sub makeRscape{
 
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
-	my $cleaned_r2r = "$outdir/creaned.R2R.svg";
+	my $cleaned_r2r = "$outdir/cleaned.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_img, $cleaned_r2r);
 
 	gzip $cleaned_r2r => \$rscapeImgGzipped;
@@ -153,7 +153,7 @@ sub makeRscape{
 
     if (-e $rscape_cyk_img){
 
-	my $cleaned_cyk_r2r = "$outdir/creaned.fold.R2R.svg";
+	my $cleaned_cyk_r2r = "$outdir/cleaned.fold.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_cyk_r2r);
 
 	gzip  $cleaned_cyk_r2r => \$rscapeCykGzipped;
