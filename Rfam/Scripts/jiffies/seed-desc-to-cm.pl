@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-my $usage = "perl seed-desc-to-cm.pl <SEED file with DESC> <CM file to add DESC to>";
+my $usage = "perl seed-desc-to-cm.pl <SEED file with DESC> <CM file to add DESC to> > RFXXXXX.cm";
 
 if(scalar(@ARGV) != 2) { 
 
