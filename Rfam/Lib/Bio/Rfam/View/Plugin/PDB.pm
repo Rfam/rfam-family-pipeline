@@ -20,7 +20,7 @@ sub mapPDB {
 	#This file is the fasta file of all the non-protein nucleic acid sequences in the PDB.
 	#Those with modified bases have been excluded.
 	#Documentation on Confluence as to how to produce this fasta file.
-	my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/14.1/PDB_sequences/PDB_RFAM14_1.fa';
+	my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/14.2/pdb_files/PDB_RFAM14_2.fa';
 	my $config = $self->_mxrp_parent->config;
 	# my $client = Bio::Rfam::SVN::Client->new({config => $config});
 	my $familyIO = Bio::Rfam::FamilyIO->new;	
