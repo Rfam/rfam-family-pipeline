@@ -1314,7 +1314,7 @@ sub writeTbloutDependentFiles {
 
   # Prepare the queries for execution.
   my $sthDesc = $rfdbh->prepare_seqaccToDescription();
-  my $sthTax  = $rfdbh->prepare_seqaccToSpeciesTaxStringAndID();
+  my $sthTax  = $rfdbh->prepare_seqaccToSpeciesTaxStringAndId();
 
   # open OUTPUT files
   my $outFH; 
@@ -1617,7 +1617,7 @@ sub writeScores {
              : in the database. 
     Args     : $tblline:     a tabular output line from a cmsearch --tblout file.
              : $sthDesc:     prepared database query for fetching description ($rfdbh->prepared_seqaccToDescription())
-             : $sthTax:      prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndID())
+             : $sthTax:      prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndId())
              : $is_reversed: '1' for a line from a reversed search
              : $require_tax: '1' to require each hit desc and tax info is found in database (die if it is not)
              :               '0' to fill all desc and tax info with '-' if not found in database
@@ -1665,7 +1665,7 @@ sub processTbloutLine {
     $description = fetchDescription($sthDesc, $name2lookup);
   }
   if(defined $sthTax) { 
-    ($species, $shortSpecies, $taxString, $ncbiId) = fetchSpeciesTaxStringAndID($sthTax, $name2lookup);
+    ($species, $shortSpecies, $taxString, $ncbiId) = fetchSpeciesTaxStringAndId($sthTax, $name2lookup);
   }
 
   if($require_tax) { 
@@ -1718,16 +1718,16 @@ sub fetchDescription {
   return $description;
 }
 
-=head2 fetchSpeciesTaxStringAndID
+=head2 fetchSpeciesTaxStringAndId
 
-    Title    : fetchSpeciesTaxStringAndID()
+    Title    : fetchSpeciesTaxStringAndId()
     Incept   : EPN, Tue Dec 10 06:39:12 2013
-    Usage    : fetchSpeciesTaxStringAndID($sthTax, $seqAcc)
-    Function : Fetch a species string, tax string, and NCBI ID from RfamLive 
+    Usage    : fetchSpeciesTaxStringAndId($sthTax, $seqAcc)
+    Function : Fetch a species string, tax string, and NCBI Id from RfamLive 
              : for a sequence accession given a DBI statement handle 
              : ($sthTax) for executing queries with a single bind 
              : value: rfamseq_acc.
-    Args     : $sthTax:  prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndID())
+    Args     : $sthTax:  prepared database query for fetching tax info ($rfdbh->prepared_seqaccToSpeciesTaxStringAndId())
              : $seqacc: sequence accession (name) to get description for
     Returns  : list of:
              : $species:      species string
@@ -1738,11 +1738,11 @@ sub fetchDescription {
 
 =cut
 
-sub fetchSpeciesTaxStringAndID { 
+sub fetchSpeciesTaxStringAndId { 
   my ($sthTax, $seqacc) = @_;
 
-  if(! defined $sthTax) { die "ERROR, fetchSpeciesTaxStringAndID, sthTax is undefined"; }
-  if(! defined $seqacc) { die "ERROR, fetchSpeciesTaxStringAndID, seqacc is undefined"; }
+  if(! defined $sthTax) { die "ERROR, fetchSpeciesTaxStringAndId, sthTax is undefined"; }
+  if(! defined $seqacc) { die "ERROR, fetchSpeciesTaxStringAndId, seqacc is undefined"; }
 
   my ($species, $shortSpecies, $taxString, $ncbiId);
 

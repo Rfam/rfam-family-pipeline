@@ -169,7 +169,7 @@ my $n = swallow_ss_ps( );    # read ss plot
 
 makepsfile("rna_fcbp.ps", \@fcbpA,         0,       1,       "Frac. canonical BPs");
 makepsfile("rna_cov.ps",  \@covariationA, -2,       2,       "Covariation");
-makepsfile("rna_ent.ps",  \@entropyA,      $minent, $maxent, "Relative entropy");
+makepsfile("rna_ent.ps",  \@entropyA,      $minent, $maxent, "Entropy");
 makepsfile("rna_cons.ps", \@conservationA, 0,       1,       "Sequence conservation");
 #makesvgfile(\@fcbp, \@covariation);
 #makesvgfile();

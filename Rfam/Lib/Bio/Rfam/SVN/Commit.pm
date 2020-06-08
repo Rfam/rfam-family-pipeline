@@ -191,10 +191,24 @@ sub _commitEntry {
     $self->{logger}->debug( 'only the DESC file was changed' );
   }else{
     #There is more to change than just the DESC file....
+    # fetch current info for the SEED seqs from GenBank/Rnacentral
+    my %seed_info_HH; # 1D key is seed sequence name (name/start-end format)
+                      # 2D keys are many of the field names in Rfamseq and Taxonomy tables 
+                      # (see fetch_seed_sequence_info() for details)
+    Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH);
+    $self->{logger}->debug( 'fetched seed sequence info' );
+
+    # order of updates: taxonomy, rfamseq, seed_region, full_region, rnacentral_matches
+    $rfamdb->resultset('Taxonomy')->updateTaxonomyFromFamilyObj( $familyObj, \%seed_info_HH );
+    $self->{logger}->debug( 'updated taxonomy' );
+    $rfamdb->resultset('Rfamseq')->updateRfamseqFromFamilyObj( $familyObj, \%seed_info_HH );
+    $self->{logger}->debug( 'updated Rfamseq' );
     $rfamdb->resultset('SeedRegion')->updateSeedRegionsFromFamilyObj( $familyObj );
     $self->{logger}->debug( 'updated seed regions' );
     $rfamdb->resultset('FullRegion')->updateFullRegionsFromFamilyObj( $familyObj );
     $self->{logger}->debug( 'updated full regions' );
+    $rfamdb->resultset('RnacentralMatch')->updateRnacentralMatchesFromFamilyObj( $familyObj );
+    $self->{logger}->debug( 'updated RnacentralMatch' );
     eval {
       $rfamdb->resultset('FamilyFile')->uploadFilesFromFamilyObj( $familyObj );
     };

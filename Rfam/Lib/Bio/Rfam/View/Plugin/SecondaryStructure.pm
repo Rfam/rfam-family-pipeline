@@ -110,7 +110,7 @@ sub makeRscape{
         }
 
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --cyk $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --fold $seed_loc";
 
 	print "Making rscape image for $rfam_acc\n";
 
@@ -126,9 +126,9 @@ sub makeRscape{
 		$rscape_img = "$outdir/SEED_1.R2R.sto.svg";
 	}
 
-	my $rscape_cyk_img = "$outdir/$rfam_id.cyk.R2R.sto.svg";
+	my $rscape_cyk_img = "$outdir/$rfam_id.fold.R2R.sto.svg";
 	if (not -e $rscape_cyk_img){
-		$rscape_cyk_img = "$outdir/SEED_1.cyk.R2R.sto.svg";
+		$rscape_cyk_img = "$outdir/SEED_1.fold.R2R.sto.svg";
 	}
 
 	my $rscapeImgGzipped;
@@ -136,7 +136,7 @@ sub makeRscape{
 
     #if the files exist, compress and load to the database
     if (-e $rscape_img){
-	my $cleaned_r2r = "$outdir/creaned.R2R.svg";
+	my $cleaned_r2r = "$outdir/cleaned.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_img, $cleaned_r2r);
 
 	gzip $cleaned_r2r => \$rscapeImgGzipped;
@@ -153,7 +153,7 @@ sub makeRscape{
 
     if (-e $rscape_cyk_img){
 
-	my $cleaned_cyk_r2r = "$outdir/creaned.cyk.R2R.svg";
+	my $cleaned_cyk_r2r = "$outdir/cleaned.fold.R2R.svg";
 	$self->clean_rscape_svg_files($rscape_cyk_img, $cleaned_cyk_r2r);
 
 	gzip  $cleaned_cyk_r2r => \$rscapeCykGzipped;
@@ -216,7 +216,7 @@ sub makeBling {
   my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
   #my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
-  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1/ss_images/$rfam_acc";
+  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1.1/ss_images/$rfam_acc";
   File::Path::make_path($location);
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
@@ -280,7 +280,7 @@ sub makeBling {
   chdir($location);
 
   use IPC::Run qw(run);
-  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/RNAplot", "-o", "svg");
+  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh74/software/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
 
   unless(-e $RNAplot_img) {

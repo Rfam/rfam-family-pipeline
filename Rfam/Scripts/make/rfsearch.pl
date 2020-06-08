@@ -12,6 +12,7 @@ use Bio::Rfam::Config;
 use Bio::Rfam::FamilyIO;
 use Bio::Rfam::Family::MSA;
 use Bio::Rfam::Infernal;
+use Bio::Rfam::QC;
 use Bio::Rfam::Utils;
 
 use Bio::Easel::SqFile;
@@ -34,7 +35,7 @@ my $do_noss     = 0;            # TRUE to allow building of CMs with no structur
 my $do_hand     = 0;            # TRUE to pass --hand to cmbuild
 my $do_enone    = 0;            # TRUE to pass --enone to cmbuild
 my $ignore_bm   = 0;            # TRUE to ignore BM in DESC for cmbuild options
-my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in the database
+my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in GenBank or RNAcentral
 # calibration related options
 my $force_calibrate = 0;        # TRUE to force calibration
 my $ncpus_cmcalibrate;          # number of CPUs for cmcalibrate call
@@ -79,6 +80,10 @@ my $logFH;
 
 my $config = Bio::Rfam::Config->new;
 my $exec_description = "build, calibrate, and search a CM against a database.";
+
+# make *STDOUT file handle 'hot' so it automatically flushes whenever we print to it
+select *STDOUT;
+$| = 1;
 
 my $options_okay = 
     &GetOptions( "b"          => \$force_build,
@@ -353,7 +358,7 @@ if($do_noss)                   { push(@opt_lhsA, "# rewrite SEED with zero bp SS
 if($do_hand)                   { push(@opt_lhsA, "# pass --hand to cmbuild: ");             push(@opt_rhsA, "yes [-hand]"); }
 if($do_enone)                  { push(@opt_lhsA, "# pass --enone to cmbuild: ");            push(@opt_rhsA, "yes [-enone]"); }
 if($ignore_bm)                 { push(@opt_lhsA, "# ignore DESC's BM line: ");              push(@opt_rhsA, "yes [-ignorebm]"); }
-if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in database: "); push(@opt_rhsA, "yes [-relax]"); }
+if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in GB/RNAc:");   push(@opt_rhsA, "yes [-relax]"); }
 if($force_calibrate)           { push(@opt_lhsA, "# force cmcalibrate step: ");             push(@opt_rhsA, "yes [-c]"); }
 if($calibrate_nompi)           { push(@opt_lhsA, "# threaded calibration, not MPI: ");      push(@opt_rhsA, "yes [-cnompi]"); }
 if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for cmcalibrate: ");     push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
@@ -404,17 +409,22 @@ my $cmfile          = "CM";
 
 # create hash of potential output files
 my %outfileH = ();
-my @outfile_orderA = ("TBLOUT", "REVTBLOUT", "searchout", "revsearchout", "outlist", "revoutlist", "species", "revspecies", "outlist.pdf", "species.pdf");
-$outfileH{"TBLOUT"}       = "concatenated --tblout output from all searches";
-$outfileH{"REVTBLOUT"}    = "concatenated --tblout output from reversed searches";
-$outfileH{"searchout"}    = "concatenated standard output from all searches";
-$outfileH{"revsearchout"} = "concatenated standard output from reversed searches";
-$outfileH{"outlist"}      = "sorted list of all hits from TBLOUT";
-$outfileH{"revoutlist"}   = "sorted list of all hits from REVTBLOUT";
-$outfileH{"species"}      = "same as outlist, but with additional taxonomic information";
-$outfileH{"revspecies"}   = "same as revoutlist, but with additional taxonomic information";
-$outfileH{"outlist.pdf"}  = "bit score histograms of all hits";
-$outfileH{"species.pdf"}  = "bit score histogram of all hits, colored by taxonomy";
+my @outfile_orderA = ("TBLOUT", "REVTBLOUT", "SEEDTBLOUT", "searchout", "revsearchout", "seedsearchout", "outlist", "revoutlist", "seedoutlist", 
+                      "species", "revspecies", "outlist.pdf", "species.pdf", "seed.fa");
+$outfileH{"TBLOUT"}        = "concatenated --tblout output from all db searches";
+$outfileH{"REVTBLOUT"}     = "concatenated --tblout output from reversed searches";
+$outfileH{"SEEDTBLOUT"}    = "concatenated --tblout output from SEED searches";
+$outfileH{"searchout"}     = "concatenated standard output from all db searches";
+$outfileH{"revsearchout"}  = "concatenated standard output from reversed searches";
+$outfileH{"seedsearchout"} = "concatenated standard output from SEED searches";
+$outfileH{"outlist"}       = "sorted list of all hits from TBLOUT";
+$outfileH{"revoutlist"}    = "sorted list of all hits from REVTBLOUT";
+$outfileH{"seedoutlist"}   = "sorted list of all hits from SEEDTBLOUT";
+$outfileH{"species"}       = "same as outlist, but with additional taxonomic information";
+$outfileH{"revspecies"}    = "same as revoutlist, but with additional taxonomic information";
+$outfileH{"outlist.pdf"}   = "bit score histograms of all hits";
+$outfileH{"species.pdf"}   = "bit score histogram of all hits, colored by taxonomy";
+$outfileH{"seed.fa"}       = "FASTA format version of SEED";
 
 # remove any of these files that currently exist, they're now invalid, since we're now rerunning the search
 my $outfile;
@@ -433,36 +443,27 @@ if($config->location eq "")       { $do_all_local = 1; }
 if($config->location eq "docker") { $do_all_local = 1; } 
 if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
 
-###########################################################################################################
-# Preliminary check: verify that all sequences in the SEED derive from the database we're about to search #
-###########################################################################################################
-if((defined $dbconfig) && (defined $dbconfig->{"fetchPath"})) { 
-  my $name2lookup;
-  my $nwarnings = 0;
-  my $fetch_sqfile;
-  $fetch_sqfile = Bio::Easel::SqFile->new({
-    fileLocation => $dbconfig->{"fetchPath"}
-  });
-  for(my $i = 0; $i < $msa->nseq; $i++) { 
-    my $sqname = $msa->get_sqname($i);
-    my($is_nse, $name, $start, $end, $str) = Bio::Rfam::Utils::nse_breakdown($sqname);
-    $name2lookup = ($is_nse) ? $name : $sqname;
-    my $sqlen = $fetch_sqfile->fetch_seq_length_given_name($name2lookup);
-    if($sqlen == -1) { # sequence not in database
-      Bio::Rfam::Utils::printToFileAndStderr($logFH, "! WARNING: SEED sequence $sqname: $name2lookup not in database\n"); 
-        $nwarnings++;
-      }
-    elsif($sqlen != 0) { # we have a valid sequence length
-      if($start > $sqlen || $end > $sqlen) { # sequence in database but not long enough to cover $start-$end
-        Bio::Rfam::Utils::printToFileAndStderr($logFH, "! WARNING: SEED sequence $sqname: $name2lookup exists in database but seq length is $sqlen\n");
-          $nwarnings++;
-        }
-    }
-  }
-  if($nwarnings > 0 && (! $relax_about_seed)) { 
-    die "ERROR: at least 1 sequence in SEED does not derive from database (permit this with -relax)\ndatabase file: $fetch_sqfile->{path}"; 
-  }
+##############################################################################################
+# Preliminary check: verify that all sequences in the SEED are from GenBank, ENA or RNAcentral, unless -relax
+##############################################################################################
+if (! $relax_about_seed) { 
+  print "# Validating all SEED seqs exist in GenBank or RNAcentral (skip with -relax) ... ";
+  my $nfail = Bio::Rfam::QC::checkSEEDSeqs($famObj, $config->rfamseqObj, 0); # the '0' tells the sub not to 'be_verbose'
+  if($nfail > 0) { 
+    die "ERROR: $nfail sequences in SEED sequence is/are not in any of GenBank, ENA or RNAcentral (permit this with -relax)"; 
+ }
+  print "done\n";
 }
+else { 
+  # relax_about_seed is 1 (--relax used)
+  print "# Validating SEED sequence names are not present in target db (-relax) ... ";
+  my $err_str = Bio::Rfam::QC::checkSEEDSeqsNameOnly($famObj, $config->rfamseqObj, 1); # the '0' tells the sub not to 'be_verbose'
+  if($err_str ne "") { 
+    die "\nERROR: with -relax:\n$err_str";
+  }
+  print "done\n";
+}
+  
 
 ##############
 # Build step #
@@ -535,7 +536,6 @@ if ($do_build) {
   $cm = $famObj->CM($io->parseCM("CM"));
   $famObj->CM($io->parseCM("CM"));
 
-
   $is_cm_calibrated = 0;
 
   # use cmalign --mapali to get an RF annotation version of the SEED that we 
@@ -547,13 +547,11 @@ if ($do_build) {
   my $cmalign_mapali_file = "ma.$$.stk";
   Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
   Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, "", 1, undef, 0);
-  unlink $emit_fafile;
 
   # add RF annotation from cmalign --mapali output file to original SEED
   # to create a new SEED file 
   # (this subroutine expects the extra consensus sequence in the $cmalign_mapali_file alignment)
   add_rf_and_ss_cons_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen});
-  unlink $cmalign_mapali_file;
 
   # rebuild CM from new SEED
   my $copied_cmfile = $cmfile . ".$$";
@@ -566,8 +564,9 @@ if ($do_build) {
 
   # clean up
   if(! $do_dirty) { 
-    if(-e $outfile)       { unlink $outfile; }
-    if(-e $copied_cmfile) { unlink $copied_cmfile; }
+    foreach my $file2unlink ($outfile, $copied_cmfile, $cmalign_mapali_file, $emit_fafile) { 
+      if(-e $file2unlink) { unlink $file2unlink; }
+    }
   }
 
   $build_wall_secs = time() - $build_start_time;
@@ -653,18 +652,22 @@ else {
 ###############
 # Search step #
 ###############
-my $idx;                         # counter
-my $search_wall_secs        = 0; # wall time (secs) for search
-my $search_cpu_secs         = 0; # CPU time (secs) for all regular (non-reversed) db searches 
-my $search_max_wait_secs    = 0; # max time (secs) a job waited on cluster
-my $search_max_cpu_secs     = 0; # max CPU time (secs) a regular db search job took
-my $search_max_elp_secs     = 0; # max time (secs) elapsed a regular db search job took
-my $rev_search_cpu_secs     = 0; # CPU time (secs) for all reversed db searches
-my $rev_search_max_cpu_secs = 0; # max CPU time (secs) a reversed db search job took
-my $rev_search_max_elp_secs = 0; # max time (secs) elapsed a reversed db search job took
-my $ndbfiles                = 0; # number of db files searched (number of cmsearch calls)
-my $rev_ndbfiles            = 0; # number of reversed db files searched (number of cmsearch calls)
-my $did_search              = 0;
+my $idx;                          # counter
+my $search_wall_secs         = 0; # wall time (secs) for search
+my $search_cpu_secs          = 0; # CPU time (secs) for all regular (non-reversed) db searches 
+my $search_max_wait_secs     = 0; # max time (secs) a job waited on cluster
+my $search_max_cpu_secs      = 0; # max CPU time (secs) a regular db search job took
+my $search_max_elp_secs      = 0; # max time (secs) elapsed a regular db search job took
+my $rev_search_cpu_secs      = 0; # CPU time (secs) for all reversed db searches
+my $rev_search_max_cpu_secs  = 0; # max CPU time (secs) a reversed db search job took
+my $rev_search_max_elp_secs  = 0; # max time (secs) elapsed a reversed db search job took
+my $seed_search_cpu_secs     = 0; # CPU time (secs) for all reversed db searches
+my $seed_search_max_cpu_secs = 0; # max CPU time (secs) a reversed db search job took
+my $seed_search_max_elp_secs = 0; # max time (secs) elapsed a reversed db search job took
+my $ndbfiles                 = 0; # number of db files searched (number of cmsearch calls)
+my $rev_ndbfiles             = 0; # number of reversed db files searched (number of cmsearch calls)
+my $seed_ndbfiles            = 0; # number of SEED files searched (number of cmsearch calls, always 1)
+my $did_search               = 0;
 
 if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) { 
   my $search_start_time = time();
@@ -725,6 +728,14 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   if($rev_ndbfiles == 0) { $no_rev_search = 1; }
   # note that if -dbdir, -dbdir or -dbfile used, no reversed searches are done unless -rdbfile or -rdbdir
   #
+  # setup SEED search (we only do 1 search, but we create an array like we did for database search 
+  # and reversed database to keep subroutine calls and everything else consistent
+  # first we have to create the SEED fasta file (we could use esl-reformat on SEED
+  # and pipe into cmsearch, but we can't do that with existing cmsearch related subroutines
+  # so we make seed.fa first so we can use the same subroutines as the DB searches)
+  $msa->write_msa("seed.fa", "fasta");
+  my @seed_dbfileA = ("seed.fa");
+  
   # end of database setup
   #################################################################################
 
@@ -752,7 +763,7 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
 
   # We want to use the options in DESC's SM unless user set -ignoresm
   # remove default options that always get set automatically by rfsearch:
-  # -Z <f>, --FZ <f>, --cpu <n>, --verbose, --nohmmonly, --mxsize <f>
+  # -Z <f>, --FZ <f>, --cpu <n>, --verbose, --nohmmonly
   # we defined $desc_searchopts way above, when we were processing cmdline options
 
   # Currently we may need to convert a search E-value threshold in the DESC's SM
@@ -768,11 +779,6 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   my $e_opt_bitsc      = undef;
   my $ga_opt_bitsc     = undef
   my $thr_searchopts   = undef;
-  # unless --mxsize set on command line, set it to the default
-  if(! defined $mxsize_opt) { 
-    # use --mxsize=512 for models > 2000 (currently only LSU) and --mxsize=128 for all other models 
-    $mxsize_opt = ($cm->{cmHeader}->{clen} >= 2000) ? 512 : 128; 
-  }
 
   # are we going to ignore the SM methods? If not, then we will use the -E or -T
   # from that line. We checked for this above during option processing/checking.
@@ -840,7 +846,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   $rev_searchopts  = $searchopts . $rev_Zopt;
   $searchopts     .= $Zopt;
   # and finally, add the --mxsize opt, added relatively close to 12.0 release (after nearly all families were done, to deal with LSU (EPN, Fri May 30 14:53:47 2014))
-  $searchopts     .= " --mxsize $mxsize_opt "; 
+  if(defined $mxsize_opt) { 
+    $searchopts     .= " --mxsize $mxsize_opt "; 
+  }
 
   $searchopts     .= $extra_searchopts;
   $rev_searchopts .= $extra_searchopts;
@@ -857,19 +865,25 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   #################################################################################
   # Submit cmsearch jobs, wait for them to finish, and process their output.
   
-  my @jobnameA     = (); # names of jobs for regular searches
-  my @tblOA        = (); # names of --tblout files for regular searches
-  my @cmsOA        = (); # names of cmsearch output files for regular searches
-  my @errOA        = (); # names of error files for regular searches
-  my @rev_jobnameA = (); # names of jobs for reversed searches
-  my @rev_tblOA    = (); # names of --tblout files for reversed searches
-  my @rev_cmsOA    = (); # names of cmsearch output files for reversed searches
-  my @rev_errOA    = (); # names of error files for reversed searches
+  my @jobnameA      = (); # names of jobs for regular searches
+  my @tblOA         = (); # names of --tblout files for regular searches
+  my @cmsOA         = (); # names of cmsearch output files for regular searches
+  my @errOA         = (); # names of error files for regular searches
+  my @rev_jobnameA  = (); # names of jobs for reversed searches
+  my @rev_tblOA     = (); # names of --tblout files for reversed searches
+  my @rev_cmsOA     = (); # names of cmsearch output files for reversed searches
+  my @rev_errOA     = (); # names of error files for reversed searches
+  my @seed_jobnameA = (); # names of jobs for SEED search
+  my @seed_tblOA    = (); # names of --tblout files for SEED search
+  my @seed_cmsOA    = (); # names of cmsearch output files for SEED search
+  my @seed_errOA    = (); # names of error files for SEED search
 
-  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
+  submit_or_run_cmsearch_jobs($config, $ndbfiles, "s.",  $searchopts, $cm->{cmHeader}->{w}, $cmfile, \@dbfileA, \@jobnameA, \@tblOA, \@cmsOA, \@errOA, $ssopt_str, $q_opt, $do_all_local);
   if($rev_ndbfiles > 0) { 
-    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
+    submit_or_run_cmsearch_jobs($config, $rev_ndbfiles, "rs.", $rev_searchopts, $cm->{cmHeader}->{w}, $cmfile, \@rev_dbfileA, \@rev_jobnameA, \@rev_tblOA, \@rev_cmsOA, \@rev_errOA, $ssopt_str, $q_opt, $do_all_local);
   }
+  submit_or_run_cmsearch_jobs($config, 1, "ss.",  $searchopts, $cm->{cmHeader}->{w}, $cmfile, \@seed_dbfileA, \@seed_jobnameA, \@seed_tblOA, \@seed_cmsOA, \@seed_errOA, $ssopt_str, $q_opt, $do_all_local);
+  
   my @all_jobnameA = @jobnameA;
   my @all_tblOA    = @tblOA;
   my @all_errOA    = @errOA;
@@ -878,6 +892,9 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
     push(@all_tblOA,    @rev_tblOA);
     push(@all_errOA,    @rev_errOA);
   }
+  push(@all_jobnameA, @seed_jobnameA);
+  push(@all_tblOA,    @seed_tblOA);
+  push(@all_errOA,    @seed_errOA);
 
   if(! $do_all_local) { 
     # wait for cluster jobs to finish
@@ -887,11 +904,13 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   $search_wall_secs     = time() - $search_start_time;
   
   # concatenate files (no need to validate output, we already did that in wait_for_cluster())
-  my $all_errO     = "searcherr";
-  my $all_tblO     = "TBLOUT";
-  my $all_rev_tblO = "REVTBLOUT";
-  my $all_cmsO     = "searchout";
-  my $all_rev_cmsO = "revsearchout";
+  my $all_errO      = "searcherr";
+  my $all_tblO      = "TBLOUT";
+  my $all_rev_tblO  = "REVTBLOUT";
+  my $all_seed_tblO = "SEEDTBLOUT";
+  my $all_cmsO      = "searchout";
+  my $all_rev_cmsO  = "revsearchout";
+  my $all_seed_cmsO = "seedsearchout";
 
   if(! $do_all_local) { 
     # if we ran jobs on the cluster, first create the concatenated error file, if it's not empty we'll die before creating TBLOUT
@@ -909,6 +928,8 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
     Bio::Rfam::Utils::concatenate_files(\@rev_tblOA, $all_rev_tblO, (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
     Bio::Rfam::Utils::concatenate_files(\@rev_cmsOA, $all_rev_cmsO, (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
   }
+  Bio::Rfam::Utils::concatenate_files(\@seed_tblOA, $all_seed_tblO,  (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
+  Bio::Rfam::Utils::concatenate_files(\@seed_cmsOA, $all_seed_cmsO,  (! $do_dirty)); # '! $do_dirty' says delete original files after concatenation, unless -dirty
 
   # update DESC with search method
   if($searchopts ne "") { $searchopts .= " "; } # add trailing single space so next line properly formats SM (and blank opts ("") will work too)
@@ -923,12 +944,17 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
     if($rev_search_max_elp_secs > $search_max_elp_secs) { $search_max_elp_secs = $rev_search_max_elp_secs; }
     $search_cpu_secs += $rev_search_cpu_secs;
   }
+  Bio::Rfam::Infernal::process_cpu_times($all_seed_cmsO, "Total CPU time:", \$seed_search_max_cpu_secs, \$seed_search_max_elp_secs, \$seed_search_cpu_secs, undef);
+  if($seed_search_max_cpu_secs > $search_max_cpu_secs) { $search_max_cpu_secs = $seed_search_max_cpu_secs; }
+  if($seed_search_max_elp_secs > $search_max_elp_secs) { $search_max_elp_secs = $seed_search_max_elp_secs; }
+  $search_cpu_secs += $seed_search_cpu_secs;
   $did_search = 1;
 
   # write TBLOUT-dependent files
   my $require_tax = 0;
   if(defined $dbconfig) { $require_tax = 1; } # we require tax info if we're doing standard search against a db in the config
-  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $logFH);
+  my $fetch_seed_info = ($relax_about_seed) ? 0 : 1; # with -relax, don't attempt to fetch seed sequence info from GenBank/RNAcentarl
+  $io->writeTbloutDependentFiles($famObj, $config->rfamlive, $famObj->SEED, $famObj->DESC->CUTGA, $config->RPlotScriptPath, $require_tax, $fetch_seed_info, $logFH);
 
   # End of block for submitting/running and processing cmsearch jobs
   #################################################################################
@@ -1037,15 +1063,14 @@ exit(0);
 ######################################################################
 
 sub submit_or_run_cmsearch_jobs {
-  my ($config, $ndbfiles, $prefix, $searchopts, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
+  my ($config, $ndbfiles, $prefix, $searchopts, $w, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
   my ($idx, $file_idx, $dbfile);
 
-  # determine Gb of memory we need per thread based on $searchopts, if it contains '--mxsize <d>' with <d> > 500
-  # use 8Gb, otherwise use 3gb. This step was implemented this to deal with Eukaryotic LSU, which requires more 
-  # than 3Gb per thread
+  # determine Gb of memory we need per thread based on $w, if it's >= 1000, require 8Gb,
+  # otherwise use 3gb.
   my $gbPerThread = 3.0;
-  if($searchopts =~ /\-\-mxsize\s+(\d+)/) { 
-    if($1 > 500) { $gbPerThread = 8.0; }
+  if($w >= 1000) { 
+    $gbPerThread = 8.0; 
   }
 
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
@@ -1342,7 +1367,7 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
             -hand      : pass --hand option to cmbuild, SEED must have nongap RF annotation
             -enone     : pass --enone option to cmbuild
             -ignorebm  : ignore build method (BM) in DESC
-            -relax     : relax requirement that all SEED seqs exist in target database
+            -relax     : relax requirement that all SEED seqs exist are in GenBank or RNAcentral
 
             OPTIONS RELATED TO CALIBRATION STEP (cmcalibrate):
 	    -c         : always run cmcalibrate (default: only run if 'CM' is not calibrated)

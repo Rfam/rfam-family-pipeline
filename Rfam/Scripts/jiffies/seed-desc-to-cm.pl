@@ -1,8 +1,17 @@
-my $usage = "perl seed-desc-to-cm.pl <SEED file with DESC> <CM file to add DESC to>";
+#!/usr/bin/env perl
+
+my $usage = "perl seed-desc-to-cm.pl <SEED file with DESC> <CM file to add DESC to> > RFXXXXX.cm";
+
 if(scalar(@ARGV) != 2) { 
+
   die $usage;
 }
+
 ($seed, $cm) = (@ARGV);
+
+#my $seed = $ARGV[1];
+#my $cm = $ARGV[2];
+
 open(SEED, $seed) || die "ERROR unable to open $seed";
 
 while($line = <SEED>) { 
