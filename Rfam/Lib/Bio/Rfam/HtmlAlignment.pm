@@ -434,6 +434,9 @@ sub _format_block_html {
                                     { join => [ {'rfamseq_acc' => 'ncbi' } ] } )
                           ->first;
       #get bit score
+      unless (defined $rs) {
+          next ROW;
+      }
       $bit_score = $rs->bit_score;
     }
     unless ( defined $rs and defined $rs->rfamseq_acc ) {
