@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: rfam-pvc-$USERID
+ labels:
+   user: $USERID
+ annotations:
+  volume.beta.kubernetes.io/storage-class: gluster-heketi
+spec:
+  accessModes:
+   - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi

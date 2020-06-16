@@ -13,6 +13,8 @@ use Data::Dumper;
 use Data::Printer;
 use Mail::Mailer;
 use File::Copy;
+use File::Spec;
+
 use vars qw( @ISA
              @EXPORT
 );
@@ -90,7 +92,10 @@ sub cmbuild_wrapper {
 
 sub cmcalibrate_wrapper {
   my ($config, $jobname, $options, $cmPath, $outPath, $errPath, $nproc, $queue, $doMPI, $do_locally) = @_;
-  
+
+  # get workdir path
+  my ($volumes, $workdir, $filename) = File::Spec->splitpath($cmPath);
+
   # ensure $cmPath exists
   if (! -e $cmPath) { die "CM file $cmPath does not exist"; }
   
@@ -102,7 +107,7 @@ sub cmcalibrate_wrapper {
   my $cmcalibratePath = $config->infernalPath . "cmcalibrate";
 
   # run cmcalibrate --forecast to predict how long job will take
-  my $forecast_out = "cfc.$$.out";
+  my $forecast_out = File::Spec->catfile($workdir, "cfc.$$.out");
   Bio::Rfam::Utils::run_local_command("$cmcalibratePath --forecast --nforecast $nproc $cmPath > $forecast_out");
 
   # parse cmcalibrate output
@@ -129,7 +134,12 @@ sub cmcalibrate_wrapper {
     }
     else { 
       my $gbPerThread = 3.0;
-      my $requiredMb = $nproc * $gbPerThread * 1000.; 
+      my $requiredMb = $nproc * $gbPerThread * 1000.;
+      
+      if ($config->location eq 'CLOUD'){
+      $requiredMb = 6000;
+      }
+      # if the job is run in the cloud, assign the job an index
       Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
   }
