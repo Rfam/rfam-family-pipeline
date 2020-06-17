@@ -260,9 +260,12 @@ sub cmsearch_or_cmscan_wrapper {
     my $ncpu;
     
     if ($config->location eq "CLOUD"){
-	if ($ncpu > 8){
-	$ncpu = 8; # maximum number of CPUs allowed per job on K8s 
-	}   
+	if ($cpus > 8){
+		$ncpu = 8; # maximum number of CPUs allowed per job on K8s 
+	}
+	else{
+   		$ncpu = ($cpus == 0) ? 1 : $cpus;
+	}
     }
     
     else {
