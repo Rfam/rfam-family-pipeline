@@ -259,7 +259,7 @@ sub cmsearch_or_cmscan_wrapper {
   else { # submit to cluster
     my $ncpu;
     
-    if ($config->location eq "CLOUD"){
+    if ($config->location eq "CLOUD" && $ncpu > 8){
 	$ncpu = 8; # maximum number of CPUs allowed per job on K8s 
     }
     
