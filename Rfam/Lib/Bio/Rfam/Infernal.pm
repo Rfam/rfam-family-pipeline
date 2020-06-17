@@ -136,9 +136,9 @@ sub cmcalibrate_wrapper {
       my $gbPerThread = 3.0;
       my $requiredMb = $nproc * $gbPerThread * 1000.;
       
-      if ($config->location eq 'CLOUD'){
-      $requiredMb = 6000;
-      }
+      #if ($config->location eq 'CLOUD'){
+      #$requiredMb = 6000;
+      #}
       # if the job is run in the cloud, assign the job an index
       Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
@@ -259,8 +259,10 @@ sub cmsearch_or_cmscan_wrapper {
   else { # submit to cluster
     my $ncpu;
     
-    if ($config->location eq "CLOUD" && $ncpu > 8){
+    if ($config->location eq "CLOUD"){
+	if ($ncpu > 8){
 	$ncpu = 8; # maximum number of CPUs allowed per job on K8s 
+	}   
     }
     
     else {
