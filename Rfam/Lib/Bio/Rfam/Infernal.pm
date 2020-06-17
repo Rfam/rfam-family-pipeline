@@ -257,7 +257,16 @@ sub cmsearch_or_cmscan_wrapper {
     Bio::Rfam::Utils::run_local_command($config->infernalPath . "$program $options $cmPath $seqfilePath > $outPath"); 
   }
   else { # submit to cluster
-    my $ncpu = ($cpus == 0) ? 1 : $cpus; # --cpu 0 actually means 'use 1 CPU'
+    my $ncpu;
+    
+    if ($config->location eq "CLOUD"){
+	$ncpu = 8; # maximum number of CPUs allowed per job on K8s 
+    }
+    
+    else {
+    	$ncpu = ($cpus == 0) ? 1 : $cpus; # --cpu 0 actually means 'use 1 CPU'
+    }
+    
     my $requiredMb = $ncpu * $gbPerThread * 1000.; # 
     Bio::Rfam::Utils::submit_nonmpi_job($config->location, $config->infernalPath . "$program $options $cmPath $seqfilePath > $outPath", $jobname, $errPath, $ncpu, $requiredMb, $submitExStr, $queue);
   }
