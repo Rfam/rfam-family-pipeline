@@ -19,8 +19,7 @@ RUN apt-get update && apt-get install -y curl \
     gfortran \
     default-jdk \
     r-base \
-    r-base-dev \
-    mysql-server
+    r-base-dev
 
 RUN apt-get install -y libimage-size-perl \
   libtest-most-perl \
@@ -54,10 +53,11 @@ cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
 cpan -f install JSON && \
-cpan -f install JSON::XS \
-cpan -f install DBI \
-cpan -f install DBI::mysql
-
+cpan -f install JSON::XS
+#cpan -f install DBI
+#cpan -f install DBI::mysql \
+#cpan -f install Catalyst::Devel
+#cpan -f install Catalyst::Model::DBIC::Schema
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
@@ -210,6 +210,9 @@ curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && \
 pip install requests
 
+
+RUN apt-get install -y libclass-dbi-loader-perl
+
 # clone Rfam repo
 RUN cd /Rfam && git clone -b hotfix-dbi-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
 cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/. && \
@@ -233,12 +236,29 @@ RUN apt-get install -y python3 && \
 python3 /Rfam/get-pip.py && \
 pip3 install kubernetes
 
-ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+RUN apt-get update && apt-get install -y libcatalyst-devel-perl \
+#libclass-dbi-perl \
+#libclass-dbi-loader-perl \
+libclass-dbi-mysql-perl \
+libdbix-class-schema-loader-perl \
+libsvn-perl
 
-ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam_cloud.conf
+RUN cpan -f install Catalyst::Model::DBI
+RUN cpan -f install DBIx::Class
+RUN cpan -f install Catalyst::Devel
+RUN cpan -f install DBIx::Class
+RUN cpan -f install Catalyst::Model
+RUN cpan -f install DBIx::Class::ResultSet
+
+
+ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
 ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:$PERL5LIB
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
+
+ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+
+
