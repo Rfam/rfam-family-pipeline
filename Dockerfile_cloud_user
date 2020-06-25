@@ -247,6 +247,9 @@ RUN cpan -f install DBIx::Class
 RUN cpan -f install Catalyst::Model
 RUN cpan -f install DBIx::Class::ResultSet
 
+RUN apt-get install -y nano \
+less
+
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
 WORKDIR /home/rfam-user
