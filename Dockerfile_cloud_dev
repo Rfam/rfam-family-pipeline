@@ -237,8 +237,6 @@ python3 /Rfam/get-pip.py && \
 pip3 install kubernetes
 
 RUN apt-get update && apt-get install -y libcatalyst-devel-perl \
-#libclass-dbi-perl \
-#libclass-dbi-loader-perl \
 libclass-dbi-mysql-perl \
 libdbix-class-schema-loader-perl \
 libsvn-perl
