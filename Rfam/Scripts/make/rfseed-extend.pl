@@ -113,6 +113,7 @@ my $famObj = Bio::Rfam::Family->new(
                                     'SEED' => {
                                                fileLocation => $inseed,
                                                aliType      => 'seed',
+                                               isRna        => 1,
                                                forceText    => 1
                                               },
                                     'DESC'   => $io->parseDESC("DESC"),

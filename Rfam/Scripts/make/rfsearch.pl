@@ -192,7 +192,8 @@ elsif(! -s "DESC") {
 my $famObj = Bio::Rfam::Family->new(
                                     'SEED' => {
                                                fileLocation => "SEED",
-                                               aliType      => 'seed'
+                                               aliType      => 'seed',
+                                               isRna        => 1
                                               },
                                     'TBLOUT' => { 
                                                  fileLocation => "TBLOUT",

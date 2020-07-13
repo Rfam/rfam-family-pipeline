@@ -65,7 +65,8 @@ my $io     = Bio::Rfam::FamilyIO->new;
 my $famObj = Bio::Rfam::Family->new(
                                     'SEED' => {
                                                fileLocation => "SEED",
-                                               aliType      => 'seed'
+                                               aliType      => 'seed',
+                                               isRna        => 1
                                               },
                                     'DESC'   => $io->parseDESC("DESC"),
                                     'CM'     => $io->parseCM("CM"),
