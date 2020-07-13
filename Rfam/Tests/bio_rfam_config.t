@@ -20,6 +20,7 @@ isa_ok($config, 'Bio::Rfam::Config');
 #my $familyIO = Bio::Rfam::FamilyIO->new( );
 
 #my $family = Bio::Rfam::Family->new( { SEED => { aliType => 'seed',
+#                                                 isRna => 1,
 #                                                 fileLocation => $test_data.'/SEED'},
 #                                       DESC  => $desc,
 #                                       TBLOUT => { fileLocation => $test_data.'/TBLOUT'} });

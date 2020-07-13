@@ -143,6 +143,7 @@ sub loadRfamFromRDB {
                            fileLocation => "$dir/$family/SEED",
                            aliType      => 'seed',
                            reqdFormat   => 'Stockholm',
+                           isRna        => 1,
                            forceText    => 1
                           },
                 'DESC'   => $descData,

@@ -146,7 +146,8 @@ my $io     = Bio::Rfam::FamilyIO->new;
 my $famObj = Bio::Rfam::Family->new(
                                     'SEED' => {
                                                fileLocation => "$inseed",
-                                               aliType      => 'seed'
+                                               aliType      => 'seed',
+                                               isRna        => 1
                                               },
                                     'TBLOUT' => { 
                                                  fileLocation => "TBLOUT",

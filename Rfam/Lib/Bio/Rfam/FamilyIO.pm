@@ -86,6 +86,7 @@ sub loadRfamFromLocalFile {
                 'SEED' => {
                            fileLocation => "$dir/$family/SEED",
                            aliType      => 'seed',
+                           isRna        => 1,
                            reqdFormat   => 'Stockholm',
                            # NOTE: we don't pass 'forceText => 1', if we did we'd read the alignment in text mode...
                           },
@@ -136,6 +137,7 @@ sub loadRfamFromLocalFile_preSEED {
                 'SEED' => {
                            fileLocation => "$dir/$family/SEED",
                            aliType      => 'seed',
+                           isRna        => 1,
                            reqdFormat   => 'Stockholm',
                            # NOTE: we don't pass 'forceText => 1', if we did we'd read the alignment in text mode...
                           },
@@ -192,6 +194,7 @@ sub loadRfamFromRDB {
                            fileLocation => "$dir/$family/SEED",
                            aliType      => 'seed',
                            reqdFormat   => 'Stockholm',
+                           isRna        => 1,
                            forceText    => 1
                           },
                 'DESC'   => $descData,
