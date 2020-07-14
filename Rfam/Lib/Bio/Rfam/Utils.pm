@@ -2722,128 +2722,128 @@ sub ncbi_taxonomy_fetch_taxinfo {
     croak "ERROR in $sub_name undefined or empty input name array"; 
   }
   my %taxid_H = (); # hash to keep track of the taxids in our input @{$taxid_AR}
-  my $taxid_str = "";
   foreach my $taxid (@{$taxid_AR}) { 
     if(! defined $taxid_H{$taxid}) { 
-      if($taxid_str ne "") { $taxid_str .= ","; }
-      $taxid_str .= $taxid;
       $taxid_H{$taxid} = 1;
     }
   }
   
-  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
-  my $xml = undef;
-  my $xml_string = get($genbank_url);
-  my $xml_valid = 0;
-  if(defined $xml_string) { 
-    $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-    if($@) { $xml_valid = 0; }
-    else   { $xml_valid = 1; }
-  }
-  
-  if(! $xml_valid) { 
-    # the get() command either failed (returned undef) or
-    # returned an invalid xml string, either way we
-    # wait a few seconds ($nseconds) and try again (up to
-    # $nattempts) times BUT we only do this if the ID doesn't look 
-    # like a RNAcentral ids. If it does, we do not do more attempts.
-    my $attempt_ctr = 1;
-    while((! $xml_valid) && ($attempt_ctr < $nattempts)) { 
-      sleep($nseconds);
-      $xml_string = get($genbank_url);
-      if(defined $xml_string) { 
-        $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-        if($@) { $xml_valid = 0; }
-        else   { $xml_valid = 1; }
+  # look up each taxid separately to avoid problem with fetching too many taxids (limit seems to be somewhere around 1000)
+  foreach my $taxid (sort keys (%taxid_H)) { 
+    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid;
+    my $xml = undef;
+    my $xml_string = get($genbank_url);
+    my $xml_valid = 0;
+    if(defined $xml_string) { 
+      $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+      if($@) { $xml_valid = 0; }
+      else   { $xml_valid = 1; }
+    }
+    
+    if(! $xml_valid) { 
+      # the get() command either failed (returned undef) or
+      # returned an invalid xml string, either way we
+      # wait a few seconds ($nseconds) and try again (up to
+      # $nattempts) times BUT we only do this if the ID doesn't look 
+      # like a RNAcentral ids. If it does, we do not do more attempts.
+      my $attempt_ctr = 1;
+      while((! $xml_valid) && ($attempt_ctr < $nattempts)) { 
+        sleep($nseconds);
+        $xml_string = get($genbank_url);
+        if(defined $xml_string) { 
+          $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+          if($@) { $xml_valid = 0; }
+          else   { $xml_valid = 1; }
+        }
+        $attempt_ctr++;
       }
-      $attempt_ctr++;
+      if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
+        croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid\n"; 
+      }
     }
-    if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
-      croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid_str\n"; 
-    }
-  }
-
-  foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
-    my $cur_taxid = $taxon->findvalue('./TaxId');
-    if(! defined $cur_taxid) { 
-      croak "ERROR in $sub_name unable to parse taxid from xml";
-    }
-    # check if there are any additional taxids:
-    my @aka_taxid_A = ();
-    foreach my $aka_taxid_node ($taxon->findnodes('./AkaTaxIds/TaxId')) { 
-      push(@aka_taxid_A, $aka_taxid_node->to_literal());
-    }
-    # Determine which input taxid this xml set pertains to.
-    # It is not necessarily $cur_taxid (because if input taxid has been merged
-    # with another taxid, then $cur_taxid will be the new taxid it was merged to).
-    # However, if $cur_taxid is not an input taxid, one of the ids in @aka_taxid_A
-    # should be. 
-    my $taxid = undef;
-    my $taxid_is_cur = 0; # the taxid we wanted to fetch we actually fetched (we didn't fetch a new taxid that was merged to the one we wanted)
-    if(defined $taxid_H{$cur_taxid}) { 
-      $taxid = $cur_taxid;
-      $taxid_is_cur = 1;
-    }
-    else { 
-      foreach my $aka_taxid (@aka_taxid_A) { 
-        if((! defined $taxid) && (defined $taxid_H{$aka_taxid})) { 
-          $taxid = $aka_taxid;
+    
+    foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
+      my $cur_taxid = $taxon->findvalue('./TaxId');
+      if(! defined $cur_taxid) { 
+        croak "ERROR in $sub_name unable to parse taxid from xml";
+      }
+      # check if there are any additional taxids:
+      my @aka_taxid_A = ();
+      foreach my $aka_taxid_node ($taxon->findnodes('./AkaTaxIds/TaxId')) { 
+        push(@aka_taxid_A, $aka_taxid_node->to_literal());
+      }
+      # Determine which input taxid this xml set pertains to.
+      # It is not necessarily $cur_taxid (because if input taxid has been merged
+      # with another taxid, then $cur_taxid will be the new taxid it was merged to).
+      # However, if $cur_taxid is not an input taxid, one of the ids in @aka_taxid_A
+      # should be. 
+      my $taxid = undef;
+      my $taxid_is_cur = 0; # the taxid we wanted to fetch we actually fetched (we didn't fetch a new taxid that was merged to the one we wanted)
+      if(defined $taxid_H{$cur_taxid}) { 
+        $taxid = $cur_taxid;
+        $taxid_is_cur = 1;
+      }
+      else { 
+        foreach my $aka_taxid (@aka_taxid_A) { 
+          if((! defined $taxid) && (defined $taxid_H{$aka_taxid})) { 
+            $taxid = $aka_taxid;
+          }
         }
       }
-    }
-    if(! defined $taxid) { 
-      croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
-    }
-
-    my $lineage = $taxon->findvalue('./Lineage');
-    if(! defined $lineage) { 
-      croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
-    }
-
-    my $scientific_name = $taxon->findvalue('./ScientificName');
-    if(! defined $scientific_name) { 
-      croak "ERROR in $sub_name unable to parse scientific_name from xml for taxid $cur_taxid";
-    }
-
-    my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
-    my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
-
-    my $tree_display_name = $species;
-    $tree_display_name =~ s/ /\_/g;
-
-    my $align_display_name = $tree_display_name . "[" . $taxid . "]";
-
-    # we only want the lineage starting at "superkingdom", so we have to parse further
-    my @lineage_A = split("; ", $lineage);
-    my $i = 0;
-    my $superkingdom_i = -1;
-    foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
-      my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
-      my $sub_rank = $sub_taxon->findvalue('./Rank');
-      if($sub_rank eq "superkingdom") { 
-        $superkingdom_i = $i;
+      if(! defined $taxid) { 
+        croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
       }
-      $i++;
-    }
-    my $tax_string = "Unclassified"; # overwritten below if we read LineageEx/Taxon info into @lineage_A
-    if($superkingdom_i != -1) { 
-      $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
-    }
-    # commented out this check: could be 'unclassified sequences' or 'marine metagenome' or maybe others? 
-    # this check used to verify it was an expected species value, but I commented it out because I 
-    # didn't want to need to list them all
-    #elsif($species !~ /^unclassified sequences/) { # could also 
-    #  croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
-    #}
+      
+      my $lineage = $taxon->findvalue('./Lineage');
+      if(! defined $lineage) { 
+        croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
+      }
+      
+      my $scientific_name = $taxon->findvalue('./ScientificName');
+      if(! defined $scientific_name) { 
+        croak "ERROR in $sub_name unable to parse scientific_name from xml for taxid $cur_taxid";
+      }
+      
+      my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
+      my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
+      
+      my $tree_display_name = $species;
+      $tree_display_name =~ s/ /\_/g;
 
-    if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
-      %{$tax_table_HHR->{$taxid}} = ();
-      $tax_table_HHR->{$taxid}{"species"}            = $species;
-      $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
-      $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
-      $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
-    }
-  }
+      my $align_display_name = $tree_display_name . "[" . $taxid . "]";
+      
+      # we only want the lineage starting at "superkingdom", so we have to parse further
+      my @lineage_A = split("; ", $lineage);
+      my $i = 0;
+      my $superkingdom_i = -1;
+      foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
+        my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
+        my $sub_rank = $sub_taxon->findvalue('./Rank');
+        if($sub_rank eq "superkingdom") { 
+          $superkingdom_i = $i;
+        }
+        $i++;
+      }
+      my $tax_string = "Unclassified"; # overwritten below if we read LineageEx/Taxon info into @lineage_A
+      if($superkingdom_i != -1) { 
+        $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
+      }
+      # commented out this check: could be 'unclassified sequences' or 'marine metagenome' or maybe others? 
+      # this check used to verify it was an expected species value, but I commented it out because I 
+      # didn't want to need to list them all
+      #elsif($species !~ /^unclassified sequences/) { # could also 
+      #  croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
+      #}
+      
+      if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
+        %{$tax_table_HHR->{$taxid}} = ();
+        $tax_table_HHR->{$taxid}{"species"}            = $species;
+        $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
+        $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
+        $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
+      }
+    } # end of 'foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon'))'
+  } # end of 'foreach my $taxid (sort keys %taxid_H)
 
   return;
 }
