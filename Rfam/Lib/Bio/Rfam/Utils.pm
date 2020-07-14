@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use Sys::Hostname;
 use File::stat;
+use File::Spec;
 use Carp;
 
 use Digest::MD5 qw(md5_hex);
@@ -95,6 +96,15 @@ sub submit_nonmpi_job {
     }
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
+  elsif($location eq "CLOUD"){
+
+
+    # temporarily minimize memory to 6GB only to work with the test cloud
+#    if ($reqMb >= 24000){
+#      $reqMb = 6000;
+#    }
+    $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $reqMb $jobname";
+  }
   elsif($location eq "JFRC") { 
     my $batch_opt = "";
     if(defined $ncpu && $ncpu > 1) { $batch_opt = "-pe batch $ncpu"; }
@@ -122,7 +132,7 @@ sub submit_nonmpi_job {
   return;
 }
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
 =head2 submit_mpi_job
 
@@ -165,6 +175,9 @@ sub submit_mpi_job {
     my $queue_opt = "";
     if($queue ne "") { $queue_opt = "-l $queue=true "; }
     $submit_cmd = "qsub -N $jobname -e $errPath -o /dev/null -b y -cwd -V -pe impi $nproc " . $queue_opt . "\"mpirun -np $nproc $cmd\" > /dev/null";
+  }
+  elsif ($location eq "CLOUD"){
+  	die "ERROR: MPI unavailable on CLOUD. Consider using -cnompi option";
   }
   else { 
     die "ERROR unknown location $location in submit_mpi_job()";
@@ -410,15 +423,15 @@ sub wait_for_cluster_light {
   my ($location, $username, $jobnameAR, $outnameAR, $errnameAR, $success_string, $program, $outFH, $extra_note, $max_minutes, $do_stdout) = @_;
 
   my $start_time = time();
-  
   my $n = scalar(@{$jobnameAR});
   my $i;
   if($extra_note ne "") { $extra_note = "  " . $extra_note; }
 
-  # sanity check
+  # sanity check - limit this to EBI and JFRC clusters only
+  
   if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
   if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
-
+  
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
   if($location eq "EBI") { 
     if(length($username) > 7) { 
@@ -430,13 +443,13 @@ sub wait_for_cluster_light {
       }
     }
   }
-  elsif($location ne "JFRC") { 
+  elsif(($location ne "JFRC") && ($location ne "CLOUD")) { 
     die "ERROR in wait_for_cluster_light, unrecognized location: $location"; 
   }
 
   my $sleep_nsecs = 30;  # we'll look at file system every 30 seconds
   my $print_freq  = 2; # print update every 2 loop iterations (about every 2*$sleep_nsecs seconds)
-  my @ininfoA = ();
+  my @ininfoA = (); # array to hold information about which job is still in the queue and running
   my @infoA  = ();
   my @elA    = ();
   my $max_wait_secs = 0;
@@ -452,15 +465,20 @@ sub wait_for_cluster_light {
   my @runningA  = ();  # [0..$n-1]: '1' if job is running (its error file does exist), else '0'
   my @waitingA  = ();  # [0..$n-1]: '1' if job is waiting (its error does not exists), else '0'
   my @finishedA  = (); # [0..$n-1]: '1' if job does not exist in the queue and so should be finished (revealed by 'qstat' or 'bjobs'), else '0'
+  
+  # initialize status buffers
   for($i = 0; $i < $n; $i++) { 
     $finishedA[$i] = 0;
     $successA[$i] = 0;
     $runningA[$i] = 0;
-    $waitingA[$i] = 1;
+    $waitingA[$i] = 1; # all jobs pending in the beginning
   }
+
+  # initialize counters
   my $nsuccess = 0;
   my $nrunning = 0;
   my $nwaiting = $n;
+  
   while($nsuccess != $n) { 
     # determine if we should check the cluster using 'qstat/bjobs' to determine
     # which jobs are no longer in the queue, these should've all finished
@@ -474,6 +492,7 @@ sub wait_for_cluster_light {
 
     #################################################
     # CLUSTER CHECK BLOCK
+    #
     if($do_cluster_check) { 
       #printf("checking the cluster with qstat/bjobs\n");
       sleep(rand(30)); # randomize wait time here, so all jobs started at same time don't run qstat/bjobs at exact same time
@@ -481,9 +500,16 @@ sub wait_for_cluster_light {
       $ncluster_check++;
       if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
       elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
+      # Fetch all running jobs of a specific user
+      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend`);} 
+      
+      # initialize array
       for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; } 
-      foreach $line (@infoA) { 
-        if($line =~ m/^\s*\d+\s+/) { 
+      
+      # parse job log
+      foreach $line (@infoA) {
+        if ($location ne "CLOUD"){
+        if($line =~ m/^\s*\d+\s+/) {   
           $line =~ s/^\s*//;
           @elA = split(/\s+/, $line);
           if($location eq "JFRC") { 
@@ -491,7 +517,8 @@ sub wait_for_cluster_light {
             # 396183 10.25000 QLOGIN     nawrockie    r     07/26/2013 10:10:41 new.q@h02u19.int.janelia.org                                      1        
             # 565685 0.00000 c.25858    nawrockie    qw    08/01/2013 15:18:55                                                                  81        
             ($jobname, $uname, $status) = ($elA[2], $elA[3], $elA[4]);
-          }
+          } # closes JFRC if
+
           elsif($location eq "EBI") { 
             # jobid   uname   status queue     sub node    run node    job name   date     
             # 5134531 vitor   RUN   research-r ebi-004     ebi5-037    *lection.R Apr 29 18:00
@@ -500,41 +527,79 @@ sub wait_for_cluster_light {
             if($status eq "RUN") { $jobname = $elA[6]; }
             else                 { $jobname = $elA[5]; }
             #print STDERR ("uname: $uname status: $status; jobname: $jobname\n");
-          }
-          #printf("\tjobname: $jobname uname: $uname status: $status\n");
+          } # closes EBI if
+          
+          # no need to do this for CLOUD 
           if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
+          
           # look through our list of jobs and see if this one matches
-          for($i = 0; $i < $n; $i++) { 
+          for($i = 0; $i < $n; $i++) { #5
             #printf("\t\tsuccess: %d\tininfo: %d\tmatch: %d\n", $successA[$i], $ininfoA[$i], ($jobnameAR->[$i] eq $jobname) ? 1 : 0);
+              if((! $successA[$i]) &&              # job didn't successfully complete already 
+                 (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
+                 ($jobnameAR->[$i] eq $jobname)) { # jobname match
+                  $ininfoA[$i] = 1; 
+                  $i = $n;
+                  
+                  if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
+                  if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
+              }
+          } # EBI/JFRC for loop
+        } # first line check here
+      } # EBI/JFRC location if
+      
+      # CHECK THE JOBS RUNNING ON THE CLOUD
+      else{
+	      
+          $line =~ s/^\s*//;
+          @elA = split(/\s+/, $line);
+	  # example of kubectl get output
+	  # -----
+	  # NAME                                            READY   STATUS              RESTARTS   AGE
+          # rfam-dev-entry-pod-deployment-689f678b4-58g6m   1/1     Running             0          24h
+          # rfsearch-job-ikalvari-m5vxz                     0/1     Completed           0          4d
+          # rfsearch-job-root-hzc28                         0/1     ContainerCreating   0          19m
+
+          ($jobname, $status) = ($elA[0], $elA[2]);
+          
+	  # check if any of the running jobs matches those in the job array
+          for($i = 0; $i < $n; $i++) { #5 - TODO: jobnameAR needs to be converted into a dictionary for faster processing
             if((! $successA[$i]) &&              # job didn't successfully complete already 
-               (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
-               ($jobnameAR->[$i] eq $jobname)) { # jobname match
-              $ininfoA[$i] = 1; 
-              $i = $n;
+                 (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
+                 (index($jobname, $jobnameAR->[$i]) != -1) && # jobname match
+		 ($status ne "Completed")) { # look for a substring if on CLOUD - change this to ne if eq doesn't work
+                  $ininfoA[$i] = 1; # job with jobname is still running or pending
+                  $i = $n; # skip the rest of the computations
               # check if job is in error status, if it is, then exit
-              if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
-              if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
-            }
-          }
-        }
-      }
+	      #
+              if (($location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed" && $status ne "ContainerCreating")){ die "wait_for_cluster_light(), internal error, kubectl shows Error status: $line"; }
+            } #internal if
+          } # for loop
+      } # cloud segment else
+    } # parse job log loop 
+   
       # for any job not still in the queue, it should have successfully finished
       for($i = 0; $i < $n; $i++) {
         $finishedA[$i] = ($ininfoA[$i] == 0) ? 1 : 0; 
-      }
+	}
       sleep(60.); # sleep 1 minute after checking cluster to allow jobs that we think are finished to finish writing output files
     } # end of 'if($do_cluster_check)'
+   
     # END OF CLUSTER CHECK BLOCK
     #################################################
 
+    # ---------------------------------------------------------------------------------------------------------------------------
+
     # now go through each job and check whether its error and output files exist, for those jobs
     # that our most recent cluster check revealed should be finished (true if $finishedA[$i] is '1')
-    # make sure they finished successfully
-    for($i = 0; $i < $n; $i++) { 
+    # make sure they finished successfully - Skip this if on CLOUD
+    
+    for($i = 0; $i < $n; $i++){ 
       # sanity check
       if(($runningA[$i] + $waitingA[$i] + $successA[$i]) != 1) { 
         die "wait_for_cluster_light() internal error, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
-      }
+      } 
+    
       if($successA[$i] == 0) { 
         # if err file exists
         #    if output file exists
@@ -549,15 +614,17 @@ sub wait_for_cluster_light {
           # but the expected output file either does not exist or is empty. If this happens, we wait 
           # up to 20 minutes for it to appear, to guard against the real possibility that the file 
           # is currently being written to but isn't visible to the file system yet).
-          if($finishedA[$i] && (! -s $outnameAR->[$i])) {
+          
+	  if($finishedA[$i] && (! -s $outnameAR->[$i])) {
             my $nsleep = 0;
             while((! -s $outnameAR->[$i]) && ($nsleep < 20)) { 
               sleep(60.);
               $nsleep++;
-            }
+            } 
           }
-          if(-e $outnameAR->[$i]) { 
-            if(-s $outnameAR->[$i]) { 
+          
+	  if(-e $outnameAR->[$i]) { # check if output file exists
+            if(-s $outnameAR->[$i]) { # check if output file not empty
               # check for success string in tail output, if it's not there and $finishedA[$i] is 1 (qstat/bjobs indicated this job should be finished) 
               # then wait a minute and check again (up to 10 times) 
               my $ncheck = 0;
@@ -606,7 +673,8 @@ sub wait_for_cluster_light {
             }
           }
         } # end of 'if(-e $errnameAR->[$i])'
-        else { # err file doesn't exist yet, job is waiting (or failed)
+        else { # err file doesn't exist yet, job is waiting (or failed) or job is running on cloud
+          if ($location ne "CLOUD"){
           if($finishedA[$i] == 1) { 
             die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output ERROR file $errnameAR->[$i] does not exist\n";
           }
@@ -614,8 +682,61 @@ sub wait_for_cluster_light {
             die "wait_for_cluster_light() internal error 2, job $i runningA[$i]: $runningA[$i], waitingA[$i]: $waitingA[$i], successA[$i]: $successA[$i] (exactly 1 of these should be 1 and the others 0)";
           }
         }
-      }
-    } # end of 'for($i = 0; $i < $n; $i++)'
+        # re-do outfile checks because on CLOUD
+        else{ # running on Cloud
+          if(-e $outnameAR->[$i]) { # check if output file exists
+            if(-s $outnameAR->[$i]) { # check if output file not empty
+              # check for success string in tail output, if it's not there and $finishedA[$i] is 1 (qstat/bjobs indicated this job should be finished) 
+              # then wait a minute and check again (up to 10 times) 
+              my $ncheck = 0;
+              while(($ncheck == 0) || ($finishedA[$i] == 1 && $ncheck < 20 && $successA[$i] == 0)) { # if finishedA[$i] is 1, we'll stay in this loop until we've found the $success_string or checked for it 10 times
+                my $tail= `tail $outnameAR->[$i]`;
+		foreach $line (split ('\n', $tail)) { 
+		if($line =~ m/\Q$success_string/) {
+                    $successA[$i] = 1; 
+                    $nsuccess++;
+                    if($runningA[$i] == 1) { $runningA[$i] = 0; $nrunning--; }
+                    if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; }
+                    #printf("\tjob %2d finished successfully!\n", $i);
+                    last;
+                  }
+                }
+                $ncheck++;
+                if($successA[$i] == 0) { # didn't find $success_string
+                  sleep(60.);
+                }
+              }
+              if($successA[$i] == 0) { # we didn't find the $success_string in the output
+                if($finishedA[$i] == 1) { # if our cluster check revealed this job should be finished, then we waited 20 minutes and it still didn't have success, so die
+                  die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but tail of expected output file $outnameAR->[$i] does not contain: $success_string\n"; 
+                }
+              }
+            } #end of 'if(-s $outnameAR->[$i])'
+            else { # $outfile exists but is empty, job is running or failed
+              if($finishedA[$i] == 1) {
+		      #die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] is empty\n";
+              }
+              elsif($runningA[$i] == 0) { 
+                $runningA[$i] = 1; 
+                $nrunning++;
+                if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; }
+              }
+            }
+          } # end of 'if(-e $outnameAR->[$i])'
+          else { # outfile doesn't exist, but errfile does, job is running or failed
+            if($finishedA[$i] == 1) { 
+		    #die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output file $outnameAR->[$i] does not exist\n";
+            }
+            elsif($runningA[$i] == 0) { 
+              $runningA[$i] = 1; 
+              $nrunning++;
+              if($waitingA[$i] == 1) { $waitingA[$i] = 0; $nwaiting--; } 
+            }
+          }
+        }
+        }
+	   }
+  } # end of 'for($i = 0; $i < $n; $i++)'
 
     if($nwaiting > 0) { $max_wait_secs = time() - $start_time; } 
     $minutes_elapsed = (time() - $start_time) / 60;
@@ -635,7 +756,6 @@ sub wait_for_cluster_light {
       $ncycle_tot++;
     }
   }
-
   return $max_wait_secs;
   # The only way we'll get here is if all jobs are finished 
   # and have $success_string in output file, if not, we'll have die'd earlier
@@ -664,6 +784,29 @@ sub format_time_string {
   $seconds -= $m * 60;
 
   return sprintf("%02d:%02d:%02d", $h, $m, int($seconds + 0.5));
+}
+
+#-------------------------------------------------------------------------------
+
+=head2 delete_completed_k8s_jobs
+
+  Title    : delete_completed_k8s_jobs()
+  Incept   : IK, Wed Mar 6 20:08:10 2019
+  Usage    : delete_completed_k8s_jobs($user, $tier)
+  Function : Delete all k8s jobs of a specific
+           : user. 
+  Args     : $user: user id
+           : $tier: backend/frontend
+  Returns  : void
+
+=cut
+
+sub delete_completed_k8s_jobs { 
+  my ($user, $tier) = @_;
+
+  my $cmd = "kubectl delete jobs --selector=user=$user --selector=tier=$tier";
+  run_local_command($cmd);
+  
 }
 
 #-------------------------------------------------------------------------------
@@ -2579,128 +2722,128 @@ sub ncbi_taxonomy_fetch_taxinfo {
     croak "ERROR in $sub_name undefined or empty input name array"; 
   }
   my %taxid_H = (); # hash to keep track of the taxids in our input @{$taxid_AR}
-  my $taxid_str = "";
   foreach my $taxid (@{$taxid_AR}) { 
     if(! defined $taxid_H{$taxid}) { 
-      if($taxid_str ne "") { $taxid_str .= ","; }
-      $taxid_str .= $taxid;
       $taxid_H{$taxid} = 1;
     }
   }
   
-  my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid_str;
-  my $xml = undef;
-  my $xml_string = get($genbank_url);
-  my $xml_valid = 0;
-  if(defined $xml_string) { 
-    $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-    if($@) { $xml_valid = 0; }
-    else   { $xml_valid = 1; }
-  }
-  
-  if(! $xml_valid) { 
-    # the get() command either failed (returned undef) or
-    # returned an invalid xml string, either way we
-    # wait a few seconds ($nseconds) and try again (up to
-    # $nattempts) times BUT we only do this if the ID doesn't look 
-    # like a RNAcentral ids. If it does, we do not do more attempts.
-    my $attempt_ctr = 1;
-    while((! $xml_valid) && ($attempt_ctr < $nattempts)) { 
-      sleep($nseconds);
-      $xml_string = get($genbank_url);
-      if(defined $xml_string) { 
-        $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-        if($@) { $xml_valid = 0; }
-        else   { $xml_valid = 1; }
+  # look up each taxid separately to avoid problem with fetching too many taxids (limit seems to be somewhere around 1000)
+  foreach my $taxid (sort keys (%taxid_H)) { 
+    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid;
+    my $xml = undef;
+    my $xml_string = get($genbank_url);
+    my $xml_valid = 0;
+    if(defined $xml_string) { 
+      $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+      if($@) { $xml_valid = 0; }
+      else   { $xml_valid = 1; }
+    }
+    
+    if(! $xml_valid) { 
+      # the get() command either failed (returned undef) or
+      # returned an invalid xml string, either way we
+      # wait a few seconds ($nseconds) and try again (up to
+      # $nattempts) times BUT we only do this if the ID doesn't look 
+      # like a RNAcentral ids. If it does, we do not do more attempts.
+      my $attempt_ctr = 1;
+      while((! $xml_valid) && ($attempt_ctr < $nattempts)) { 
+        sleep($nseconds);
+        $xml_string = get($genbank_url);
+        if(defined $xml_string) { 
+          $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+          if($@) { $xml_valid = 0; }
+          else   { $xml_valid = 1; }
+        }
+        $attempt_ctr++;
       }
-      $attempt_ctr++;
+      if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
+        croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid\n"; 
+      }
     }
-    if(($attempt_ctr >= $nattempts) && (! $xml_valid)) { 
-      croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid_str\n"; 
-    }
-  }
-
-  foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
-    my $cur_taxid = $taxon->findvalue('./TaxId');
-    if(! defined $cur_taxid) { 
-      croak "ERROR in $sub_name unable to parse taxid from xml";
-    }
-    # check if there are any additional taxids:
-    my @aka_taxid_A = ();
-    foreach my $aka_taxid_node ($taxon->findnodes('./AkaTaxIds/TaxId')) { 
-      push(@aka_taxid_A, $aka_taxid_node->to_literal());
-    }
-    # Determine which input taxid this xml set pertains to.
-    # It is not necessarily $cur_taxid (because if input taxid has been merged
-    # with another taxid, then $cur_taxid will be the new taxid it was merged to).
-    # However, if $cur_taxid is not an input taxid, one of the ids in @aka_taxid_A
-    # should be. 
-    my $taxid = undef;
-    my $taxid_is_cur = 0; # the taxid we wanted to fetch we actually fetched (we didn't fetch a new taxid that was merged to the one we wanted)
-    if(defined $taxid_H{$cur_taxid}) { 
-      $taxid = $cur_taxid;
-      $taxid_is_cur = 1;
-    }
-    else { 
-      foreach my $aka_taxid (@aka_taxid_A) { 
-        if((! defined $taxid) && (defined $taxid_H{$aka_taxid})) { 
-          $taxid = $aka_taxid;
+    
+    foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon')) { 
+      my $cur_taxid = $taxon->findvalue('./TaxId');
+      if(! defined $cur_taxid) { 
+        croak "ERROR in $sub_name unable to parse taxid from xml";
+      }
+      # check if there are any additional taxids:
+      my @aka_taxid_A = ();
+      foreach my $aka_taxid_node ($taxon->findnodes('./AkaTaxIds/TaxId')) { 
+        push(@aka_taxid_A, $aka_taxid_node->to_literal());
+      }
+      # Determine which input taxid this xml set pertains to.
+      # It is not necessarily $cur_taxid (because if input taxid has been merged
+      # with another taxid, then $cur_taxid will be the new taxid it was merged to).
+      # However, if $cur_taxid is not an input taxid, one of the ids in @aka_taxid_A
+      # should be. 
+      my $taxid = undef;
+      my $taxid_is_cur = 0; # the taxid we wanted to fetch we actually fetched (we didn't fetch a new taxid that was merged to the one we wanted)
+      if(defined $taxid_H{$cur_taxid}) { 
+        $taxid = $cur_taxid;
+        $taxid_is_cur = 1;
+      }
+      else { 
+        foreach my $aka_taxid (@aka_taxid_A) { 
+          if((! defined $taxid) && (defined $taxid_H{$aka_taxid})) { 
+            $taxid = $aka_taxid;
+          }
         }
       }
-    }
-    if(! defined $taxid) { 
-      croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
-    }
-
-    my $lineage = $taxon->findvalue('./Lineage');
-    if(! defined $lineage) { 
-      croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
-    }
-
-    my $scientific_name = $taxon->findvalue('./ScientificName');
-    if(! defined $scientific_name) { 
-      croak "ERROR in $sub_name unable to parse scientific_name from xml for taxid $cur_taxid";
-    }
-
-    my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
-    my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
-
-    my $tree_display_name = $species;
-    $tree_display_name =~ s/ /\_/g;
-
-    my $align_display_name = $tree_display_name . "[" . $taxid . "]";
-
-    # we only want the lineage starting at "superkingdom", so we have to parse further
-    my @lineage_A = split("; ", $lineage);
-    my $i = 0;
-    my $superkingdom_i = -1;
-    foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
-      my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
-      my $sub_rank = $sub_taxon->findvalue('./Rank');
-      if($sub_rank eq "superkingdom") { 
-        $superkingdom_i = $i;
+      if(! defined $taxid) { 
+        croak ("ERROR in $sub_name, unable to determine matching input tax id for fetched taxid $cur_taxid");
       }
-      $i++;
-    }
-    my $tax_string = "Unclassified"; # overwritten below if we read LineageEx/Taxon info into @lineage_A
-    if($superkingdom_i != -1) { 
-      $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
-    }
-    # commented out this check: could be 'unclassified sequences' or 'marine metagenome' or maybe others? 
-    # this check used to verify it was an expected species value, but I commented it out because I 
-    # didn't want to need to list them all
-    #elsif($species !~ /^unclassified sequences/) { # could also 
-    #  croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
-    #}
+      
+      my $lineage = $taxon->findvalue('./Lineage');
+      if(! defined $lineage) { 
+        croak "ERROR in $sub_name unable to parse lineage from xml for taxid $cur_taxid";
+      }
+      
+      my $scientific_name = $taxon->findvalue('./ScientificName');
+      if(! defined $scientific_name) { 
+        croak "ERROR in $sub_name unable to parse scientific_name from xml for taxid $cur_taxid";
+      }
+      
+      my $genbank_common_name = $taxon->findvalue('./OtherNames/GenbankCommonName');
+      my $species = sprintf("%s%s", $scientific_name, (defined $genbank_common_name) ? " ($genbank_common_name)" : "");
+      
+      my $tree_display_name = $species;
+      $tree_display_name =~ s/ /\_/g;
 
-    if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
-      %{$tax_table_HHR->{$taxid}} = ();
-      $tax_table_HHR->{$taxid}{"species"}            = $species;
-      $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
-      $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
-      $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
-    }
-  }
+      my $align_display_name = $tree_display_name . "[" . $taxid . "]";
+      
+      # we only want the lineage starting at "superkingdom", so we have to parse further
+      my @lineage_A = split("; ", $lineage);
+      my $i = 0;
+      my $superkingdom_i = -1;
+      foreach my $sub_taxon ($taxon->findnodes('./LineageEx/Taxon')) { 
+        my $sub_scientific_name = $sub_taxon->findvalue('./ScientificName');
+        my $sub_rank = $sub_taxon->findvalue('./Rank');
+        if($sub_rank eq "superkingdom") { 
+          $superkingdom_i = $i;
+        }
+        $i++;
+      }
+      my $tax_string = "Unclassified"; # overwritten below if we read LineageEx/Taxon info into @lineage_A
+      if($superkingdom_i != -1) { 
+        $tax_string = join("; ", splice(@lineage_A, $superkingdom_i));
+      }
+      # commented out this check: could be 'unclassified sequences' or 'marine metagenome' or maybe others? 
+      # this check used to verify it was an expected species value, but I commented it out because I 
+      # didn't want to need to list them all
+      #elsif($species !~ /^unclassified sequences/) { # could also 
+      #  croak "ERROR in $sub_name unable to find superkingdom rank for taxid $taxid and species is not 'unclassified sequences' but '$species'";
+      #}
+      
+      if(($taxid_is_cur) || (! defined $tax_table_HHR->{$taxid})) { 
+        %{$tax_table_HHR->{$taxid}} = ();
+        $tax_table_HHR->{$taxid}{"species"}            = $species;
+        $tax_table_HHR->{$taxid}{"tax_string"}         = $tax_string;
+        $tax_table_HHR->{$taxid}{"tree_display_name"}  = $tree_display_name;
+        $tax_table_HHR->{$taxid}{"align_display_name"} = $align_display_name;
+      }
+    } # end of 'foreach my $taxon ($xml->findnodes('/TaxaSet/Taxon'))'
+  } # end of 'foreach my $taxid (sort keys %taxid_H)
 
   return;
 }
