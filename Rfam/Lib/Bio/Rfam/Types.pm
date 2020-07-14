@@ -48,7 +48,7 @@ subtype RfamRef,
 
 subtype CmCutOff,
   as Str, 
-  where { $_ =~ m/\d+\.\d{1,2}/ },
+  where { $_ =~ m/\d+(\.\d{1,2})?/ },
   message { "\n\nExpecting a floating point to two decimal places, but got |$_|\n\n" }; 
 
 subtype hmmAlpha,
