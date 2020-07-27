@@ -215,10 +215,10 @@ RUN apt-get install -y libclass-dbi-loader-perl
 RUN echo "test"
 
 # clone Rfam repo
-RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git && \
-cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/. && \
-cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/. && \
-mv /Rfam/rfam-family-pipeline/Rfam/Conf/rfam_cloud.conf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+#RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git && \
+#cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/. && \
+#cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/. && \
+#mv /Rfam/rfam-family-pipeline/Rfam/Conf/rfam_cloud.conf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
 # install kubectl to establish communication with the k8s cluster
 RUN cd /usr/local/bin && \
@@ -250,7 +250,7 @@ RUN cpan -f install DBIx::Class::ResultSet
 RUN apt-get install -y nano \
 less
 
-# R-scape installation
+# R-scape installation - release 1.5.10
 RUN cd /Rfam/software && wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar -xvzf rscape.tar.gz && \
 mv rscape_* rscape && \
@@ -259,6 +259,14 @@ cd rscape && \
 ./configure && make && make install
 
 RUN apt-get install -y aspell
+
+# clone Rfam repo
+RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git && \
+cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/. && \
+cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/. && \
+mv /Rfam/rfam-family-pipeline/Rfam/Conf/rfam_cloud.conf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+
+RUN mkdir /mounts && mkdir mounts/mnt1 /mounts/mnt2 /mounts/mnt3
 
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
