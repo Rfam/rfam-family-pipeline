@@ -253,7 +253,8 @@ RUN apt-get install -y aspell
 
 #emacs installation
 RUN apt-get install -y software-properties-common && \
-add-apt-repository ppa:kelleyk/emacs
+add-apt-repository ppa:kelleyk/emacs && \
+apt-get install -y emacs24-lucid
 
 # set up user account to prevent from using root to run the scripts
 #RUN useradd --create-home -s /bin/bash rfam-user
