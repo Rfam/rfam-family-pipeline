@@ -525,11 +525,11 @@ sub _parseCMHMMHeader {
       $objHash->{hitTC} = $1;
     } elsif (/NC\s+(\S+)\;/) { 
       $objHash->{hitNC} = $1;
-    } elsif ( my ($msv_mu, $msv_lambda ) = $_ =~ /^STATS LOCAL MSV\s+(\S+)\s+(0\.\d+)/) {
+    } elsif ( my ($msv_mu, $msv_lambda ) = $_ =~ /^STATS LOCAL MSV\s+(\S+)\s+(\d+\.\d+)/) {
       $objHash->{msvStats} = { mu => $msv_mu, lambda => $msv_lambda};
-    } elsif ( my ($viterbi_mu, $viterbi_lambda ) = $_ =~ /^STATS LOCAL VITERBI\s+(\S+)\s+(0\.\d+)/) {
+    } elsif ( my ($viterbi_mu, $viterbi_lambda ) = $_ =~ /^STATS LOCAL VITERBI\s+(\S+)\s+(\d+\.\d+)/) {
       $objHash->{viterbiStats} = { mu => $viterbi_mu, lambda => $viterbi_lambda };
-    } elsif ( my ($forward_tau, $forward_lambda ) = $_ =~ /^STATS LOCAL FORWARD\s+(\S+)\s+(0\.\d+)/) {
+    } elsif ( my ($forward_tau, $forward_lambda ) = $_ =~ /^STATS LOCAL FORWARD\s+(\S+)\s+(\d+\.\d+)/) {
       $objHash->{forwardStats} = {tau => $forward_tau, lambda => $forward_lambda};
     } elsif ( $_ =~ /^HMM\s+A/) {
       $$iRef = $i;
