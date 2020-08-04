@@ -256,10 +256,19 @@ RUN apt-get install -y software-properties-common && \
 add-apt-repository ppa:kelleyk/emacs && \
 apt-get install -y emacs24-lucid
 
+# install ralee 
+RUN cd /Rfam/software && wget http://sgjlab.org/wp-content/uploads/2014/11/ralee-mode-0.8.tar.gz && \
+tar -xzvf ralee-mode*.tar.gz
+
+# set emacs config
+#COPY ralee-emacs /workdir/.emacs
+
 # set up user account to prevent from using root to run the scripts
-#RUN useradd --create-home -s /bin/bash rfam-user
-#WORKDIR /home/rfam-user
-#USER rfam-user
+RUN useradd --create-home -s /bin/bash rfam-user
+WORKDIR /home/rfam-user
+USER rfam-user
+
+COPY ralee-emacs /home/rfam-user/.emacs
 
 # add command to bashrc to move to /workdir
 RUN echo "cd /workdir" >> ~/.bashrc
