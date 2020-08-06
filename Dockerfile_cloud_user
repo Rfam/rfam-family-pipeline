@@ -260,12 +260,12 @@ cd rscape && \
 
 RUN apt-get install -y aspell
 
-#emacs installation
+# emacs installation
 RUN apt-get install -y software-properties-common && \
 add-apt-repository ppa:kelleyk/emacs && \
 apt-get install -y emacs24-lucid
 
-# install ralee
+# ralee installation using lisp files directly from ralee directory
 RUN cd /Rfam/software && wget http://sgjlab.org/wp-content/uploads/2014/11/ralee-mode-0.8.tar.gz && \
 tar -xzvf ralee-mode*.tar.gz
 
@@ -276,6 +276,7 @@ cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/. && \
 mv /Rfam/rfam-family-pipeline/Rfam/Conf/rfam_cloud.conf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
 RUN mkdir /mounts && mkdir mounts/mnt1 /mounts/mnt2 /mounts/mnt3
+RUN chmod 777 /workdir
 
 # set up user account to prevent from using root to run the scripts
 RUN useradd --create-home -s /bin/bash rfam-user
@@ -289,7 +290,7 @@ RUN echo "cd /workdir" >> ~/.bashrc
 
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/software/rscape/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
-ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:$PERL5LIB
+ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:/Rfam/software/ralee-0.8/perl:$PERL5LIB
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 
