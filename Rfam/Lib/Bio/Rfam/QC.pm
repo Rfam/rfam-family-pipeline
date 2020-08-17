@@ -1163,7 +1163,7 @@ sub checkSEEDSeqs_helper {
 
     # lookup in RNAcentral
     my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
-
+    my ($rnacentral_has_exact_subseq) = Bio::Rfam::Utils::rnacentral_subseq_lookup($nse, $seed_md5);
     #
     my $pass_rfm = 0;
     my $pass_gbk = 0;
@@ -1187,7 +1187,7 @@ sub checkSEEDSeqs_helper {
       if($be_verbose) { $outstr .= "NOT-NAME/START-END"; }
       else            { warn "SEED sequence $nse fails validation; it is not in valid name/start-end format\n"; }
     }
-    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) {
+    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq) && (! $rnacentral_has_exact_subseq)) {
       # 2) not in any of Rfamseq, GenBank, or RNAcentral
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "NO-MATCHES"; }
@@ -1231,7 +1231,9 @@ sub checkSEEDSeqs_helper {
         if($be_verbose) { $outstr .= "GBK:md5-pass;"; }
       }
     }
-    if($rnacentral_has_exact_seq) {
+    if($rnacentral_has_exact_subseq) {
+      $nrnc_pass += 1;
+    } elsif($rnacentral_has_exact_seq) {
       if($rnacentral_md5 ne $seed_md5) {
         # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)

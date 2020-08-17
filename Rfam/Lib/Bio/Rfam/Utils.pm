@@ -2934,6 +2934,60 @@ sub rnacentral_id_lookup {
 }
 
 #-------------------------------------------------------------------------------
+=head2 rnacentral_subseq_lookup
+  Title    : rnacentral_subseq_lookup
+  Incept   : AIP, Mon Aug 17 10:00:00 2020
+  Function : Checks if RNAcentral subsequence matches the RNAcentral sequence.
+  Args     : $nse: URS/start-end of a sequence from SEED
+           : $seed_md5: md5 of the URS/start-end subsequence according to SEED
+  Returns  : 1 value:
+           : 1 if subsequence matched md5 from RNAcentral or 0 otherwise.
+  Dies     : if there is a problem fetching from RNAcentral
+=cut
+
+sub rnacentral_subseq_lookup {
+  my ( $nse, $seed_md5 ) = @_;
+
+  my ($is_nse, $name, $start, $end, $strand) = nse_breakdown($nse);
+
+  my $urs;
+  if ($nse =~ /^(URS[0-9A-F]{10})/) {
+      $urs = $1;
+  } else {
+      return 0;
+  }
+
+  my $rnacentral_url = "https://rnacentral.org/api/v1/rna/" . $urs . ".fasta";
+  my $fasta = get($rnacentral_url);
+  if(! defined $fasta) { croak "ERROR trying to fetch fasta from RNAcentral $rnacentral_url"; }
+
+  my @lines = split(/^/m, $fasta);
+  my $sequence = '';
+  for my $line (@lines) {
+      if ($line =~ /^>/) {
+           next;
+      }
+      chomp($line);
+      $sequence .= $line;
+  }
+
+  my $subseq = '';
+  if ($strand == 1) {
+      $subseq = substr($sequence, $start-1, $end-$start+1);
+  } else {
+      printf("Found RNAcentral sequence in reverse orientation: $nse");
+      return 0;
+  }
+  my $subseq_md5 = md5_of_sequence_string($subseq);
+
+  if( $subseq_md5 eq $seed_md5) {
+      return 1;
+  } else {
+      return 0;
+  }
+}
+
+#-------------------------------------------------------------------------------
 =head2 id_looks_like_rnacentral
   Title    : id_looks_like_rnacentral
   Incept   : EPN, Fri Feb 22 16:24:58 2019
