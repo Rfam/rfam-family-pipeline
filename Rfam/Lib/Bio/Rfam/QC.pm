@@ -13,9 +13,9 @@ A more detailed description of what this class does and how it does it.
 
 =head1 COPYRIGHT
 
-File: QC.pm 
+File: QC.pm
 
-Copyright (c) 2013: 
+Copyright (c) 2013:
 
 
 Author: Rob Finn (rdf 'at' ebi.ac.uk or finnr 'at' janelia.hhmi.org)
@@ -36,16 +36,16 @@ use IPC::Run qw(run);
 
 =cut
 
-#Templating this off the old code......
+#Templating this off the old code.....
 sub checkFamilyFiles {
   my ( $family, $upFamilyObj ) = @_;
-  
+
   #Removed QC check below; this is now conducted as part of the checkin, and
   #not prior to checkin as it was in Sanger. Therefore no point looking for
   #qcpassed file:
 
   #&checkQCPerformed($family, $upFamilyObj);
-  
+
   #Now return result of timestamp check:
   return checkTimestamps($family,$upFamilyObj);
 	#return 1 on failure.
@@ -81,8 +81,8 @@ sub checkQCPerformed {
   Usage    : Bio::Rfam::QC::checkFamily($familyObj)
   Function : Performs series of format checks
   Args     : A Bio::Rfam::Family object
-  Returns  : 1 if an error is found, 
-  
+  Returns  : 1 if an error is found,
+
 =cut
 
 sub checkFamilyFormat {
@@ -121,7 +121,7 @@ sub checkFamilyFormat {
   Function : Performs format QC steps on the SEED, via the object.
   Args     : A Bio::Rfam::Family object
   Returns  : 1 on error, 0 on passing checks.
-  
+
 =cut
 
 sub checkSEEDFormat {
@@ -164,18 +164,18 @@ sub checkSEEDFormat {
     warn "FATAL: SEED does not have an SS_cons line\n";
     $error++;
   }
-  
+
   #If family is a lncRNA, ensure it does not have any secondary
   #structure in the SS line.
-  if( defined($familyObj->DESC->TP) and 
+  if( defined($familyObj->DESC->TP) and
       $familyObj->DESC->TP eq 'Gene; lncRNA;' ){
       if(!($familyObj->SEED->get_ss_cons =~ /^(\.|\:)*$/)){
         warn "Found family type lncRNA (TP line in DESC), but the seed contains secondary structure.\n";
         $error++;
       }
-    
+
   }
-  
+
   return $error;
 }
 
@@ -190,10 +190,10 @@ sub checkSEEDFormat {
            : Although largely done via the FamilyIO, that just parses fields and
            : does not perform integrity checks. This checks that the number of
            : SEED sequences and CM are consistent and that the number of sequences
-           : in the CM and internal HMM agree. 
+           : in the CM and internal HMM agree.
   Args     : A Bio::Rfam::Family object
   Returns  : 1 on error, 0 on passing checks.
-  
+
 =cut
 
 sub checkCMFormat {
@@ -221,20 +221,20 @@ sub checkCMFormat {
   }
 
   # Make sure the checksums match between the SEED and the CM
-  if($familyObj->CM->cmHeader->{cksum} != $familyObj->SEED->checksum) { 
+  if($familyObj->CM->cmHeader->{cksum} != $familyObj->SEED->checksum) {
     $error = 1;
     # checksums don't match, SEED may not be in digital mode
-    if(! $familyObj->SEED->is_digitized) { 
+    if(! $familyObj->SEED->is_digitized) {
       printf STDERR ("Checksum mismatch between SEED and CM, possibly because SEED was read in text mode, inspect Bio::Rfam::Family object declaration.\n");
     }
-    else { 
+    else {
       printf STDERR ("Checksum mismatch between SEED and CM, CM was not built from SEED.\n");
     }
     return $error;
   }
 
   # Make sure the CLEN in the CM is the same as the nongap RF length in the SEED
-  if(! $familyObj->SEED->has_rf) { 
+  if(! $familyObj->SEED->has_rf) {
     printf STDERR "FATAL: SEED does not have an RF line\n";
     $error = 1;
     return $error;
@@ -245,7 +245,7 @@ sub checkCMFormat {
     printf STDERR ("FATAL: CLEN in CM does not match nogap RF length in SEED.\n");
     $error = 1;
     return $error;
-  }    
+  }
 
   return $error;
 }
@@ -260,7 +260,7 @@ sub checkCMFormat {
   Function : Performs format QC steps on the DESC, via the object.
   Args     : A Bio::Rfam::Family object
   Returns  : 1 on error, 0 on passing checks.
-  
+
 =cut
 
 sub checkDESCFormat {
@@ -300,7 +300,7 @@ sub checkDESCFormat {
   Function : Performs format QC steps on the scores, via the object.
   Args     : A Bio::Rfam::Family object
   Returns  : 1 on error, 0 on passing checks.
-  
+
 =cut
 
 sub checkScoresFormat {
@@ -308,16 +308,16 @@ sub checkScoresFormat {
 
   my $threshold = $familyObj->DESC->CUTGA;
   #Should check that no regions exceed threshold?
-  
+
   #Now we have to ensure that all sequences are present and correct w.r.t to the
   #GA threshold. Run over the TBLOUT file and get all data from that raw,
   #infernal output.
 
   my $count = 0;
   my(@tbloutMatches, $nres);
-  open(T, '<', $familyObj->TBLOUT->fileLocation) 
+  open(T, '<', $familyObj->TBLOUT->fileLocation)
       or die "Failed to open TBLOUT file for reading.[$!]\n";
-  
+
   while(<T>){
     next if(/^#/); #Ignore lines starting with #
     my @line = split(/\s+/); #split on whitespace
@@ -346,26 +346,26 @@ sub checkScoresFormat {
          "] array differs from the count [". ($familyObj->SCORES->numRegions) ."].\n";
     $error = 1;
   }
-  
+
   $familyObj->SCORES->determineNres if(!$familyObj->SCORES->nres);
   if($nres != $familyObj->SCORES->nres){
     warn "The number of residues in the SCORES [".$familyObj->SCORES->nres.
           "] and TBLOUT [$nres] do not match.\n";
   }
-  
+
   return($error) if($error);
 
   #Now a deep comparison, if everything looks okay. Do this by making a string
   #out of all of the NSE from the TBLOUT and SCORES - then compare.
-  my $scoresMatches = join(" ", 
-                           sort { $a cmp $b } 
+  my $scoresMatches = join(" ",
+                           sort { $a cmp $b }
                            map { $_->[0]   }
                            @{$familyObj->SCORES->regions});
-  
+
   my $tbloutMatches = join(" ", sort { $a cmp $b } @tbloutMatches);
 
   if($scoresMatches ne $tbloutMatches){
-    warn "The matches between SCORES and TBLOUT differ!\n"; 
+    warn "The matches between SCORES and TBLOUT differ!\n";
     $error = 1;
   }
   return($error);
@@ -382,7 +382,7 @@ sub checkScoresFormat {
            : are present in the DESC file.
   Args     : A Bio::Rfam::Family object, a Bio::Rfam::Config object (optional).
   Returns  :  1 on error, 0 on passing checks.
-  
+
 =cut
 
 sub checkRequiredFields {
@@ -414,12 +414,12 @@ sub checkRequiredFields {
   }
 
   #Make sure none of the default values set in writeEmptyDESC still exist
-  foreach my $key ( keys %{ $familyObj->DESC->defaultButIllegalFields } ) { 
+  foreach my $key ( keys %{ $familyObj->DESC->defaultButIllegalFields } ) {
     if ( !defined( $familyObj->DESC->$key ) ) { #make sure it's defined first
       warn "Required DESC field $key not defined.\n";
       $error++;
     }
-    elsif( $familyObj->DESC->$key eq $familyObj->DESC->defaultButIllegalFields->{$key} ) { 
+    elsif( $familyObj->DESC->$key eq $familyObj->DESC->defaultButIllegalFields->{$key} ) {
       warn "DESC field $key illegal value (appears unchanged from an 'rfsearch.pl -nodesc' call).\n";
       $error++;
     }
@@ -427,9 +427,9 @@ sub checkRequiredFields {
     # a special case: make sure that --nohmmonly appears in the SM (search method)
     # so we can't check-in a family run with the -hmmonly option in rfsearch, which
     # is meant to be a option used for debugging only, not for production.
-    if(defined $familyObj->DESC->SM) { 
-      if($familyObj->DESC->SM !~ m/\-\-nohmmonly/) { 
-        warn "DESC SM field does not contain --nohmmonly.\n"; 
+    if(defined $familyObj->DESC->SM) {
+      if($familyObj->DESC->SM !~ m/\-\-nohmmonly/) {
+        warn "DESC SM field does not contain --nohmmonly.\n";
         $error++;
       }
     }
@@ -474,7 +474,7 @@ sub checkRequiredFields {
            : the expected data structure that is stored in the config.
   Args     : A Bio::Rfam::Family object, a Bio::Rfam::Config object (optional)
   Returns  : 0 if everything is okay, 1 if there is an error detected.
-  
+
 =cut
 
 sub checkTPField {
@@ -532,22 +532,22 @@ sub checkTPField {
   Function : Checks that nobody has changes the ID, AC, PI lines
   Args     : Bio::Rfam::Family object for old and new family.
   Returns  : 1 on error, 0 on success.
-  
+
 =cut
 
 sub checkFixedFields {
   my ($newFamilyObj, $oldFamilyObj) = @_;
-  
+
   my $error = 0;
-  
+
   if ( !$newFamilyObj or !$newFamilyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object (new)\n";
   }
-  
+
   if ( !$oldFamilyObj or !$oldFamilyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object (old)\n";
   }
-  
+
   if($newFamilyObj->DESC->AC ne $oldFamilyObj->DESC->AC){
     warn "Your accession (AC) differs between the old and new version of the family.\n";
     $error = 1;
@@ -557,14 +557,14 @@ sub checkFixedFields {
     warn "Your identifier (ID) differs between the old and new version of the family.\n";
     $error = 1;
   }
-  
+
   if( defined( $newFamilyObj->DESC->PI )){
     if($newFamilyObj->DESC->PI ne $oldFamilyObj->DESC->PI){
       warn "Your pervious identifers (PI) differs between the old and new version of the family.\n";
       $error = 1;
     }
   }
-  
+
   return $error;
 }
 
@@ -578,22 +578,22 @@ sub checkFixedFields {
   Function : Checks that nobody has changes the ID, AC, PI and MB lines
   Args     : Bio::Rfam::Clan object for old and new clan.
   Returns  : 1 on error, 0 on success.
-  
+
 =cut
 
 sub checkClanFixedFields {
   my ($newClanObj, $oldClanObj) = @_;
-  
+
   my $error = 0;
-  
+
   if ( !$newClanObj or !$newClanObj->isa('Bio::Rfam::Clan') ) {
     die "Did not get passed in a Bio::Rfam::Clan object (new)\n";
   }
-  
+
   if ( !$oldClanObj or !$oldClanObj->isa('Bio::Rfam::Clan') ) {
     die "Did not get passed in a Bio::Rfam::Clan object (old)\n";
   }
-  
+
   if($newClanObj->DESC->AC ne $oldClanObj->DESC->AC){
     warn "Your accession (AC) differs between the old and new version of the clan.\n";
     $error = 1;
@@ -603,14 +603,14 @@ sub checkClanFixedFields {
     warn "Your identifier (ID) differs between the old and new version of the clan.\n";
     $error = 1;
   }
-  
+
   if( defined( $newClanObj->DESC->PI )){
     if($newClanObj->DESC->PI ne $oldClanObj->DESC->PI){
       warn "Your pervious identifers (PI) differs between the old and new version of the Clan. This should be performed by CL move.\n";
       $error = 1;
     }
   }
-  
+
   #Now compare the membership of the old and new to check that nobody has change it here.
   my $old_members = defined $oldClanObj->DESC->MEMB ? $oldClanObj->DESC->MEMB : [];
   my $new_members = defined $newClanObj->DESC->MEMB ? $newClanObj->DESC->MEMB : [];
@@ -636,7 +636,7 @@ sub checkClanFixedFields {
         : "$d is not in the new membership\n";
     }
   }
-  
+
   return $error;
 }
 
@@ -646,11 +646,11 @@ sub checkClanFixedFields {
   Title    : checkNonFreeText
   Incept   : finnr, Aug 5, 2013 11:03:29 AM
   Usage    : Bio::Rfam::QC::checkNonFreeText($newFamilyObj, $oldFamilyObj)
-  Function : Checks that certain fields in the DESC have not changed between 
+  Function : Checks that certain fields in the DESC have not changed between
            : different the checked-in and modified versions
   Args     : Bio::Rfam::Family object for both the old and updated families.
   Returns  : 1 on error, 0 on success.
-  
+
 =cut
 
 sub checkNonFreeText {
@@ -661,11 +661,11 @@ sub checkNonFreeText {
   if ( !$upFamilyObj or !$upFamilyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
-  
+
   if ( !$oldFamilyObj or !$oldFamilyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
-  
+
   #The list of fields  that cannot be altered are:
   # NC, TC, GA,
   my $error = 0;
@@ -689,7 +689,7 @@ sub checkNonFreeText {
       $error = 1;
     }
   }
-  
+
   return ($error);
 }
 #------------------------------------------------------------------------------
@@ -705,7 +705,7 @@ sub checkNonFreeText {
            : just sequence accessions.
   Args     : A Bio::Rfam::Family object
   Returns  : 0 when all sequences found, otherwise 1
-  
+
 =cut
 
 sub compareSeedAndSeedScores {
@@ -715,7 +715,7 @@ sub compareSeedAndSeedScores {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
 
-  if (!$familyObj->SEEDSCORES) { 
+  if (!$familyObj->SEEDSCORES) {
     die "ERROR in compareSeedAndSeedScores() no SEEDSCORES object exists";
   }
 
@@ -756,13 +756,13 @@ sub compareSeedAndSeedScores {
   Usage    : Bio::Rfam::QC::compareOldAndNew($oldFamily, $updatedFamily, $path)
   Function : Compares the SCORES files from the old and update family to identify
            : new and missing sequences. If a path is supplied, it will write files
-           : containing the found/missing sequence accessions 
+           : containing the found/missing sequence accessions
   Args     : Two family objects, first the old, second the updated family.  Third
            : argument is an optional path of the directory where missng and found
            : files should be written
-  Returns  : array references to the arrays containing the found or missing 
+  Returns  : array references to the arrays containing the found or missing
            : sequence accessions.
-  
+
 =cut
 
 sub compareOldAndNew {
@@ -850,7 +850,7 @@ sub compareOldAndNew {
            : that have been built in the same way.
   Args     : A path to family directory, a Bio::Rfam::Config object (optional).
   Returns  : 0 on passing, 1 on issue.
-  
+
 =cut
 
 sub checkTimestamps {
@@ -873,22 +873,22 @@ sub checkTimestamps {
     if ( !-e "$fam/$f" ) {
       warn "$f is missing from $fam\n";
       $error++;
-    } 
+    }
   }
   return $error if ($error);
 
   #Now check the timestamps.
-	if(Bio::Rfam::Utils::youngerThan("$fam/SEED", "$fam/CM")) { 
+	if(Bio::Rfam::Utils::youngerThan("$fam/SEED", "$fam/CM")) {
     warn
         "\nFATAL ERROR: $fam: Your SEED [$fam/SEED] is younger than your CM file [$fam/CM].\n";
     $error = 1;
   }
-  if(Bio::Rfam::Utils::youngerThan("$fam/CM", "$fam/TBLOUT")) { 
+  if(Bio::Rfam::Utils::youngerThan("$fam/CM", "$fam/TBLOUT")) {
     warn
 "\nFATAL ERROR: $fam: Your CM [$fam/CM] is younger than your TBLOUT file [$fam/TBLOUT].\n";
     $error = 1;
   }
-  if(Bio::Rfam::Utils::youngerThan("$fam/TBLOUT", "$fam/SCORES")) { 
+  if(Bio::Rfam::Utils::youngerThan("$fam/TBLOUT", "$fam/SCORES")) {
     warn
 "\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your scores [$fam/scores].\n";
     $error = 1;
@@ -905,12 +905,12 @@ sub checkTimestamps {
   Usage    : Bio::Rfam::QC::checkSpell($dir, $dictPath, $familyIOObj)
   Function : This takes the DESC file and grabs out the free text fields, removes
            : our tags and writes a temporary file. It then runs ispell over the
-           : contents of the file, interactively with the users. Finally, the 
+           : contents of the file, interactively with the users. Finally, the
            : data is written back into the file.
   Args     : Path containting the family, Path to dictionary file used by ispell,
            : a familyIO object (optional)
   Returns  : An error flag if encountered.
-  
+
 =cut
 
 sub checkSpell {
@@ -1046,11 +1046,11 @@ sub checkSpell {
   Incept   : EPN, Thu Jul 18 15:34:22 2013
   Usage    : Bio::Rfam::QC::ssStats($familyObj, $outputDir)
   Function : Calculates and outputs per-family, per-sequence and per-basepair
-           : statistics to 'ss-stats-perfamily', 'ss-stats-persequence' and 
+           : statistics to 'ss-stats-perfamily', 'ss-stats-persequence' and
            : 'ss-stats-perbasepair' files.
   Args     : A Family object, output directory (optional, default '.').
   Returns  : 1 on error, 0 if no errors were found.
-  
+
 =cut
 
 sub ssStats {
@@ -1090,16 +1090,16 @@ sub ssStats {
   Incept   : EPN, Fri Mar  1 18:04:58 2019
   Usage    : Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj, $be_verbose)
   Function : Checks that all SEED sequencs are valid based on md5
-           : To be valid, each SEED sequence must exist and 
+           : To be valid, each SEED sequence must exist and
            : (be identical to) the same (sub)sequence in one
-           : or more of: 
+           : or more of:
            : - rfamseq
            : - GenBank
            : - RNAcentral
   Args     : Bio::Rfam::Family object, Bio::Rfam::SeqDB object
            : $be_verbose: if '1' print info to stdout, if '0' print warnings only if nec.
   Returns  : 1 on error, 0 on successully passing check
-  
+
 =cut
 
 sub checkSEEDSeqs {
@@ -1123,25 +1123,25 @@ sub checkSEEDSeqs {
   Usage    : Bio::Rfam::QC::checkSEEDSeqs($familyObj, $seqDBObj)
   Function : Does actual work for checkSEEDSeqs()
            : Checks that all SEED sequencs are valid based on md5
-           : To be valid, each SEED sequence must exist and 
+           : To be valid, each SEED sequence must exist and
            : (be identical to) the same (sub)sequence in one
-           : or more of: 
+           : or more of:
            : - rfamseq
            : - GenBank
            : - RNAcentral
   Args     : Bio::Easel::MSA object, Bio::Rfam::Family object, Bio::Rfam::SeqDB object
            : $be_verbose: if '1' print info to stdout, if '0' print warnings only if nec.
   Returns  : 1 on error, 0 on successully passing check
-  
+
 =cut
 sub checkSEEDSeqs_helper {
   my ( $seed, $seqDBObj, $be_verbose ) = @_;
 
-  # stats collected and only output if $be_verbose is 1 
+  # stats collected and only output if $be_verbose is 1
   my $nrfm_pass = 0;
   my $ngbk_pass = 0;
   my $nrnc_pass = 0;
-  my $nfail = 0; 
+  my $nfail = 0;
 
   if(! defined $be_verbose) { $be_verbose = 0; }
 
@@ -1154,17 +1154,17 @@ sub checkSEEDSeqs_helper {
 
     my $seed_msa_seq = $seed->get_sqstring_unaligned($i);
     my $seed_md5 = Bio::Rfam::Utils::md5_of_sequence_string($seed_msa_seq);
-    
+
     # lookup in rfamseq
     my ($rfamseq_has_source_seq, $rfamseq_has_exact_seq, $rfamseq_md5) = Bio::Rfam::Utils::rfamseq_nse_lookup_and_md5($seqDBObj, $nse);
-    
+
     # lookup in GenBank, retry up to 200 times if fetch fails, wait 3 seconds between tries
     my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($nse, 200, 3);
-    
+
     # lookup in RNAcentral
     my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
-    
-    # 
+
+    #
     my $pass_rfm = 0;
     my $pass_gbk = 0;
     my $pass_rnc = 0;
@@ -1181,57 +1181,57 @@ sub checkSEEDSeqs_helper {
     # 7) subseq appears to exist in RNAcentral, but md5 does not match
     #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
     # 8) subseq appears to exist in RNAcentral, but it is not in URS_taxid format
-    if(! $is_nse) { 
+    if(! $is_nse) {
       # 1) name is not in valid name/start-end format
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "NOT-NAME/START-END"; }
       else            { warn "SEED sequence $nse fails validation; it is not in valid name/start-end format\n"; }
     }
-    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) { 
+    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq)) {
       # 2) not in any of Rfamseq, GenBank, or RNAcentral
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "NO-MATCHES"; }
       else            { warn "SEED sequence $nse fails validation; it exists in none of: Rfamseq, GenBank, RNAcentral\n"; }
     }
-    if(($rfamseq_has_source_seq) && (! $rfamseq_has_exact_seq)) { 
+    if(($rfamseq_has_source_seq) && (! $rfamseq_has_exact_seq)) {
       # 3) source seq exists in Rfamseq, but not subseq (start-end)
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "RFM:found-seq-but-not-subseq;"; }
       else            { warn "SEED sequence $nse fails validation; its source sequence exists in Rfamseq, but specific range subsequence does not\n"; }
     }
-    if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) { 
+    if(($genbank_has_source_seq) && (! $genbank_has_exact_seq)) {
       # 4) source seq exists in GenBank, but not subseq (start-end)
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "GBK:found-seq-but-not-subseq;"; }
       else            { warn "SEED sequence $nse fails validation; its source sequence exists in GenBank, but specific range subsequence does not\n"; }
     }
-    if($rfamseq_has_exact_seq) { 
+    if($rfamseq_has_exact_seq) {
       if($rfamseq_md5 ne $seed_md5) {
         # 5) subseq appears to exist in Rfamseq, but md5 does not match
         $passfail = "FAIL";
         if($be_verbose) { $outstr .= "RFM:md5-fail;"; }
         else            { warn "SEED sequence $nse fails validation; it appears to exist in Rfamseq, but md5 does not match\n"; }
       }
-      else { 
+      else {
         $nrfm_pass++;
         $pass_rfm = 1;
         if($be_verbose) { $outstr .= "RFM:md5-pass;"; }
-      }      
-    }  
-    if($genbank_has_exact_seq) { 
+      }
+    }
+    if($genbank_has_exact_seq) {
       if($genbank_md5 ne $seed_md5) {
         # 6) subseq appears to exist in GenBank, but md5 does not match
         $passfail = "FAIL";
         if($be_verbose) { $outstr .= "GBK:md5-fail;"; }
         else            { warn "SEED sequence $nse fails validation; it appears to exist in GenBank, but md5 does not match\n"; }
       }
-      else { 
+      else {
         $ngbk_pass++;
         $pass_gbk = 1;
         if($be_verbose) { $outstr .= "GBK:md5-pass;"; }
       }
     }
-    if($rnacentral_has_exact_seq) { 
+    if($rnacentral_has_exact_seq) {
       if($rnacentral_md5 ne $seed_md5) {
         # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
@@ -1239,13 +1239,13 @@ sub checkSEEDSeqs_helper {
         if($be_verbose) { $outstr .= "RNC:md5-fail;"; }
         else            { warn "SEED sequence $nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n"; }
       }
-      else { 
+      else {
         # 8) subseq only exists in RNAcentral, but is not in URS_taxid format
-        # if the sequence *only* exists in RNAcentral verify that it 
+        # if the sequence *only* exists in RNAcentral verify that it
         # has the proper name format URS_taxid
-        if((! $pass_rfm) && (! $pass_gbk)) { 
+        if((! $pass_rfm) && (! $pass_gbk)) {
           my ($is_rnacentral_taxid, undef, undef) = Bio::Rfam::Utils::rnacentral_urs_taxid_breakdown(($is_nse) ? $name : $nse);
-          if($is_rnacentral_taxid != 1) { 
+          if($is_rnacentral_taxid != 1) {
             $passfail = "FAIL";
             if($be_verbose) { $outstr .= "RNC:md5-id-pass;"; }
             else            { warn "SEED sequence $nse fails validation; it is only in RNAcentral, but its name is not in the expected URS_taxid format\n"; }
@@ -1257,11 +1257,11 @@ sub checkSEEDSeqs_helper {
     if($passfail eq "FAIL") { $nfail++; }
   }
 
-  if($nfail > 0) { 
+  if($nfail > 0) {
     warn "script Rfam/Scripts/jiffies/validate_seed_sequences_against_database.pl can provide more information";
   }
 
-  if($be_verbose) { 
+  if($be_verbose) {
     print("nseq:      $nseq\n");
     print("nrfm_pass: $nrfm_pass\n");
     print("ngbk_pass: $ngbk_pass\n");
@@ -1270,7 +1270,7 @@ sub checkSEEDSeqs_helper {
   }
 
   # return value differs depending on $be_verbose value:
-  if($be_verbose) { 
+  if($be_verbose) {
     return $nfail;
   }
   return ($nfail > 0) ? 1 : 0; # return 1 if at least 1 seq failed
@@ -1284,13 +1284,13 @@ sub checkSEEDSeqs_helper {
   Usage    : Bio::Rfam::QC::checkSEEDSeqsNameOnly($familyObj, $seqDBObj, $be_verbose)
   Function : Checks each SEED sequencs to see if a sequence of the
            : same name exists in rfamseq. Note, doesn't remove "/<start>-<end>"
-           : from the SEED sequence name if it exists, it checks the 
+           : from the SEED sequence name if it exists, it checks the
            : entire sequence name, possibly including "/<start>-<end>"
-           : 
+           :
   Args     : Bio::Rfam::Family object
            : Bio::Rfam::SeqDB object
   Returns  : List of sequences that fail the name check, "" on successully passing check
-  
+
 =cut
 
 sub checkSEEDSeqsNameOnly {
@@ -1309,12 +1309,12 @@ sub checkSEEDSeqsNameOnly {
   for ( my $i = 0 ; $i < $nseq; $i++ ) {
     my $name = $seed->get_sqname($i);
     my $name_exists_in_db = $seqDBObj->check_seq_exists($name) ? 1 : 0;
-    if($name_exists_in_db) { 
+    if($name_exists_in_db) {
       $name_str .= "\t$name\n";;
     }
   }
-  if($name_str ne "") { 
-    $ret_str  = "The following sequence names exist in both the SEED and the target db.\n"; 
+  if($name_str ne "") {
+    $ret_str  = "The following sequence names exist in both the SEED and the target db.\n";
     $ret_str .= "Change their names in SEED, preferable to <name>/<start>-<end>\n";
     $ret_str .= $name_str;
   }
@@ -1328,9 +1328,9 @@ sub checkSEEDSeqsNameOnly {
   Title    : checkScoresSeqs
   Incept   : finnr, Jul 31, 2013 2:54:26 PM
   Usage    : Bio::Rfam::QC::checkScoresSeqs($familyObj, $seqDBObj)
-  Function : 
-  Args     : 
-  Returns  : 
+  Function :
+  Args     :
+  Returns  :
 
 =cut
 
@@ -1361,11 +1361,11 @@ sub checkScoresSeqs {
 
   Title    : checkOverlaps
   Incept   : finnr, Aug 5, 2013 4:08:00 PM
-  Usage    : 
-  Function : 
-  Args     : 
-  Returns  : 
-  
+  Usage    :
+  Function :
+  Args     :
+  Returns  :
+
 =cut
 
 sub checkOverlaps {
@@ -1382,15 +1382,15 @@ sub checkOverlaps {
 #is the family part of a clan?
     if ($familyObj->DESC->CL) {
         my $clan = $familyObj->DESC->CL;
-#get clan membership and add members to ignore hash        
+#get clan membership and add members to ignore hash
         my @rs = $rfamdb->resultset('ClanMembership')->search( { clan_acc => $clan });
         foreach my $row (@rs){
             my $rfam_acc = $row->rfam_acc->rfam_acc;
             $ignore->{$rfam_acc}=1;
         }
-    }  
+    }
 
-  open(my $OVERLAP, '>', "$famPath/overlap") 
+  open(my $OVERLAP, '>', "$famPath/overlap")
     or die "Could not open $famPath/overlap:[$!]\n";
 
   my $error = 0;
@@ -1399,9 +1399,9 @@ sub checkOverlaps {
   $masterError =  1 if($error);
   $error = findInternalOverlaps($familyObj, $OVERLAP);
   $masterError =  1 if($error);
-  
+
   close($OVERLAP);
-  
+
   return $masterError;
 }
 
@@ -1438,13 +1438,13 @@ sub findClanOverlaps {
 	#
 	for my $family (@$clan_members) {
 		my $regions = $rfamdb->resultset('FullRegion')->allRegions($family);
-	
+
 	#For each region, get start and end coordinates and figure out which strand it is on:
 	#
 		for my $r ( @$regions) {
-			my ($s1, $e1, $strand) = 
+			my ($s1, $e1, $strand) =
         	$r->[1] <= $r->[2] ? ($r->[1], $r->[2], 1) : ($r->[2], $r->[1], -1);
-		
+
 	# Add hash of each region to the clan_regions array:
 	#
 		push @clan_regions , {rfamseq_acc => $r->[3],
@@ -1454,8 +1454,8 @@ sub findClanOverlaps {
 						evalue => $r->[5],
 						family => $family,
 						type => $r->[9]};
-	
-		}	
+
+		}
 	}
  	# Now look for overlaps for every region:
  	#
@@ -1470,7 +1470,7 @@ sub findClanOverlaps {
 	#
 		my $ol = 0;
 		my @overlaps;
-	
+
 	# Now, compare our query sequence with every other region in the clan:
 	#
 		for my $poss_overlap( @clan_regions) {
@@ -1479,7 +1479,7 @@ sub findClanOverlaps {
 			if ($region->{family} eq $poss_overlap->{family}) {
 				next;
 			}
-			
+
 
 			#Ignore any sequence accessions which we have seen before, as we will already have
 			#checked these for overlaps:
@@ -1497,7 +1497,7 @@ sub findClanOverlaps {
 			my ($s2, $e2) = ($poss_overlap->{start}, $poss_overlap->{end});
 			my $overlap = 0;
 			#Now calculate % overlap:
-		
+
 			#Now check for overlaps:
 			$overlap = Bio::Rfam::Utils::overlap_nres_or_full($s1, $e1, $s2, $e2);
 			if ($overlap != 0) {
@@ -1510,8 +1510,8 @@ sub findClanOverlaps {
 				if ($percent_ol < 0.5 || $percent_ol > 2) {
 					#print "Overlap less than 50%, skipping\n";
 					next;
-				} 
-	
+				}
+
 				my $overlap_type = $poss_overlap->{strand} eq $region->{strand} ? 'SS' : 'OS';
 				$ol++;
 				#Add the overlapping region to @overlaps:
@@ -1523,7 +1523,7 @@ sub findClanOverlaps {
 		if ($ol != 0) {
 			push @overlaps, $region;
 		}
-		
+
 		#Sort the overlaps by e value and then take the highest match as the significant match:
 		#
 		my @sorted_overlap = sort {$a->{evalue} <=> $b->{evalue}} @overlaps;
@@ -1532,28 +1532,28 @@ sub findClanOverlaps {
 				$hash->{'is_significant'} = 1;
 			} else {
 				$hash->{'is_significant'} = 0;
-				my ($start, $end) = $hash->{strand} eq 1 ? ($hash->{start}, $hash->{end}):($hash->{end}, $hash->{start}); 
+				my ($start, $end) = $hash->{strand} eq 1 ? ($hash->{start}, $hash->{end}):($hash->{end}, $hash->{start});
 				my $resultset = $rfamdb->resultset('FullRegion')->search( {rfam_acc => $hash->{family},
 																		rfamseq_acc => $hash->{rfamseq_acc},
 																		seq_start => $start,
 																		seq_end => $end,
 																		evalue_score => $hash->{evalue}
 																	})->single;
-				
-				
+
+
 				$resultset->update({is_significant => '0'});
 			}
 		#
 		#	print $OVERLAP "$hash->{rfamseq_acc}\t$hash->{start}\t$hash->{end}\t$hash->{strand}\t$hash->{evalue}\t$hash->{family}\t$hash->{type}\t$hash->{is_significant}\n";
-		}	
+		}
 		#Update counter now we've done this region:
 		$seen{$orig_acc}++;
 	}
 
-	
 
-	return $clerror;	
- 
+
+	return $clerror;
+
 }
 
 
@@ -1562,28 +1562,28 @@ sub findClanOverlaps {
 
   Title    : findExternalOverlaps()
   Incept   : finnr, Aug 5, 2013 4:08:17 PM
-  Usage    : 
-  Function : 
-  Args     : 
-  Returns  : 
-  
+  Usage    :
+  Function :
+  Args     :
+  Returns  :
+
 =cut
 
 
 sub findExternalOverlaps {
   my ($familyObj, $rfamdb, $ignore, $config, $OVERLAP) = @_;
-  
+
   _addBlackListToIgnore($ignore, $config);
-  
+
   if($config->location ne 'EBI'){
     warn "This overlap test has been written assuming you have a local database.".
          "Eventually, there needs to be a Web based overlap method\n.";
   }
-  my $error = 0; 
+  my $error = 0;
   my $currentAcc = '';
   my $regions;
   foreach my $r (sort{$a->[3] cmp $b->[3]} @{$familyObj->SCORES->regions}){
-    my ($s1, $e1, $or1) = 
+    my ($s1, $e1, $or1) =
         $r->[1] <= $r->[2] ? ($r->[1], $r->[2], 1) : ($r->[2], $r->[1], -1);
 
     if($currentAcc ne $r->[3]){
@@ -1593,7 +1593,7 @@ sub findExternalOverlaps {
     foreach my $dbReg (@$regions){
       #Does it belong to a family we want to ignore?
       next if(exists($ignore->{$dbReg->[1]}));
-      my ($s2, $e2) = 
+      my ($s2, $e2) =
         $dbReg->[4] == 1 ? ($dbReg->[2], $dbReg->[3]) : ($dbReg->[3], $dbReg->[2]);
       my $overlap = 0;
       $overlap = Bio::Rfam::Utils::overlap_nres_or_full($s1, $e1, $s2, $e2);
@@ -1609,7 +1609,7 @@ sub findExternalOverlaps {
             $dbReg->[1].":".$dbReg->[0]."/".$dbReg->[2]."-".$dbReg->[3],
             $overlap;
           print $OVERLAP $eString;
-          print STDERR $eString; 
+          print STDERR $eString;
 	  $error++;
       }
     }
@@ -1623,12 +1623,12 @@ sub findExternalOverlaps {
   Title    : findInternalOverlaps
   Incept   : finnr, Jul 31, 2013 2:28:40 PM
   Usage    : Bio::Rfam::QC::findInternalOverlaps($familyObj, $OVERLAP)
-  Function : Takes a family object and looks for overlaps within the SEED 
+  Function : Takes a family object and looks for overlaps within the SEED
            : alignment. It will report overlaps to STDERR and to the overlap
            : file.
   Args     : A Bio::Rfam::Family object, overlaps filehandle
-  Returns  : 1 on error, 0 if no overlaps are found. 
-  
+  Returns  : 1 on error, 0 if no overlaps are found.
+
 =cut
 
 sub findInternalOverlaps {
@@ -1638,7 +1638,7 @@ sub findInternalOverlaps {
   if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
   }
-  
+
   if(!$OVERLAP and ref($OVERLAP) ne 'GLOB'){
     die "Did not get passed a filehandle for reporting\n";
   }
@@ -1648,20 +1648,20 @@ sub findInternalOverlaps {
                    #we should have all NSE.
 
   for ( my $i = 0 ; $i < $familyObj->SEED->nseq - 1 ; $i++ ) {
-     $atomizedNSE[$i]  = [Bio::Rfam::Utils::nse_breakdown($familyObj->SEED->get_sqname($i))] 
+     $atomizedNSE[$i]  = [Bio::Rfam::Utils::nse_breakdown($familyObj->SEED->get_sqname($i))]
         if ( !$atomizedNSE[$i] );
     for ( my $j = $i + 1 ; $j < $familyObj->SEED->nseq ; $j++ ) {
-      $atomizedNSE[$j]  = [Bio::Rfam::Utils::nse_breakdown($familyObj->SEED->get_sqname($j))] 
+      $atomizedNSE[$j]  = [Bio::Rfam::Utils::nse_breakdown($familyObj->SEED->get_sqname($j))]
         if ( !$atomizedNSE[$j] );
       next if($atomizedNSE[$i]->[1] ne $atomizedNSE[$j]->[1]);
       # determine overlap fraction (overlap_nres_or_full() is robust to start < end or start > end)
       my $overlap = Bio::Rfam::Utils::overlap_nres_or_full(
-        $atomizedNSE[$i]->[2], 
-        $atomizedNSE[$i]->[3], 
-	$atomizedNSE[$j]->[2], 
+        $atomizedNSE[$i]->[2],
+        $atomizedNSE[$i]->[3],
+	$atomizedNSE[$j]->[2],
         $atomizedNSE[$j]->[3]);
-      
-      if($overlap != 0) { 
+
+      if($overlap != 0) {
         $overlap = 'fullOL' if ( $overlap == -1 );
         my $eString = sprintf "Internal overlap of %s with %s by %s\n",
         $familyObj->SEED->get_sqname($i),
@@ -1682,27 +1682,27 @@ sub findInternalOverlaps {
   Title    : codingSeqs
   Incept   : finnr, Jul 29, 2013 3:10:48 PM
   Usage    : Bio::Rfam::QC::codingSeqs($familyObj, $config)
-  Function : Takes the seed alignment, reformats it to clustal (with '-' as a 
+  Function : Takes the seed alignment, reformats it to clustal (with '-' as a
            : gap character). It then runs third party software, RNACode to
-           : identify potential coding regions. The p-value threshold for this 
+           : identify potential coding regions. The p-value threshold for this
            : comes from the config.
   Args     : A Bio::Rfam::Family object, a Bio::Rfam::Config
   Returns  : 0 when no errors, 1 and scalar of RNAcode output on error.
-  
+
 =cut
 
 sub codingSeqs {
   my ($familyObj, $config) = @_;
-  
+
   my ($fh, $filename) = tempfile();
   close($fh);
 
   #Write the file out as clustal
   $familyObj->SEED->write_msa($filename, 'clustal');
-    
+
   #Get the pvalue that we will use for cut-off.
   my $pvalue = $config->rnacode_pvalue; #Get via the config.
-  
+
   #run RNAcode on clustal file and capture results in STDOUT pipe.
   my @cmd = qw(RNAcode -s -p );
   push(@cmd, $pvalue, $filename);
@@ -1727,47 +1727,47 @@ sub codingSeqs {
   Usage    : Bio::Rfam::QC::essential($newFamilyObj, $dir, $oldFamily, $config)
   Function : Takes the new family and performs all of the essential QC steps on
            : the family. Due to the repetoire of QC, need file location, old family
-           : and config objects. 
+           : and config objects.
   Args     : Bio::Rfam::Family object for the new family,
            : path to the family,
            : Bio::Rfam::Family object for the old family or undef if new,
            : A Bio::Rfam::Config object
   Returns  : 1 on error, 0 on success.
-  
+
 =cut
 
 sub essential {
-  my ($newFamily, $dir, $oldFamily, $config) = @_; 
+  my ($newFamily, $dir, $oldFamily, $config) = @_;
 
   my $masterError = 0;
   my $error = 0;
-  
+
   my $seqDBObj = $config->rfamseqObj;
-  
+
   $error = Bio::Rfam::QC::checkTimestamps($dir, $config);
   if($error){
     warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
-  
+
   $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
   if($error){
     warn "Family failed essential format checks.\n";
     $masterError = 1;
   }
-  
+
   $error = checkSEEDSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential check that seed sequences are all valid (from at least one of rfamseq, GenBank or RNAcentral).\n";
     $masterError = 1;
   }
-  
+
   $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
     warn "Family failed essential threshold check.\n";
     $masterError = 1;
   }
-  
+
   if(defined($oldFamily)){
     $error = checkFixedFields($newFamily, $oldFamily);
     if($error){
@@ -1775,7 +1775,7 @@ sub essential {
       $masterError = 1;
     }
   }
-  
+
   open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
   $error = findInternalOverlaps($newFamily, $OVERLAP);
   close($OVERLAP);
@@ -1783,12 +1783,12 @@ sub essential {
     warn "Found internal SEED overlaps.\n";
     $masterError = 1;
   }
-  
+
   return( $masterError );
 }
 
 #------------------------------------------------------------------------------
-=head2 
+=head2
 
   Title    : optional
   Incept   : finnr, Aug 5, 2013 3:55:47 PM
@@ -1810,7 +1810,7 @@ sub optional {
   my $error       = 0;
   my $masterError = 0;
   my $msg         = "";
-  
+
   if(!exists($override->{spell})){
     $error = checkSpell($dir, $config->dictionary);
     if($error){
@@ -1820,7 +1820,7 @@ sub optional {
   }else{
     warn "Ignoring spell check.\n";
   }
- 
+
   if(!exists($override->{seed})){
     $error = compareSeedAndSeedScores($newFamily);
     if($error){
@@ -1830,7 +1830,7 @@ sub optional {
   }else{
     warn "Ignoring check to ensure all SEED sequences found.\n";
   }
-  
+
   if(!exists($override->{coding})){
     ($error, $msg) = codingSeqs($newFamily, $config);
     if($error){
@@ -1852,13 +1852,13 @@ sub optional {
           #Override the error....
           $error = 0;
         }
-        else { 
+        else {
           $masterError = 1;
         }
       }
     }
   }
-  
+
   #Okay, hack time; allow overlaps....for some families
   if(!exists($override->{overlap})){
     open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
@@ -1871,7 +1871,7 @@ sub optional {
    }else{
     warn "Ignoring overlap check.\n";
   }
-  
+
   return($masterError);
 }
 
@@ -1888,12 +1888,12 @@ sub optional {
            : families, the overlap option will not be run.
   Args     : Array containing options, Bio::Rfam::Config object, accession of family (optional)
   Returns  : hash, keys are allowed options.
-  
+
 =cut
 
 sub processIgnoreOpt {
   my ($ignoreRef, $config, $acc) = @_;
-  
+
   #See if the family if one of the few blacklisted? If so,
   #do not bother running the overlap check.
   if($acc){
@@ -1902,9 +1902,9 @@ sub processIgnoreOpt {
 	  push (@$ignoreRef, 'overlap');
 	}
   }
-  
+
   my $allowedOpts = $config->ignorableQC;
- 
+
   #Go through each option passed in and see if it is allowed.
   foreach my $i (@{$ignoreRef}){
     if(! exists($allowedOpts->{$i})){
@@ -1917,19 +1917,19 @@ sub processIgnoreOpt {
 }
 
 sub essentialClan {
-  my ($newClan, $oldClan, $config) = @_; 
+  my ($newClan, $oldClan, $config) = @_;
 
   my $masterError = 0;
   my $error = 0;
-  
+
   $error = Bio::Rfam::QC::checkClanFormat($newClan);
-  
+
   if($error){
     warn "Family failed essential clan format checks.\n";
     $masterError = 1;
   }
-  
-  
+
+
   if(defined($oldClan)){
     $error = checkClanFixedFields( $newClan, $oldClan );
     if($error){
@@ -1937,22 +1937,22 @@ sub essentialClan {
       $masterError = 1;
     }
   }
-  
+
   return $masterError;
 }
 
 
 sub checkClanFormat {
   my ($clanObj) = @_;
-  
+
   my $error = 0;
    #Make sure none of the default values set in writeEmptyDESC still exist
-  foreach my $key ( keys %{ $clanObj->DESC->defaultButIllegalFields } ) { 
+  foreach my $key ( keys %{ $clanObj->DESC->defaultButIllegalFields } ) {
     if ( !defined( $clanObj->DESC->$key ) ) { #make sure it's defined first
       warn "Required CLANDESC field $key not defined.\n";
       $error++;
     }
-    elsif( $clanObj->DESC->$key eq $clanObj->DESC->defaultButIllegalFields->{$key} ) { 
+    elsif( $clanObj->DESC->$key eq $clanObj->DESC->defaultButIllegalFields->{$key} ) {
       warn "CLANDESC field $key illegal value (appears unchanged from default).\n";
       $error++;
     }
@@ -1967,7 +1967,7 @@ sub optionalClan{
   my $error       = 0;
   my $masterError = 0;
   my $msg         = "";
-  
+
   if(!exists($override->{spell})){
     $error = checkSpell($dir, $config->dictionary);
     if($error){
@@ -1976,7 +1976,7 @@ sub optionalClan{
     }
   }else{
     warn "Ignoring spell check.\n";
-  } 
+  }
 }
 #------------------------------------------------------------------------------
 =head2 _addBlackListToIgnore
@@ -1988,16 +1988,16 @@ sub optionalClan{
            : families.
   Args     : hash reference, Bio::Rfam::Config object.
   Returns  : Nothing - hash reference is manipulated.
-  
+
 =cut
 
 sub _addBlackListToIgnore {
   my ($ignore, $config) = @_;
-  
+
   foreach my $k (keys( %{ $config->allowedOverlaps })){
     $ignore->{$k} = 1;
   }
-  
+
   return;
 }
 
