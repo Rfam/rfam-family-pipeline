@@ -1162,9 +1162,12 @@ sub checkSEEDSeqs_helper {
     my ($genbank_has_source_seq, $genbank_has_exact_seq, $genbank_md5) = Bio::Rfam::Utils::genbank_nse_lookup_and_md5($nse, 200, 3);
 
     # lookup in RNAcentral
-    my ($rnacentral_has_exact_seq, $rnacentral_md5, $rnacentral_id, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
-    my ($rnacentral_has_exact_subseq) = Bio::Rfam::Utils::rnacentral_subseq_lookup($nse, $seed_md5);
+    # first using md5 only and *not* the seq id
+    my ($rnacentral_has_seq_by_md5, $rnacentral_seq_md5, undef, undef) = Bio::Rfam::Utils::rnacentral_md5_lookup($seed_md5);
+    # second using name/start-end, this will handle if sequence is an RNAcentral subsequence
+    my ($rnacentral_has_seq_by_id,  $rnacentral_subseq_md5) = Bio::Rfam::Utils::rnacentral_subseq_lookup($nse);
     #
+
     my $pass_rfm = 0;
     my $pass_gbk = 0;
     my $pass_rnc = 0;
@@ -1180,14 +1183,15 @@ sub checkSEEDSeqs_helper {
     # 6) subseq appears to exist in GenBank, but md5 does not match
     # 7) subseq appears to exist in RNAcentral, but md5 does not match
     #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
-    # 8) subseq appears to exist in RNAcentral, but it is not in URS_taxid format
+    # 8) subseq appears to exist in RNAcentral by md5, but it is not in URS_taxid/start-end format
+    # 9) subseq appears to exist in RNAcentral by id, but md5 does not match
     if(! $is_nse) {
       # 1) name is not in valid name/start-end format
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "NOT-NAME/START-END"; }
       else            { warn "SEED sequence $nse fails validation; it is not in valid name/start-end format\n"; }
     }
-    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_exact_seq) && (! $rnacentral_has_exact_subseq)) {
+    if((! $rfamseq_has_source_seq) && (! $genbank_has_source_seq) && (! $rnacentral_has_seq_by_md5) && (! $rnacentral_has_seq_by_id)) {
       # 2) not in any of Rfamseq, GenBank, or RNAcentral
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "NO-MATCHES"; }
@@ -1231,9 +1235,7 @@ sub checkSEEDSeqs_helper {
         if($be_verbose) { $outstr .= "GBK:md5-pass;"; }
       }
     }
-    if($rnacentral_has_exact_subseq) {
-      $nrnc_pass += 1;
-    } elsif($rnacentral_has_exact_seq) {
+    if($rnacentral_has_seq_by_md5) {
       if($rnacentral_md5 ne $seed_md5) {
         # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
@@ -1241,16 +1243,49 @@ sub checkSEEDSeqs_helper {
         if($be_verbose) { $outstr .= "RNC:md5-fail;"; }
         else            { warn "SEED sequence $nse fails validation; it appears to exist in RNAcentral, but md5 does not match (*check code: this should be impossible)\n"; }
       }
-      else {
-        # 8) subseq only exists in RNAcentral, but is not in URS_taxid format
+      else { # md5 matches (as it should since we looked it up by md5)
         # if the sequence *only* exists in RNAcentral verify that it
         # has the proper name format URS_taxid
         if((! $pass_rfm) && (! $pass_gbk)) {
           my ($is_rnacentral_taxid, undef, undef) = Bio::Rfam::Utils::rnacentral_urs_taxid_breakdown(($is_nse) ? $name : $nse);
           if($is_rnacentral_taxid != 1) {
+            # 8) subseq appears to exist in RNAcentral by md5, but it is not in URS_taxid/start-end format
             $passfail = "FAIL";
-            if($be_verbose) { $outstr .= "RNC:md5-id-pass;"; }
+            if($be_verbose) { $outstr .= "RNC:md5-id-fail;"; }
             else            { warn "SEED sequence $nse fails validation; it is only in RNAcentral, but its name is not in the expected URS_taxid format\n"; }
+          }
+          else {
+            # sequence exists by md5 and it's in proper URS_taxid format
+            $nrnc_pass++;
+            $pass_rnc = 1;
+            if($be_verbose) { $outstr .= "RNC:md5-pass;"; }
+          }
+        }
+      }
+    }
+    elsif($rnacentral_has_seq_by_id) { 
+      if($rnacentral_subseq_md5 ne $seed_md5) { 
+      # 9) subseq appears to exist in RNAcentral by id, but md5 does not match
+      $passfail = "FAIL";
+      if($be_verbose) { $outstr .= "RNC:md5-subseq-fail;"; }
+      else            { warn "SEED sequence $nse fails validation; it appears to exist in RNAcentral based on its id, but md5 of its subsequence does not match md5 of subsequence fetched from RNAcentral\n"; }
+      }
+      else {
+        # if the sequence *only* exists in RNAcentral verify that it
+        # has the proper name format URS_taxid
+        if((! $pass_rfm) && (! $pass_gbk)) {
+          my ($is_rnacentral_taxid, undef, undef) = Bio::Rfam::Utils::rnacentral_urs_taxid_breakdown(($is_nse) ? $name : $nse);
+          if($is_rnacentral_taxid != 1) {
+            # Another possible case of 8) subseq appears to exist in RNAcentral by id, but md5 does not match
+            $passfail = "FAIL";
+            if($be_verbose) { $outstr .= "RNC:md5-subseq-id-fail;"; }
+            else            { warn "SEED sequence $nse fails validation; it is only in RNAcentral, but its name is not in the expected URS_taxid format\n"; }
+          }
+          else {
+            # sequence exists by id, md5 matches and it's in proper URS_taxid format
+            $nrnc_pass++;
+            $pass_rnc = 1;
+            if($be_verbose) { $outstr .= "RNC:md5-subseq-pass;"; }
           }
         }
       }
