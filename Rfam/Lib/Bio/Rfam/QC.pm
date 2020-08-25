@@ -1236,7 +1236,7 @@ sub checkSEEDSeqs_helper {
       }
     }
     if($rnacentral_has_seq_by_md5) {
-      if($rnacentral_md5 ne $seed_md5) {
+      if($rnacentral_seq_md5 ne $seed_md5) {
         # 7) subseq appears to exist in RNAcentral, but md5 does not match
         #    (THIS SHOULD BE IMPOSSIBLE BECAUSE WE LOOK UP IN RNACENTRAL BASED ON md5)
         $passfail = "FAIL";

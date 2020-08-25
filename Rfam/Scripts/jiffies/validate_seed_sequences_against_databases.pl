@@ -12,8 +12,8 @@ use Moose;
 
 use Getopt::Long;
 
-my $usage  = "Usage:\nperl test_fetch_seed_seq_info.pl <accession>\nOR\n";
-   $usage .= "perl test_fetch_seed_seq_info.pl -a <alifile>\n";
+my $usage  = "Usage:\nperl validate_seed_sequences_against_databases.pl <accession>\nOR\n";
+   $usage .= "perl validate_seed_sequences_against_databases.pl -a <alifile>\n";
 
 my $acc_or_alifile = undef; # single command line arg
 my $a_opt          = undef; # defined if -a used
