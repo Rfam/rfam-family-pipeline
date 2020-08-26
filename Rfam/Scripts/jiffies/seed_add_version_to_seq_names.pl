@@ -70,7 +70,7 @@ for(my $i = 0; $i < $seed->nseq; $i++) {
     die "ERROR seed sequence $seed_name is not in name/start-end format";
   }
 
-  my ($have_source_seq, $fetched_seqname) = genbank_nse_get_accession_version($seed_name, undef, undef);
+  my ($have_source_seq, $fetched_seqname) = genbank_nse_get_accession_version($seed_name, 10, undef);
   if(! $have_source_seq) { 
     die "ERROR seed sequence $seed_name was not found in GenBank";
   }
