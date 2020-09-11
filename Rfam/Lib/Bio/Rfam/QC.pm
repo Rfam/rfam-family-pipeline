@@ -1793,11 +1793,19 @@ sub essential {
     $masterError = 1;
   }
 
-  $error = checkSEEDSeqs($newFamily, $seqDBObj);
-  if($error){
-    warn "Family failed essential check that seed sequences are all valid (from at least one of rfamseq, GenBank or RNAcentral).\n";
-    $masterError = 1;
-  }
+  #############################
+  # EPN, Fri Sep 11 17:30:46 2020
+  # TEMPORARILY removing check that seed sequences are valid from GenBank/rfamseq/RNAcentral
+  # to get around flaky (unreproducible) behavior of fetching from NCBI GenBank possible due
+  # to massive power outage yesterday. 
+  # This was done on executive order from Anton.
+  # Should be reverted by Monday 14 Sept when NCBI expects to be back to normal.
+  #$error = checkSEEDSeqs($newFamily, $seqDBObj);
+  #if($error){
+  #  warn "Family failed essential check that seed sequences are all valid (from at least one of rfamseq, GenBank or RNAcentral).\n";
+  #  $masterError = 1;
+  #}
+  #############################
 
   $error = checkScoresSeqs($newFamily, $seqDBObj);
   if($error){
