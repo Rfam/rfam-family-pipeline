@@ -389,26 +389,28 @@ sub parse_outlist {
 
   open(IN, $outlist) || die "ERROR unable to open $outlist"; 
   while($line = <IN>) {
-    # example outlist line:
-    #  87.5  4.8e-18      FULL  AACZ03038953.1        -    25367    25465    +       1   101     no  Pan_troglodytes_(chimpa..[9598]    Pan troglodytes chromosome 5 Contig52.80, whole genome shotgun sequence.
+    # example outlist lines:
+    #53.2  1.8e-05  SEED       NFHL01000007.1/110673-110613        -         1        61    +       1    60     no  -                                                   GA:A;RV:A;SO:SELF      -
+    #53.2  1.8e-05  FULL-SEED  NFHL01000007.1                      -    110673    110613    -       1    60     no  Lachnoclostridium_sp._An76[1965654]                 GA:A;RV:A;SO:Y[1.000]  Lachnoclostridium sp. An76 An76_contig_7, whole genome shotgun sequence.
+    #   45.6   0.0024  FULL       JZEM01000007.1                      -     11463     11400    -       1    60     no  Halomonas_meridiana[29570]                          GA:A;RV:A;SO:N[0.000]  Halomonas meridiana strain R1t3 scaffold_11, whole genome shotgun sequence.
+    # !!! we skip SEED lines !!! 
     if($line !~ m/^\#/) { 
       $line =~ s/^\s+//; # remove leading whitespace
       my @out_elA = split(/\s\s+/, $line); # note: we separate by double spaces
-      my ($cur_bitsc, $name, $start, $end) = ($out_elA[0], $out_elA[3], $out_elA[5], $out_elA[6]);
+      my ($cur_bitsc, $category, $name, $start, $end) = ($out_elA[0], $out_elA[2], $out_elA[3], $out_elA[5], $out_elA[6]);
       
-      if($cur_bitsc >= $min_bitsc){ 
-        my $nse = "$name/$start-$end";
-        $nres += Bio::Rfam::Utils::nse_sqlen($nse);
-        $nseq++;
-        
-        my ($validated, undef, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($nse);
-        if(! $validated) { die "ERROR something wrong with outlist line, can't break it down to name/start-end format ($line)"; }
-        
-        push(@{$fetchAAR}, [$nse, $start, $end, $name]); 
-        #print ("added seq $name/$start-$end\n");
-      }
-      else { # bit score is below our minimum: stop
-        last;
+      if($cur_bitsc >= $min_bitsc) { 
+        if($category ne "SEED") { 
+          my $nse = "$name/$start-$end";
+          $nres += Bio::Rfam::Utils::nse_sqlen($nse);
+          $nseq++;
+          
+          my ($validated, undef, undef, undef, undef) = Bio::Rfam::Utils::nse_breakdown($nse);
+          if(! $validated) { die "ERROR something wrong with outlist line, can't break it down to name/start-end format ($line)"; }
+          
+          push(@{$fetchAAR}, [$nse, $start, $end, $name]); 
+          #print ("added seq $name/$start-$end, name is $name\n");
+        }
       }
     }
   }
