@@ -131,7 +131,8 @@ sub genbank_nse_get_accession_version {
   my $have_source_seq  = 0; # possibly changed to '1' below
   my $fetched_seqname  = undef; # updated to fetched_seqname below
 
-  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
+  my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d&api_key=%s", $name, $qstart, $qend, $api_key);
   my $got_url = get($url);
 
   if(! defined $got_url) {

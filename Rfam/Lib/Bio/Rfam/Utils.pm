@@ -2447,7 +2447,8 @@ sub genbank_nse_lookup_and_md5 {
   my $sqstring = "";
   my $md5 = undef;
 
-  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d", $name, $qstart, $qend);
+  my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+  my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d&api_key=%s", $name, $qstart, $qend, $api_key);
   my $got_url = get($url);
   my $looks_like_rnacentral = id_looks_like_rnacentral($name);
 
@@ -2558,9 +2559,9 @@ sub genbank_fetch_seq_info {
     $info_HHR->{$name}{"length"}      = "-";
     $info_HHR->{$name}{"mol_type"}    = "-";
 
-    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str;
+    my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str . "&api_key=" . $api_key;
     my $xml = undef;
-    # printf("Trying to fetch for $name\n");
     my $xml_string = get($genbank_url);
     my $xml_valid = 0;
     if(defined $xml_string) {
@@ -2730,7 +2731,8 @@ sub ncbi_taxonomy_fetch_taxinfo {
 
   # look up each taxid separately to avoid problem with fetching too many taxids (limit seems to be somewhere around 1000)
   foreach my $taxid (sort keys (%taxid_H)) {
-    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid;
+    my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=taxonomy&retmode=xml&id=" . $taxid . "&api_key=" . $api_key;
     my $xml = undef;
     my $xml_string = get($genbank_url);
     my $xml_valid = 0;
@@ -2758,7 +2760,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
         $attempt_ctr++;
       }
       if(($attempt_ctr >= $nattempts) && (! $xml_valid)) {
-        croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nList of taxids:\n$taxid\n";
+        croak "ERROR trying to fetch taxids from genbank, reached maximum allowed number of failed attempts ($nattempts)\nTried to fetch taxid\n$taxid\n";
       }
     }
 
