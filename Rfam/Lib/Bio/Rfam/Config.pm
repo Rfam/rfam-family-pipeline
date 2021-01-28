@@ -472,6 +472,13 @@ sub proxy {
   return $self->{proxy};
 }
 
+sub genbankApikey {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{genbank}->{apikey};
+}
 
 =head2 binLocation
 
