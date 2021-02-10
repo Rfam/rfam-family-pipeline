@@ -2628,7 +2628,7 @@ sub genbank_fetch_seq_info {
         }
         $info_HHR->{$accver}{"length"} = $length;
 
-        # for taxid and mol_type, we have to fetch from Quailifier_values, and may have more than 1
+        # for taxid and mol_type, we have to fetch from Qualifier_values, and may have more than 1
         # in that case, they will be concatenated together
         my $taxid_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
         my $taxid = undef;
@@ -2643,7 +2643,11 @@ sub genbank_fetch_seq_info {
             $taxid = $cur_taxid;
           }
           elsif($cur_taxid != $taxid) {
-            croak "ERROR in $sub_name for $accver, > 1 taxids read: $taxid and $cur_taxid\nFull taxon values read: $orig_taxid_val\n";
+            ; # do nothing, see comment below
+            # Change Jan 29, 2021: if multiple taxids are returned for a single accession,
+            # always use the first one and don't complain. Previously we would fail here
+            # with following croak:
+            #croak "ERROR in $sub_name for $accver, > 1 taxids read: $taxid and $cur_taxid\nFull taxon values read: $orig_taxid_val\n";
           }
           $taxid_val =~ s/^taxon\:(\d+)//;
         }
