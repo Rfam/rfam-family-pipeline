@@ -57,7 +57,7 @@ def main():
         "            port: \"2049\"\n"
     	"      containers:\n"
     	"      - name: %s\n"
-    	"        image: ikalvari/rfam-cloud:kubes\n"
+    	"        image: rfam/cloud:kubes\n"
     	"        resources:\n"
     	"          limits:\n"
     	"            cpu: \"8000m\"\n" # maximum number of cpus to be used in the docker container
