@@ -136,6 +136,9 @@ sub _build_html {
   my $dbic_trace = $schema->storage->debug;
   $schema->storage->debug(0);
 
+  # delete existing rows
+  $table->search( { rfam_acc => $self->_rfam_acc } )->delete;
+
   my $i = 0;
   foreach my $block ( $ha->all_html_blocks ) {
     my $gzipped_block = Compress::Zlib::memGzip( $block );
