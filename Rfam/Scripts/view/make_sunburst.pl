@@ -138,7 +138,7 @@ my $sunburst_factory = Bio::Rfam::SunburstFactory->new(
 );
 
 foreach my $rfam_acc ( @rfam_accessions ) {
-  $sunburst_factory->build( $rfam_acc );
+  $sunburst_factory->build( $rfam_acc, 'rfamseq' );
 }
 
 exit;

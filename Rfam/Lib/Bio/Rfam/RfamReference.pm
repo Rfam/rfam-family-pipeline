@@ -312,8 +312,8 @@ sub get_ref_by_pubmed {
   my $ua = new LWP::UserAgent;
   $ua->agent("AVAce Indexer/1.1");
   $ua->proxy( http => $self->config->proxy ) if($self->config->proxy);
-  my $url =
-"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=$pubmed&retmode=text&rettype=medline";
+  my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+  my $url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=$pubmed&retmode=text&rettype=medline&api_key=" . $api_key;
   my $req = new HTTP::Request GET => $url;
   my $res = $ua->request($req);
   if ( $res->is_success ) {

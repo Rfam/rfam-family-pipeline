@@ -61,3 +61,17 @@ spec:
         persistentVolumeClaim:
           claimName: nfs-pvc
       restartPolicy: Always"""
+
+# manifest to sign user certificates
+
+k8s_certificate_sign_request = """
+apiVersion: certificates.k8s.io/v1beta1
+kind: CertificateSigningRequest
+metadata:
+  name: USERID
+spec:
+  groups:
+  - system:authenticated
+  request: %s
+  usages:
+  - client auth"""

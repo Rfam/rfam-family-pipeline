@@ -192,7 +192,8 @@ elsif(! -s "DESC") {
 my $famObj = Bio::Rfam::Family->new(
                                     'SEED' => {
                                                fileLocation => "SEED",
-                                               aliType      => 'seed'
+                                               aliType      => 'seed',
+                                               isRna        => 1
                                               },
                                     'TBLOUT' => { 
                                                  fileLocation => "TBLOUT",
@@ -748,8 +749,8 @@ if ((! $only_build) && ((! $no_search) || ($allow_no_desc))) {
   # first we have to create the SEED fasta file (we could use esl-reformat on SEED
   # and pipe into cmsearch, but we can't do that with existing cmsearch related subroutines
   # so we make seed.fa first so we can use the same subroutines as the DB searches)
-  $msa->write_msa("seed.fa", "fasta");
-  my @seed_dbfileA = ("seed.fa");
+  $msa->write_msa(File::Spec->rel2abs("seed.fa"), "fasta");
+  my @seed_dbfileA = (File::Spec->rel2abs("seed.fa"));
   
   # end of database setup
   #################################################################################

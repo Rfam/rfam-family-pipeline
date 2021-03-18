@@ -25,10 +25,8 @@ my $familyIO = Bio::Rfam::FamilyIO->new( );
 my $desc = $familyIO->parseDESC( $test_data.'/DESC' );
 isa_ok($desc, 'Bio::Rfam::Family::DESC');
 
-#my $family = Bio::Rfam::Family->new( { SEED => $msa } );
-#isa_ok($family, 'Bio::Rfam::Family');
-
 my $family = Bio::Rfam::Family->new( { SEED => { aliType => 'seed',
+                                                 isRNA => 1,
                                                  fileLocation => $test_data.'/SEED'},
                                        DESC  => $desc,
                                        TBLOUT => { fileLocation => $test_data.'/TBLOUT'} });
