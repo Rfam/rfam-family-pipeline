@@ -12,6 +12,6 @@ spec:
     name: nfs-pvc
   nfs:
     path: /nfs 
-    server: x.x.x.x
+    server: x.x.x.x # nfs server private ip
     readOnly: true
 
