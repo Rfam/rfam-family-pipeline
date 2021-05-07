@@ -42,7 +42,7 @@ spec:
     spec:
       containers:
       - name: rfam-login-pod-USERID
-        image: ikalvari/rfam-cloud:kubes
+        image: rfam/cloud:kubes
         imagePullPolicy: Always
         ports:
         - containerPort: 9876
