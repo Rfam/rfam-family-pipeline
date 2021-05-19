@@ -183,7 +183,7 @@ if ($caught_cntrl_c) {
 if ( $config->location eq "EBI" ) {
   my $rfamdb   = $config->rfamlive;
   my $rfamEntry = $rfamdb->resultset('Family')->find({rfam_id => $newFamObj->DESC->ID });
-  print STDERR "This family has been asssigned the accession:"
+  print STDERR "This family has been assigned the accession:"
     . $rfamEntry->rfam_acc . "\n"
     if ( $rfamEntry->rfam_acc );
 }

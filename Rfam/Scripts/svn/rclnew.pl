@@ -146,7 +146,7 @@ if ($caught_cntrl_c) {
 if ( $config->location eq "EBI" ) {
   my $rfamdb   = $config->rfamlive;
   my $clanEntry = $rfamdb->resultset('Clan')->find({id => $newClanObj->DESC->ID });
-  print STDERR "This clan has been asssigned the accession:"
+  print STDERR "This clan has been assigned the accession:"
     . $clanEntry->clan_acc . "\n"
     if ( $clanEntry->clan_acc );
 }
