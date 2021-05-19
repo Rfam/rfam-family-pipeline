@@ -977,7 +977,7 @@ sub checkSpell {
   close $tfh;
 
   # Start ispell session on file - replacing ispell with aspell
-  system("aspell -W 0 -w 0123456789 -p$dictionary $tfilename");
+  system("aspell -W 0 -w 0123456789 -p$dictionary -c $tfilename");
 
   # Now need to put changes back into DESC file
   my ( %editedline, $line_number );
@@ -1263,8 +1263,8 @@ sub checkSEEDSeqs_helper {
         }
       }
     }
-    elsif($rnacentral_has_seq_by_id) { 
-      if($rnacentral_subseq_md5 ne $seed_md5) { 
+    elsif($rnacentral_has_seq_by_id) {
+      if($rnacentral_subseq_md5 ne $seed_md5) {
       # 9) subseq appears to exist in RNAcentral by id, but md5 does not match
       $passfail = "FAIL";
       if($be_verbose) { $outstr .= "RNC:md5-subseq-fail;"; }
