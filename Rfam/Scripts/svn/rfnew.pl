@@ -126,7 +126,7 @@ if($newFamObj->DESC->CL){
 
 #-------------------------------------------------------------------------------
 #Check that the pending model does ot already exist. Parnoid check as new models
-#should be removed immediately into the main respository.
+#should be removed immediately into the main repository.
 
 $client->checkNewFamilyDoesNotExist($newFamObj->DESC->ID );
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 # This script is run by the svn repository as part of the post-commmit hook. The
-# methods in this script deal automatically adding accessions to the respository 
+# methods in this script deal automatically adding accessions to the repository 
 # and moving new entries into the repository.
 #
 use strict;

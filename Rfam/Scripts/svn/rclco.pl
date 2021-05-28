@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 # This script allows one to check out a clan from a SVN repository 
-# The clan that you wish to checkout should be in the respository
+# The clan that you wish to checkout should be in the repository
 # and you can grab them via accession and/or id.
 #
  

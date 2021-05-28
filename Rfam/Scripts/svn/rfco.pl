@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 # This script allows one to check out a family from a SVN repository containing 
-# Rfam entries. The family that you wish to checkout should be in the respository
+# Rfam entries. The family that you wish to checkout should be in the repository
 # and you can grab them via accession and/or id.
 #
  

@@ -267,7 +267,7 @@ sub checkFamilyExists {
       }
     }
     
-    confess("\n*** $family does not exist in the respository ***\n\n".
+    confess("\n*** $family does not exist in the repository ***\n\n".
             "Looking at $url.\n[$@]\n");
   }
 }
@@ -287,7 +287,7 @@ sub checkNewFamilyDoesNotExists {
   eval { $self->{txn}->info( $url, undef, 'HEAD', $codeRef, 0 ); };
 
   unless ($@) {
-    confess( "$family exist in the respository, at $url.  "
+    confess( "$family exist in the repository, at $url.  "
         . "This should not happen, as the new family should be moved into "
         . "the repoistory shortly after being added.  Please try again in a "
         . "few minutes, if the problem persists, then something is wrong\n" );
@@ -337,7 +337,7 @@ sub checkClanExists {
         exit 0;
       }
     }
-    confess( "\n*** $clan does not exist in the respository *** \n\n"
+    confess( "\n*** $clan does not exist in the repository *** \n\n"
         . "Looking at $url.\n[$@]\n" );
   }
 }
@@ -357,7 +357,7 @@ sub checkNewClanDoesNotExists {
   eval { $self->{txn}->info( $url, undef, 'HEAD', $codeRef, 0 ); };
 
   unless ($@) {
-    confess( "$clan exist in the respository, at $url.  "
+    confess( "$clan exist in the repository, at $url.  "
         . "This should not happen, as the new clan should be moved into "
         . "the repoistory shortly after being added.  Please try again in a "
         . "few minutes, if the problem persists, then something is wrong\n" );
@@ -378,7 +378,7 @@ sub checkFamilyDoesNotExist {
   eval { $self->{txn}->info( $url, undef, 'HEAD', $codeRef, 0 ); };
 
   unless ($@) {
-    confess("$family seems to exist in the respository at $url.\n[$@]\n");
+    confess("$family seems to exist in the repository at $url.\n[$@]\n");
   }
 }
 
@@ -399,7 +399,7 @@ sub checkAllFamilyFiles {
 
       #Todo, should change this to confess
       warn
-"$file for $family does not exist in the respository at $url.  This is very bad [$@]\n";
+"$file for $family does not exist in the repository at $url.  This is very bad [$@]\n";
     }
   }
 }
@@ -419,7 +419,7 @@ sub checkAllClanFiles {
 
       #Todo, should change this to confess
       warn
-"$file for $clan does not exist in the respository at $url.  This is very bad\n";
+"$file for $clan does not exist in the repository at $url.  This is very bad\n";
     }
   }
 }
@@ -656,7 +656,7 @@ sub addFamily {
 
   if ($@) {
     confess(
-"\n*** Failed to add family, $newFamilyId to the respository ***\n\n[$@]\n"
+"\n*** Failed to add family, $newFamilyId to the repository ***\n\n[$@]\n"
     );
   }
 
@@ -814,7 +814,7 @@ sub addClan {
 
   if ($@) {
     confess(
-      "\n*** Failed to add clan, $newClanId to the respository ***\n\n[$@]\n");
+      "\n*** Failed to add clan, $newClanId to the repository ***\n\n[$@]\n");
   }
 
   #And finally commit them.
