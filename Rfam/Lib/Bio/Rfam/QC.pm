@@ -1915,6 +1915,16 @@ sub optional {
     warn "Ignoring overlap check.\n";
   }
 
+  if(!exists($override->{length})){
+    $error = checkCMLength($newFamily);
+    if($error){
+      warn "Failed check on minimum consensus length of model.\n";
+      $masterError =1;
+    }
+  }else{
+    warn "Ignoring check on minimum consensus length of model.\n";
+  }
+
   return($masterError);
 }
 
