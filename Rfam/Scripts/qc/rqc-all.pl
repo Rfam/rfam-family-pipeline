@@ -225,7 +225,7 @@ print $L "\n** ID check **\n";
 
 $error = 0;
 eval{
-  $error = Bio::Rfam::QC::checkIdIsNew($familyObj, $rfamseqObj );
+  $error = Bio::Rfam::QC::checkIdIsNew($familyObj, $config);
 };
 print $L $@ if($@);
 if ($error){ 
