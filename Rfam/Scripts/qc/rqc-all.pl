@@ -220,6 +220,20 @@ else { # -nocoding not enabled
   }
 }
 #------------------------------------------------------------------------------
+print STDERR "\n(8) ID CHECK\n";
+print $L "\n** ID check **\n";
+
+$error = 0;
+eval{
+  $error = Bio::Rfam::QC::checkIdIsNew($familyObj, $rfamseqObj );
+};
+print $L $@ if($@);
+if ($error){ 
+  $masterError++;
+  print STDERR "\t--errors" 
+} else { 
+  print STDERR "\t--ID check completed with no major errors";
+}
 
 #And in summary!
 
