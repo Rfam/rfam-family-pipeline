@@ -2067,5 +2067,52 @@ sub nameFormatIsOK {
 
 }
 
+#------------------------------------------------------------------------------
+=head2 checkIdIsNew
+
+  Title    : checkIdIsNew()
+  Incept   : EPN, Fri Jun  4 19:50:20 2021
+  Usage    : Bio::Rfam::QC::checkIdIsNew()
+  Function : Checks that the provided ID for a new family does not already exist
+           : for another family
+  Args     : $familyObj: Bio::Rfam::FamilyIO object, used to access ID
+           : $config:    Bio::Rfam::Config object, used to access rfamdb
+  Returns  : 0 if no other family in rfamdb has same ID as familyObj
+           : 1 if >=1 other families in rfamdb have same ID as familyObj
+=cut
+
+
+sub checkIdIsNew {
+  my ($familyObj, $config) = @_;
+
+  if($config->location ne 'EBI'){
+    warn "This overlap test has been written assuming you have a local database.";
+  }
+  my $error = 0;
+
+  my $cur_acc = $familyObj->DESC->AC;
+  my $cur_id  = $familyObj->DESC->ID;
+  my $cur_lc_all_alphanumeric_id   = $cur_id; # $cur_id, all lowercase, with non-alphanumeric characters removed
+  $cur_lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
+  $cur_lc_all_alphanumeric_id =~ s/[^\d\w]//g;
+
+  my $rfamdb  = $config->rfamlive;
+  my %acc2id_H = ();  # key is accession, value is id
+  $rfamdb->resultset('Family')->allIds(\%acc2id_H);
+
+  foreach my $acc (sort keys (%acc2id_H)) { 
+    if($acc ne $cur_acc) { 
+      my $lc_all_alphanumeric_id = $acc2id_H{$acc};
+      $lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
+      $lc_all_alphanumeric_id =~ s/[^\d\w]//g;
+      if($lc_all_alphanumeric_id eq $cur_lc_all_alphanumeric_id) { 
+        warn "Failed checkIdIsNew() the proposed new ID $cur_id is too similar to " . $acc2id_H{$acc} . ", the ID for existing accession $acc";
+        $error = 1;
+      }
+    }
+  }
+
+  return $error;
+}
 
 1;
