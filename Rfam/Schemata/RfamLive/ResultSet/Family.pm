@@ -295,4 +295,4 @@ return \@author_list;
 }
 
 1;
->
+
