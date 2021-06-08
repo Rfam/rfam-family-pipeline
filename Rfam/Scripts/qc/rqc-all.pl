@@ -82,6 +82,23 @@ if ($error){
 }
 #------------------------------------------------------------------------------
 
+print STDERR "\n(9) LENGTH check\n";
+print $L "\n** LENGTH check **\n";
+my $error = 0;
+my $masterError = 0;
+eval{
+  $error = Bio::Rfam::QC::checkCMLength($familyObj, 110, 120);
+};
+print $L $@ if($@);
+if ($error){
+  $masterError++;
+  print STDERR "\t--errors" 
+} else { 
+  print STDERR "\t--Length check completed with no major errors";
+}
+exit 0;
+#------------------------------------------------------------------------------
+
 print STDERR "\n(2) FORMAT CHECK\n";
 print $L "\n** FORMAT check **\n";
 
