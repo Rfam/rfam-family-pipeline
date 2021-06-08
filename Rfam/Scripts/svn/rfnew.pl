@@ -201,7 +201,7 @@ print<<EOF;
   Aim: To perform quality control checks on a new family and add it to the SVN repository.
   
   -i <option>       - Ignore some of the QC steps to speed up check-in/get family through.
-                      Valid options are (probably): 'overlap', 'spell', 'coding', 'seed', and 'missing'
+                      Valid options are (probably): 'overlap', 'spell', 'coding', 'seed', 'missing', 'length'
                       To skip more than one, use -i <s> multiple times
   -m                - Specify the message that describes the changes you have made to this family 
                       on the command line, avoid being prompted for it at a later satge.
