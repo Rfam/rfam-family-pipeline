@@ -1821,6 +1821,12 @@ sub essential {
     $masterError = 1;
   }
 
+  $error = checkIdIsNew($familyObj, $config);
+  if($error){
+    warn "A family with an identical or too similar ID already exists.\n";
+    $masterError = 1;
+  }
+
   return( $masterError );
 }
 
