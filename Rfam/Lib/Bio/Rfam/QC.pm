@@ -1821,7 +1821,7 @@ sub essential {
     $masterError = 1;
   }
 
-  $error = checkIdIsNew($familyObj, $config);
+  $error = checkIdIsNew($newFamily, $config);
   if($error){
     warn "A family with an identical or too similar ID already exists.\n";
     $masterError = 1;
