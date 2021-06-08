@@ -2121,4 +2121,43 @@ sub checkIdIsNew {
   return $error;
 }
 
+#------------------------------------------------------------------------------
+
+=head2 checkCMLength
+
+  Title    : checkCMLength
+  Incept   : EPN, Tue Jun  8 12:00:56 2021
+  Usage    : Bio::Rfam::QC::checkCMLength($familyObj)
+  Function : Checks that CM length is above minimum length
+           : <$act_min> and returns 1 if not. Prints a warning if below
+           : warning length <$warn_min>.
+  Args     : A Bio::Rfam::Family object
+  Returns  : 1 on error, 0 on passing checks.
+
+=cut
+
+sub checkCMLength {
+  my ($familyObj, $act_min, $warn_min) = @_;
+
+  if(! defined $act_min)  { $act_min  = 50; }
+  if(! defined $warn_min) { $warn_min = 60; }
+
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    die "Did not get passed in a Bio::Rfam::Family object\n";
+  }
+  my $error = 0;
+
+  #Check that the CM and internal HMM agree.
+  if ( $familyObj->CM->cmHeader->{clen} < $act_min) { 
+    $error = 1;
+    warn "FATAL: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is below minimum ($act_min)";
+    return $error;
+  }
+  elsif ( $familyObj->CM->cmHeader->{clen} < $warn_min) { 
+    warn "WARNING: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is low but above minimum of $act_min (not FATAL)";
+  }
+
+  return $error;
+}
+
 1;
