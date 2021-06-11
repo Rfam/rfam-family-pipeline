@@ -9,6 +9,24 @@ use DateTime::Format::MySQL;
 
 use base 'DBIx::Class::ResultSet';
 
+sub allIds {
+  my ($self, $acc2id_HR) = @_;
+  
+#  my @row = $self->search(undef, { select => [ 'rfam_acc', 'rfam_id' ] });
+  my @rows_A = $self->search;
+
+  %{$acc2id_HR} = ();
+  foreach my $r (@rows_A){
+    my ($acc, $id) = ($r->get_column('rfam_acc'), $r->get_column('rfam_id'));
+    if(defined $acc2id_HR->{$acc}) { 
+      croak("Accession $acc exists more than once in family table");
+    }
+    $acc2id_HR->{$acc} = $id;
+  }
+
+  return;
+}
+
 sub id2acc {
   my ( $self, $id ) = @_;
 
@@ -277,3 +295,4 @@ return \@author_list;
 }
 
 1;
+

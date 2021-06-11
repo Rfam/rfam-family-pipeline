@@ -31,7 +31,7 @@ my ($full, @ignore, $family, $help, $nospell, $nocoding);
       'nospell' => \$nospell,
       'nocoding' => \$nocoding,
       ) or die "Unknown option passed, try running $0 -h\n";
-      
+
 #This is coded like this for legacy reasons. The family can be passed in
 #either way, an option or command line argument.
 $family = shift;
@@ -40,7 +40,7 @@ $family = shift;
 help() if($help);
 
 if(!$family){
-  help();  
+  help();
 }
 
 #rqc-passed file
@@ -62,7 +62,7 @@ if (@ignore){
 }
 $ignore{ $familyObj->DESC->AC }++ if($familyObj->DESC->AC);
 
-open(my $L, '>', "$pwd/$family/allqc.log") 
+open(my $L, '>', "$pwd/$family/allqc.log")
   or die "Could not open $pwd/$family/allqc.log: [$!]\n";
 
 #------------------------------------------------------------------------------
@@ -76,10 +76,11 @@ eval{
 print $L $@ if($@);
 if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
-} else { 
+  print STDERR "\t--errors"
+} else {
   print STDERR "\t--CM check completed with no major errors";
 }
+
 #------------------------------------------------------------------------------
 
 print STDERR "\n(2) FORMAT CHECK\n";
@@ -95,10 +96,10 @@ eval{
   }
 };
 print $L $@ if($@);
-if ($error){ 
+if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
-} else { 
+  print STDERR "\t--errors"
+} else {
   print STDERR "\t--FORMAT check completed with no major errors";
 }
 
@@ -112,10 +113,10 @@ eval{
   $error = Bio::Rfam::QC::checkOverlaps($familyObj, $config, \%ignore, "$pwd/$family");
 };
 print $L $@ if($@);
-if ($error){ 
+if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
-} else { 
+  print STDERR "\t--errors"
+} else {
   print STDERR "\t--OVERLAP check completed with no major errors";
 }
 
@@ -129,10 +130,10 @@ eval{
   $error = Bio::Rfam::QC::ssStats($familyObj, "$pwd/$family");
 };
 print $L $@ if($@);
-if ($error){ 
+if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
-} else { 
+  print STDERR "\t--errors"
+} else {
   print STDERR "\t--STRUCTURE check completed with no major errors";
 }
 
@@ -149,7 +150,7 @@ eval{
 print $L $@ if($@);
 if($error){
   $masterError++;
-  print STDERR "\t--errors" 
+  print STDERR "\t--errors"
 }
 
 #Check the old and new....but it may be a new family.
@@ -163,21 +164,21 @@ eval{
   }
 };
 print $L $@ if($@);
-if ($error){ 
+if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
+  print STDERR "\t--errors"
 }
 
 if(defined($oldFamilyObj)){
 my($found, $missing);
 eval {
- ($found, $missing) = 
+ ($found, $missing) =
    Bio::Rfam::QC::compareOldAndNew($oldFamilyObj, $familyObj);
 };
 if(scalar(@$missing)){
   print $L $@ if($@);
-  print STDERR "\t--errors (but non-fatal)" 
-} else { 
+  print STDERR "\t--errors (but non-fatal)"
+} else {
   print STDERR "\t--MISSING check completed with no major errors";
 }
 }
@@ -191,14 +192,14 @@ eval{
   $error = Bio::Rfam::QC::checkScoresSeqs($familyObj, $rfamseqObj) if(!$error);
 };
 print $L $@ if($@);
-if ($error){ 
+if ($error){
   $masterError++;
-  print STDERR "\t--errors" 
-} else { 
+  print STDERR "\t--errors"
+} else {
   print STDERR "\t--SEQUENCE check completed with no major errors";
 }
 #------------------------------------------------------------------------------
-if($nocoding){ 
+if($nocoding){
   print STDERR "\n(7) SKIPPING NON-CODING CHECK (due to -nocoding option)\n";
 }
 else { # -nocoding not enabled
@@ -211,14 +212,46 @@ else { # -nocoding not enabled
     ($error, $coding) = Bio::Rfam::QC::codingSeqs($familyObj, $config);
   };
   print $L $@ if($@);
-  if ($error){ 
+  if ($error){
     print $L $coding if($coding);
     $masterError++;
-    print STDERR "\t--errors" 
-  } else { 
+    print STDERR "\t--errors"
+  } else {
     print STDERR "\t--NON-CODING check completed with no major errors";
   }
 }
+#------------------------------------------------------------------------------
+print STDERR "\n(8) ID CHECK\n";
+print $L "\n** ID check **\n";
+
+$error = 0;
+eval{
+  $error = Bio::Rfam::QC::checkIdIsNew($familyObj, $config);
+};
+print $L $@ if($@);
+if ($error){
+  $masterError++;
+  print STDERR "\t--errors"
+} else {
+  print STDERR "\t--ID check completed with no major errors";
+}
+
+#------------------------------------------------------------------------------
+
+print STDERR "\n(9) LENGTH check\n";
+print $L "\n** LENGTH check **\n";
+$error = 0;
+eval{
+  $error = Bio::Rfam::QC::checkCMLength($familyObj);
+};
+print $L $@ if($@);
+if ($error){
+  $masterError++;
+  print STDERR "\t--errors"
+} else {
+  print STDERR "\t--Length check completed with no major errors";
+}
+
 #------------------------------------------------------------------------------
 
 #And in summary!
@@ -233,9 +266,9 @@ if ($masterError){
 close($L);
 
 sub help {
-  
+
   print<<EOF;
-  
+
 USAGE: $0 <options> <family>
 
 Performs all QC steps against the family.
@@ -254,4 +287,3 @@ EOF
 exit;
 
 }
-

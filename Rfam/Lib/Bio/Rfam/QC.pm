@@ -1821,6 +1821,12 @@ sub essential {
     $masterError = 1;
   }
 
+  $error = checkIdIsNew($newFamily, $config);
+  if($error){
+    warn "A family with an identical or too similar ID already exists.\n";
+    $masterError = 1;
+  }
+
   return( $masterError );
 }
 
@@ -1907,6 +1913,16 @@ sub optional {
     }
    }else{
     warn "Ignoring overlap check.\n";
+  }
+
+  if(!exists($override->{length})){
+    $error = checkCMLength($newFamily);
+    if($error){
+      warn "Failed check on minimum consensus length of model.\n";
+      $masterError =1;
+    }
+  }else{
+    warn "Ignoring check on minimum consensus length of model.\n";
   }
 
   return($masterError);
@@ -2067,5 +2083,91 @@ sub nameFormatIsOK {
 
 }
 
+#------------------------------------------------------------------------------
+=head2 checkIdIsNew
+
+  Title    : checkIdIsNew()
+  Incept   : EPN, Fri Jun  4 19:50:20 2021
+  Usage    : Bio::Rfam::QC::checkIdIsNew()
+  Function : Checks that the provided ID for a new family does not already exist
+           : for another family
+  Args     : $familyObj: Bio::Rfam::FamilyIO object, used to access ID
+           : $config:    Bio::Rfam::Config object, used to access rfamdb
+  Returns  : 0 if no other family in rfamdb has same ID as familyObj
+           : 1 if >=1 other families in rfamdb have same ID as familyObj
+=cut
+
+
+sub checkIdIsNew {
+  my ($familyObj, $config) = @_;
+
+  if($config->location ne 'EBI'){
+    warn "This overlap test has been written assuming you have a local database.";
+  }
+  my $error = 0;
+
+  my $cur_acc = $familyObj->DESC->AC || '';
+  my $cur_id  = $familyObj->DESC->ID;
+  my $cur_lc_all_alphanumeric_id   = $cur_id; # $cur_id, all lowercase, with non-alphanumeric characters removed
+  $cur_lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
+  $cur_lc_all_alphanumeric_id =~ s/[^\d\w]//g;
+
+  my $rfamdb  = $config->rfamlive;
+  my %acc2id_H = ();  # key is accession, value is id
+  $rfamdb->resultset('Family')->allIds(\%acc2id_H);
+
+  foreach my $acc (sort keys (%acc2id_H)) {
+    if($acc ne $cur_acc) {
+      my $lc_all_alphanumeric_id = $acc2id_H{$acc};
+      $lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
+      $lc_all_alphanumeric_id =~ s/[^\d\w]//g;
+      if($lc_all_alphanumeric_id eq $cur_lc_all_alphanumeric_id) {
+        warn "Failed checkIdIsNew() the proposed new ID $cur_id is too similar to " . $acc2id_H{$acc} . ", the ID for existing accession $acc";
+        $error = 1;
+      }
+    }
+  }
+
+  return $error;
+}
+
+#------------------------------------------------------------------------------
+
+=head2 checkCMLength
+
+  Title    : checkCMLength
+  Incept   : EPN, Tue Jun  8 12:00:56 2021
+  Usage    : Bio::Rfam::QC::checkCMLength($familyObj)
+  Function : Checks that CM length is above minimum length
+           : <$act_min> and returns 1 if not. Prints a warning if below
+           : warning length <$warn_min>.
+  Args     : A Bio::Rfam::Family object
+  Returns  : 1 on error, 0 on passing checks.
+
+=cut
+
+sub checkCMLength {
+  my ($familyObj, $act_min, $warn_min) = @_;
+
+  if(! defined $act_min)  { $act_min  = 50; }
+  if(! defined $warn_min) { $warn_min = 60; }
+
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    die "Did not get passed in a Bio::Rfam::Family object\n";
+  }
+  my $error = 0;
+
+  #Check that the CM and internal HMM agree.
+  if ( $familyObj->CM->cmHeader->{clen} < $act_min) {
+    $error = 1;
+    warn "FATAL: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is below minimum ($act_min)";
+    return $error;
+  }
+  elsif ( $familyObj->CM->cmHeader->{clen} < $warn_min) {
+    warn "WARNING: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is low but above minimum of $act_min (not FATAL)";
+  }
+
+  return $error;
+}
 
 1;
