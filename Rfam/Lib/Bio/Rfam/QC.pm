@@ -2106,7 +2106,7 @@ sub checkIdIsNew {
   }
   my $error = 0;
 
-  my $cur_acc = $familyObj->DESC->AC;
+  my $cur_acc = $familyObj->DESC->AC || '';
   my $cur_id  = $familyObj->DESC->ID;
   my $cur_lc_all_alphanumeric_id   = $cur_id; # $cur_id, all lowercase, with non-alphanumeric characters removed
   $cur_lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
