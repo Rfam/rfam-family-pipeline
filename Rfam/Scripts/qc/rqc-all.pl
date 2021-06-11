@@ -242,7 +242,7 @@ print STDERR "\n(9) LENGTH check\n";
 print $L "\n** LENGTH check **\n";
 $error = 0;
 eval{
-  $error = Bio::Rfam::QC::checkCMLength($familyObj, 100, 110);
+  $error = Bio::Rfam::QC::checkCMLength($familyObj);
 };
 print $L $@ if($@);
 if ($error){
