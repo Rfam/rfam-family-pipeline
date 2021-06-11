@@ -2116,12 +2116,12 @@ sub checkIdIsNew {
   my %acc2id_H = ();  # key is accession, value is id
   $rfamdb->resultset('Family')->allIds(\%acc2id_H);
 
-  foreach my $acc (sort keys (%acc2id_H)) { 
-    if($acc ne $cur_acc) { 
+  foreach my $acc (sort keys (%acc2id_H)) {
+    if($acc ne $cur_acc) {
       my $lc_all_alphanumeric_id = $acc2id_H{$acc};
       $lc_all_alphanumeric_id =~ tr/A-Z/a-z/;
       $lc_all_alphanumeric_id =~ s/[^\d\w]//g;
-      if($lc_all_alphanumeric_id eq $cur_lc_all_alphanumeric_id) { 
+      if($lc_all_alphanumeric_id eq $cur_lc_all_alphanumeric_id) {
         warn "Failed checkIdIsNew() the proposed new ID $cur_id is too similar to " . $acc2id_H{$acc} . ", the ID for existing accession $acc";
         $error = 1;
       }
@@ -2158,12 +2158,12 @@ sub checkCMLength {
   my $error = 0;
 
   #Check that the CM and internal HMM agree.
-  if ( $familyObj->CM->cmHeader->{clen} < $act_min) { 
+  if ( $familyObj->CM->cmHeader->{clen} < $act_min) {
     $error = 1;
     warn "FATAL: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is below minimum ($act_min)";
     return $error;
   }
-  elsif ( $familyObj->CM->cmHeader->{clen} < $warn_min) { 
+  elsif ( $familyObj->CM->cmHeader->{clen} < $warn_min) {
     warn "WARNING: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is low but above minimum of $act_min (not FATAL)";
   }
 
