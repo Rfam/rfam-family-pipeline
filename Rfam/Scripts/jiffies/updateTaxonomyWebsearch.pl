@@ -125,8 +125,8 @@ $rfamDB->resultset('TaxonomyWebsearch')->delete;
 my $dbh = $rfamDB->storage->dbh;
 $logger->debug( 'successfully connected to database' );
 
-my $insertTaxSth = $dbh->prepare( 
-                "INSERT INTO taxonomy_websearch VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )" );
+my $insertTaxSth = $dbh->prepare(
+                "INSERT INTO taxonomy_websearch (ncbi_id, species, taxonomy, lft, rgt, parent, level, minimal, rank) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? )" );
 
 
 
@@ -190,15 +190,15 @@ sub traverseTreeAndStore {
     #if(defined $nodes->[$k]->{name} ){
     $thisTaxString .= $nodes->[$k]->{name} . ';';
     $insertTaxSth->execute(
-        $k,
-        $nodes->[$k]->{rank} eq 'species' ? $nodes->[$k]->{name} : undef,
-        $thisTaxString,
-        $nodes->[$k]->{lft},
-        $nodes->[$k]->{rgt}, 
-        $nodes->[$k]->{parent},
-        $nodes->[$k]->{name},
-        exists ($ranksRef->{$nodes->[$k]->{rank}}) ? 1 : 0, 
-        $nodes->[$k]->{rank});
+        $k, # ncbi_id
+        $nodes->[$k]->{rank} eq 'species' ? $nodes->[$k]->{name} : undef, # species
+        $thisTaxString, # taxonomy
+        $nodes->[$k]->{lft}, # lft
+        $nodes->[$k]->{rgt}, # rgt
+        $nodes->[$k]->{parent}, # parent
+        $nodes->[$k]->{name}, # level
+        exists ($ranksRef->{$nodes->[$k]->{rank}}) ? 1 : 0, # minimal
+        $nodes->[$k]->{rank}); # rank
     #}
     traverseTreeAndStore( $hash->{$k}, $nodes, $thisTaxString, $insertTaxSth, $ranksRef );
   }
