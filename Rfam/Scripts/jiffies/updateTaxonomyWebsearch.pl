@@ -191,7 +191,7 @@ sub traverseTreeAndStore {
     $thisTaxString .= $nodes->[$k]->{name} . ';';
     $insertTaxSth->execute(
         $k, # ncbi_id
-        $nodes->[$k]->{rank} eq 'species' ? $nodes->[$k]->{name} : undef, # species
+        $nodes->[$k]->{rank} eq 'species' ? substr(0, 100, $nodes->[$k]->{name}) : undef, # species
         $thisTaxString, # taxonomy
         $nodes->[$k]->{lft}, # lft
         $nodes->[$k]->{rgt}, # rgt
