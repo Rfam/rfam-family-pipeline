@@ -3,7 +3,7 @@
 #
 # Script to download the taxonomy data from NCBI and to build the taxonomic
 # tree, strip out the levels that are not so meaningful to generate a minimal
-# tree. This 
+# tree. This
 #
 
 use strict;
@@ -49,7 +49,7 @@ usage() and exit if $help;
 #- main ------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 
-              
+
 #-------------------------------------------------------------------------------
 # Build up all the ncbi nodes. Read into a hash array
 $logger->info('Parsing ncbi data (names.dmp)');
@@ -101,12 +101,12 @@ while (<_NODES>) {
   my ($taxid)  = $_[0] =~ /(\d+)/;
   my ($parent) = $_[1] =~ /(\d+)/;
   my ($rank)   = $_[2] =~ /\s+(.*)\s+/;
-  #print "$rank\|"; 
+  #print "$rank\|";
   #Shunt those special ids to be superkingdoms.
   $rank = 'superkingdom' if ( $promoteTaxIds{$taxid} );
-    
+
   unless(defined($names{$taxid})){
-     #warn $taxid. " has no name\n"; 
+     #warn $taxid. " has no name\n";
      $names{$taxid} = '_unnamed';
   }
   $nodes->[$taxid] = {
@@ -114,7 +114,7 @@ while (<_NODES>) {
                        parent => $parent,
                        rank   => $rank,
                        name   => $names{$taxid} };
-  
+
 }
 close(_NAMES);
 close(_NODES);
@@ -168,7 +168,7 @@ traverseTreeAndStore( $tree, $nodes, $taxString, $insertTaxSth, \%ranks );
 exit;
 
 #------------------------------------------------------------------------------
-# subroutines ----------------------------------------------------------------- 
+# subroutines -----------------------------------------------------------------
 #------------------------------------------------------------------------------
 
 sub traverseTree {
@@ -184,7 +184,7 @@ sub traverseTree {
 
 sub traverseTreeAndStore {
   my ( $hash, $nodes, $taxString, $insertTaxSth, $ranksRef ) = @_;
-  
+
   foreach my $k ( keys %{$hash} ) {
     my $thisTaxString = $taxString;
     #if(defined $nodes->[$k]->{name} ){
@@ -252,7 +252,7 @@ sub buildTree {
 sub usage {
 
   print <<'EOF_help';
-Usage: $0 
+Usage: $0
 Build a database table of the taxonomic tree using the ncbi taxonomy files names.dmp and nodes.dmp
 EOF_help
 
