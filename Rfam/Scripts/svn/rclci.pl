@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# This script allows one to check in a family to the SVN repository containing Rfam 
+# This script allows one to check in a family to the SVN repository containing Rfam
 # entries. The family that you wish to commit should be passed in as a parameter
 #
 
@@ -142,7 +142,7 @@ exit(0);
 
 
 sub help {
-  
+
 print<<EOF;
 
 USAGE: $0 <directory>
@@ -150,7 +150,7 @@ USAGE: $0 <directory>
   Where the directory contains the files that consitute a Rfam entry.
 
 AIM: To perform quality control checks on an existing clan and commit to the SVN repository.
-    
+
 EOF
 
 exit(1);

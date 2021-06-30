@@ -14,8 +14,8 @@ sub process{
 #
 
 sub mapPDB {
-	
-	my ($self) = @_;	
+
+	my ($self) = @_;
 	#Sorry Rob, a hardcoded path. Need to put this someplace more permanent.
 	#This file is the fasta file of all the non-protein nucleic acid sequences in the PDB.
 	#Those with modified bases have been excluded.
@@ -23,7 +23,7 @@ sub mapPDB {
 	my $PDB_fasta = '/hps/nobackup/production/xfam/rfam/RELEASES/14.2/pdb_files/PDB_RFAM14_2.fa';
 	my $config = $self->_mxrp_parent->config;
 	# my $client = Bio::Rfam::SVN::Client->new({config => $config});
-	my $familyIO = Bio::Rfam::FamilyIO->new;	
+	my $familyIO = Bio::Rfam::FamilyIO->new;
 	my $familyObj = $self->_mxrp_parent->family;
 	my $rfam_acc = $familyObj->DESC->AC;
 	my $prefix = "$rfam_acc.XXXX";
@@ -53,9 +53,9 @@ sub mapPDB {
 
     #$familyIO->writeAnnotatedCM($cm, $familyObj,$cm_file,0);
     $familyIO->writeAnnotatedCM( $familyObj,$cm_file,0);
-    
+
 	#$familyIO->writeCM($cm, $cm_file);
-	
+
 	# cmpress the CM and run the cmscan job:
 	#
 	my $cmpress = $config->infernalPath . "cmpress -F $cm_file";
@@ -68,7 +68,7 @@ sub mapPDB {
 	system ( $cmscan_cmd) == 0
           or die 'ERROR: failed to run cmscan';
 
- 	unlink glob "/tmp/$prefix.CM*";	
+ 	unlink glob "/tmp/$prefix.CM*";
 	#Array to store our PDB matches in:
 	my @pdbs;
 
@@ -90,14 +90,14 @@ sub mapPDB {
 					cm_start => $result[5],
 					cm_end => $result[6],
                                         hex_colour => $colour };
-	} 
+	}
 	my $resultset = $rfamdb->resultset('PdbFullRegion')->search({rfam_acc => $rfam_acc});
- 	
+
 	#Delete all existing matches so we don't have duplicates:
 	#
 	$resultset->delete_all;
-	
-	#Load new PDB hits into DB:	
+
+	#Load new PDB hits into DB:
 	for my $hit (@pdbs) {
 	        p $hit;
         	$resultset->create( {rfam_acc =>$hit->{rfam_acc},
@@ -118,6 +118,6 @@ catch{
 	unlink glob "/tmp/$prefix.CM*";
 };
 
-} 
-	
-1;	
+}
+
+1;
