@@ -105,7 +105,7 @@ if ( $upClanObj->DESC->AC ne $oldClanObj->DESC->AC ) {
 if ( $upClanObj->DESC->ID ne $oldClanObj->DESC->ID ) {
   die
 "\n***** Identifier error, your local copy does not match the SVN repository. "
-    . " Do you mean to change the name? If so use rfmove. *****\n\n";
+    . " Do you mean to change the name? If so use rclmove. *****\n\n";
 }
 
 #-------------------------------------------------------------------------------
