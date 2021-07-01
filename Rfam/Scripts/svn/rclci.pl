@@ -120,12 +120,12 @@ die "Failed essential QC step.\n" if($error);
 
 
 #-------------------------------------------------------------------------------
-#If we get here, then great! We can now check the family in!
+#If we get here, then great! We can now check the clan in!
 my $caught_cntrl_c;
 $SIG{INT} = sub { $caught_cntrl_c = 1; };    # don't allow control C for a bit!
 
 $client->commitClan($clan);
-print STDERR "Successfully checked family in\n";
+print STDERR "Successfully checked clan in\n";
 #------------------------------------------------------------------------------
 #Clean-up
 #Remove any file containing the check-in message
