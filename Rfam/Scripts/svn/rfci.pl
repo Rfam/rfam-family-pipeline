@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# This script allows one to check in a family to the SVN repository containing Rfam 
+# This script allows one to check in a family to the SVN repository containing Rfam
 # entries. The family that you wish to commit should be passed in as a parameter
 #
 
@@ -93,7 +93,7 @@ $upFamilyObj = $familyIO->loadRfamFromLocalFile( $family, $pwd );
 print STDERR "Successfully loaded local copy of $family through middleware\n";
 
 #Now load the remote family
-if($preseed) { 
+if($preseed) {
   # once all families have been updated to the 'outside seeds' strategy
   # remove the --preseed option and the two subroutines with the suffix
   # '_preSEED' in FamilyIO.pm:
@@ -101,7 +101,7 @@ if($preseed) {
   # loadRfamFromLocalFile_preSEED()
   $oldFamilyObj = $familyIO->loadRfamFromSVN_preSEED( $family, $client );
 }
-else { 
+else {
   $oldFamilyObj = $familyIO->loadRfamFromSVN( $family, $client );
 }
 print STDERR "Successfully loaded SVN copy of $family through middleware\n";
@@ -125,30 +125,30 @@ if ( $upFamilyObj->DESC->ID ne $oldFamilyObj->DESC->ID ) {
 }
 
 #-------------------------------------------------------------------------------
-#Clan sanity checks 
+#Clan sanity checks
 if ( defined($upFamilyObj->DESC->CL) and !defined($oldFamilyObj->DESC->CL)){
   #The updated family has a clan line
   unless($addToClan){
     die "Found a CL line in the DESC file and you have not explicitly said you".
-        " are going to add to a clan. See $0 -help!\n";  
+        " are going to add to a clan. See $0 -help!\n";
   }
   #Check that the clan accession is valid.
   eval{
-    $client->checkClanExists($upFamilyObj->DESC->CL);  
+    $client->checkClanExists($upFamilyObj->DESC->CL);
   };
   if($@){
     die "\nERROR:There was an issue finding the clan referenced in the DESC file, ".
          $upFamilyObj->DESC->CL."\n\nSee:$@\n";
-  } 
+  }
 }elsif(!defined($upFamilyObj->DESC->CL) and defined($oldFamilyObj->DESC->CL)){
   unless($removeFromClan){
     die "Found a CL line in the previous DESC file and you have not explicitly said you".
-        " are going to remove the family from the clan. See $0 -help!\n";  
+        " are going to remove the family from the clan. See $0 -help!\n";
   }
 }elsif($addToClan){
-  die;  
+  die;
 }elsif($removeFromClan){
-  die;  
+  die;
 }
 
 #-------------------------------------------------------------------------------
@@ -172,9 +172,9 @@ if ($onlydesc) {
   #Okay, this a full check-in, perform whole QC repetoire.
   $error = Bio::Rfam::QC::essential($upFamilyObj, "$pwd/$family", $oldFamilyObj, $config);
   die "Failed essential QC step.\n" if($error);
-  
+
   printf("calling optional checks\n");
-  $error = Bio::Rfam::QC::optional( $upFamilyObj, "$pwd/$family", $oldFamilyObj, 
+  $error = Bio::Rfam::QC::optional( $upFamilyObj, "$pwd/$family", $oldFamilyObj,
                                     $config, $overrideHashRef, $overlapIgnore );
   die "Failed QC.\n" if($error);
 }
@@ -207,7 +207,7 @@ exit(0);
 
 
 sub help {
-  
+
 print<<EOF;
 
 USAGE: $0 <directory>
@@ -215,7 +215,7 @@ USAGE: $0 <directory>
   Where the directory contains the files that consitute a Rfam entry.
 
 AIM: To perform quality control checks on an existing family and commit to the SVN repository.
-    
+
 OPTIONS:
 
   -onlydesc         - Speeds up check-ins a bit by avoiding the QC and only updating the contents
