@@ -218,17 +218,21 @@ AIM: To perform quality control checks on an existing family and commit to the S
     
 OPTIONS:
 
-  -onlydesc         - Speeds up check-ins a bit by avoiding the QC and onyl updating the contents
+  -onlydesc         - Speeds up check-ins a bit by avoiding the QC and only updating the contents
                       in the DESC file.  Do not change DESC contents that affect the other files,
-                      particularly cut-offs.  Useful for when making updates to annotation or 
-                      adding a family to a clan. If you are uncertain of what you are doing, do 
+                      particularly cut-offs. Useful for when making updates to annotation or
+                      adding a family to a clan. If you are uncertain of what you are doing, do
                       not use this option.
-  -i <option>       - Ignore some of the QC steps to speed up check-in/get family through.
-                      Valid options are (probably): 'overlap', 'spell', 'coding', 'seed', and 'missing'
+  -i <option>       - Ignore some of the QC steps to speed up check-in or get family through.
+                      Valid options are: 'overlap', 'spell', 'coding', 'seed', 'missing', and 'length'
                       To skip more than one, use -i <s> multiple times
-  -m                - Specify the message that describes the changes you have made to this family 
-                      on the command line, avoid being prompted for it at a later satge.                   
-                      
+  -m                - Specify the message that describes the changes you have made to this family
+                      on the command line, avoid being prompted for it at a later stage.
+  -add_to_clan      - Use this flag along with a new CL line in the DESC file to add a family to a clan.
+  -remove_from_clan - Use this flag and delete a CL line from the DESC file to remove a family from
+                      a clan. The flag confirms that clan removal is intentional.
+  -preseed            Use this flag to update an old Rfam family that does not yet have SEEDTBLOUT
+                      and SEEDSCORES files in the SVN.
 EOF
 
 exit(1);
