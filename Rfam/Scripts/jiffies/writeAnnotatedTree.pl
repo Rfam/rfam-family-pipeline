@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
-# 
+#
 # writeAnnotatedSeed.pl:  Generates annotated SEED files to be used as release flatfiles
 #
-# 
+#
 use strict;
 use Bio::Rfam::FamilyIO;
 use Bio::Rfam::Family::CM;
@@ -31,7 +31,7 @@ system ($cmd) == 0 or croak ("Problem with generating the seed tree....this is n
 
 
 addBitscoreToTree($msa, $rfamdb, $tree, $family);
-specifyTree($msa, $rfamdb ,$bittree,$taxtree); 
+specifyTree($msa, $rfamdb ,$bittree,$taxtree);
 
 sub addBitscoreToTree {
         my ($self, $rfamdb, $tree, $family) =@_;
@@ -61,25 +61,25 @@ sub specifyTree {
         my %seenSpecies;
         my %accToSpecies;
 
-#Get sequence identifiers from the seed and query the database for the species (align_display_name)     
+#Get sequence identifiers from the seed and query the database for the species (align_display_name)
 
         my $sth = $rfamdb->prepare_seqaccToTaxon;
         for( my $i = 0; $i < $self->nseq; $i++){
                  my $nse = $self->get_sqname($i);
         my ($is_nse, $name, $start, $end) = Bio::Rfam::Utils::nse_breakdown($nse);
         if(! $is_nse) { die "ERROR $nse not in name/start-end format"; }
-        
+
         $sth->execute($name);
         my $row = $sth->fetchrow_hashref;
         if(!exists($seenSpecies{$row->{align_display_name}})){
                 $seenSpecies{$row->{align_display_name}} = 1;
         }
         my $speciesName = $row->{align_display_name}.'.'.$seenSpecies{$row->{align_display_name}};
-        
+
         $accToSpecies{$nse} = $speciesName;
         $seenSpecies{$row->{align_display_name}}++;
         }
-        
+
 
 
 #Now get the original tree and replace all the accessions with the species:
