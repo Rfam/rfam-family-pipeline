@@ -107,7 +107,7 @@ foreach my $plugin_set ( @ARGV ) {
   }
 
   #marked as DONE if all plugins execute successfully
-  #$job->done; #unless $no_db; #this one will now work after modifying the 
+  $job->done; #unless $no_db; #this one will now work after modifying the
   #PostProcess.pm in RfamLive ResultSet
 
   # (the $job row object has methods "run", "fail" and "done, which set the
