@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# writeAnnotatedSeed.pl:  Generates annotated SEED files to be used as release flatfiles
+# writeAnnotatedTree.pl:  Generates annotated TREE files to be used as release flatfiles
 #
 #
 use strict;
@@ -90,6 +90,6 @@ sub specifyTree {
         foreach my $k (keys %accToSpecies){
         $t =~ s/($k)/$1_$accToSpecies{$k}/g;
     }
-        open(TAXTREE, ">>$taxtree");
+        open(TAXTREE, ">$taxtree");
         print TAXTREE "$t\n";
 }
