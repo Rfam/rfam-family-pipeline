@@ -112,5 +112,5 @@ close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
 my $bigbedfile = $dirname . '/' . $upid . ".bigBed";
-system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile $chrom_sizes_file $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+system ("/hps/software/users/agb/rfam/bin/bedToBigBed $sortedfile $chrom_sizes_file $bigbedfile") and die "Could not convert BED to bigBed $!\n";
 

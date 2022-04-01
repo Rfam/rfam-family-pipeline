@@ -280,7 +280,7 @@ sub makeBling {
   chdir($location);
 
   use IPC::Run qw(run);
-  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh74/software/bin/RNAplot", "-o", "svg");
+  my @cmd2 = ("/hps/software/users/agb/rfam/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
 
   unless(-e $RNAplot_img) {

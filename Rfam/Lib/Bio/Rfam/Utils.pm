@@ -70,7 +70,7 @@ sub run_local_command {
            : $ncpu:     number of CPUs to run job on, can be undefined if location eq "JFRC"
            : $reqMb:    required number of Mb for job, can be undefined if location eq "JFRC"
            : $exStr:    extra string to add to qsub/sub command
-           : $queue:    queue to submit to, "" for default, 'p' = "production-rh7", 'r' = "research-rh7";
+           : $queue:    queue to submit to, "" for default, 'p' = "production", 'r' = "research";
   Returns  : void
   Dies     : If MPI submit command fails.
 
@@ -80,8 +80,8 @@ sub submit_nonmpi_job {
   my ($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
 
   my $submit_cmd = "";
-  if(defined $queue && $queue eq "p") { $queue = "production-rh74"; }
-  if(defined $queue && $queue eq "r") { $queue = "research-rh74"; }
+  if(defined $queue && $queue eq "p") { $queue = "production"; }
+  if(defined $queue && $queue eq "r") { $queue = "research"; }
 
   if($location eq "EBI") {
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
@@ -92,7 +92,7 @@ sub submit_nonmpi_job {
       $submit_cmd .= "-q $queue ";
     }
     else {
-      $submit_cmd .= "-q research-rh74 ";
+      $submit_cmd .= "-q research ";
     }
     $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
@@ -165,9 +165,9 @@ sub submit_mpi_job {
     #if($? != 0) { die "MPI prep command $prepcmd failed"; }
 
     # Need to use MPI queue ($queue is irrelevant)
-    # TEMPORARILY USING research-rh7 queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
+    # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi-rh74 -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
+    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
     # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
     # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
   }
