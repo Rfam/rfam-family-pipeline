@@ -9,6 +9,8 @@ use File::Temp qw( tempdir );
 use File::Slurp;
 use Cwd;
 
+use Bio::Rfam::Config;
+
 use Bio::Rfam::MotifMatch;
 use Bio::Rfam::MotifIO;
 use RfamLive;
@@ -17,6 +19,8 @@ use SVG;
 use SVG::Parser;
 
 use IO::Compress::Gzip qw(gzip $GzipError);
+
+my $config = Bio::Rfam::Config->new;  
 
 has foo => (
   is  => 'rw',
@@ -48,7 +52,7 @@ sub findMotifs {
 	my $results_loc = $tempdir->dirname . "/$rfam_acc";
 	File::Path::make_path( $results_loc );
         my $SEED        = "$results_loc/SEED";
-        my $CMdb	= "/nfs/production/xfam/rfam/MOTIFS/cmdb/CM";        
+        my $CMdb	= $config->config->{productionPath} . "/MOTIFS/cmdb/CM";        
 
         # Write the seed to file
 	my $msa = $self->_mxrp_parent->family->SEED;
@@ -175,7 +179,7 @@ sub findMotifs {
         chdir($results_loc);
 
         use IPC::Run qw(run);
-        my @cmd2 = ("/nfs/production/xfam/rfam/software/bin/RNAplot", "-o", "svg");
+        my @cmd2 = ("/hps/software/users/agb/rfam/bin/RNAplot", "-o", "svg");
         run \@cmd2, '<', $RNAplot;
 
         unless(-e $RNAplot_img) {

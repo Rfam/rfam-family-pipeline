@@ -165,7 +165,7 @@ sub svnRevision {
 =head2 mandatoryFiles
 
   Title    : mandatoryFiles
-  Usage    : my $files = $config->mandartoryFiles();
+  Usage    : my $files = $config->mandatoryFiles();
   Function : Returns a list of file names that are expected to be present for
            : each Rfam entry.
   Args     : None, readonly defined in the config
@@ -343,7 +343,7 @@ sub RPlotScriptPath {
   if ( $#_ >= 0 ) {
     warn "Passed variable to ro config\n";
   }
-  return $self->{'_config'}->{binaries}->{RPlotScript};
+  return $self->{'_config'}->{RPlotScript};
 }
     
 sub seqdbConfig {
@@ -489,6 +489,22 @@ sub binLocation {
     warn "Passed variable to ro config\n";
   }
   return $self->{'_config'}->{binaries}->{binLocation};
+}
+
+sub Stockholm2ArcScriptPath {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{Stockholm2ArcScript};
+}
+
+sub productionPath {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{productionPath};
 }
 
 

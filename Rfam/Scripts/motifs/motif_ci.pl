@@ -18,6 +18,7 @@ use RfamLive::ResultSet::Motif;
 use Bio::Rfam::FamilyIO;
 #------------------------------------------------------------------------------
 # Deal with the options
+my $config = Bio::Rfam::Config->new;  
 
 my ($help);
 my ($nogit);
@@ -29,10 +30,11 @@ my ($nogit);
 
 help() if ($help);
 
-my $pwd = "/nfs/production/xfam/rfam/MOTIFS/Motifs";
+my $rfamDir = $config->config->{productionPath};
+my $pwd = "$rfamDir"."/MOTIFS/Motifs";
 my $git_source = "https://github.com/ppgardne/RMfam";
-my $git_local = "/nfs/production/xfam/rfam/MOTIFS/RMfam";
-my $motif_local = "/nfs/production/xfam/rfam/MOTIFS";
+my $git_local = "$rfamDir"."/MOTIFS/RMfam";
+my $motif_local = "$rfamDir"."/MOTIFS";
 my $alignments_dir = "$motif_local"."/RMfam/alignments/";
 
 # Check if we are fetching and parsing the git

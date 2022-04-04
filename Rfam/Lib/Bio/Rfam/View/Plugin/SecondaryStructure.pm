@@ -49,7 +49,7 @@ sub makeRchie {
 		croak ("Failed to find entry in the Family table for $rfam_acc.");
 	}
 
-    my $r_script = $config->config->{binLocation} . '/stockholm2Arc.R';
+    my $r_script = $config->config->{Stockholm2ArcScriptPath};
 
 	my $Rchie_cmd = "$r_script $seed_loc $rchie_img 2> $location/$$.err";
 
