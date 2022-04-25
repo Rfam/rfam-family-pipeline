@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-#We have to set this in thes scripts as they do not assume anyones environment variables.
+# We have to set this in these scripts as they do not assume environment variables.
 #
 # pre-commit.pl -txn 1388 -repos /Users/finnr/Work/Repository
 
