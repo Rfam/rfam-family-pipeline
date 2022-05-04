@@ -16,7 +16,7 @@ my $family = $ARGV[0];
 
 my $familyIO = Bio::Rfam::FamilyIO->new;
 
-my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+my $familyObj = $familyIO->loadRfamFromSVN_preSEED($family, $client);
 my $msa = $familyObj->SEED;
 $msa->write_msa("$family.seed","pfam");
 my $DESC = $familyObj->DESC;

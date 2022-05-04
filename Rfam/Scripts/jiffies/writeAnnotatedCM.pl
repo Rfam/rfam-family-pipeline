@@ -18,7 +18,7 @@ my $family = $ARGV[0];
 my $CMFILE = "$family.CM";
 
 my $familyIO = Bio::Rfam::FamilyIO->new;
-my $familyObj = $familyIO->loadRfamFromSVN($family, $client);
+my $familyObj = $familyIO->loadRfamFromSVN_preSEED($family, $client);
 
 $familyIO->writeAnnotatedCM($familyObj, $CMFILE ,0);
 

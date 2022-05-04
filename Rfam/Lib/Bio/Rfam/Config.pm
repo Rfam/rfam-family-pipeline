@@ -507,5 +507,13 @@ sub productionPath {
   return $self->{'_config'}->{productionPath};
 }
 
+sub ssImages {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{ssImages};
+}
+
 
 1;
