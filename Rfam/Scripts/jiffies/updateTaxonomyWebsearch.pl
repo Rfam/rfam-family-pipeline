@@ -56,8 +56,8 @@ $logger->info('Parsing ncbi data (names.dmp)');
 
 my %names;
 my %minNames;
-open( _NAMES, '/hps/nobackup/production/xfam/rfam/input/names.dmp' ) #open( _NAMES, $config->localDbsLoc . '/ncbi/names.dmp' )
-  or die "Could not open /hps/nobackup/production/xfam/rfam/input/names.dmp: [$!]\n";
+open( _NAMES, '/nfs/production/agb/rfam/input/names.dmp' ) #open( _NAMES, $config->localDbsLoc . '/ncbi/names.dmp' )
+  or die "Could not open /nfs/production/agb/rfam/input/names.dmp: [$!]\n";
 
 #------------------------------------------------------------------------------
 #This is a bit of a hack, but we want to keep these levels so we can hang
@@ -92,7 +92,7 @@ while (<_NAMES>) {
 #------------------------------------------------------------------------------
 #Now parse the nodes file
 #
-open( _NODES, '/hps/nobackup/production/xfam/rfam/input/nodes.dmp')
+open( _NODES, '/nfs/production/agb/rfam/input/nodes.dmp')
   or $logger->logdie("Could not open nodes.dmp: [$!]");
 
 my $nodes = [];    #This will be out store for all the nodes in the tree
