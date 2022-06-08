@@ -38,8 +38,8 @@ use Bio::Pfam::EbiRestClient;
 my $hmmer_host = "http://www.ebi.ac.uk/Tools/hmmer";
 
 # !!! change this for each release
-# my $pfama_dat_file = "/nfs/production/xfam/pfam/Pfam-A.hmm.dat";
-my $pfama_dat_file = "/nfs/production/xfam/pfam/data/releases/29.0/Pfam-A.hmm.dat";
+# my $pfama_dat_file = "/pfam/Pfam-A.hmm.dat";
+my $pfama_dat_file = "/nfs/production/agb/pfam/data/releases/29.0/Pfam-A.hmm.dat";
 
 # public attributes
 
@@ -1868,7 +1868,7 @@ sub _convert_hmmer_json2pfamscan_json{
 sub _read_pfam_annotation {
   my ( $self ) = @_;
   my $file = $pfama_dat_file;
-  #my $file = "/nfs/production/xfam/pfam/Pfam-A.hmm.dat";
+  #my $file = "pfam/Pfam-A.hmm.dat";
   	my $fh = IO::File->new( $file, '<' ) or die "$file: $!";
 	my ($acc, $type);
 	my $pfam_hashref;

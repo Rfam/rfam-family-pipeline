@@ -49,7 +49,7 @@ sub makeRchie {
 		croak ("Failed to find entry in the Family table for $rfam_acc.");
 	}
 
-    my $r_script = $config->config->{binLocation} . '/stockholm2Arc.R';
+    my $r_script = $config->config->{Stockholm2ArcScriptPath};
 
 	my $Rchie_cmd = "$r_script $seed_loc $rchie_img 2> $location/$$.err";
 
@@ -215,8 +215,7 @@ sub makeBling {
   my $rfamdb = $self->_mxrp_parent->config->rfamlive;
   my $rfam_acc = $self->_mxrp_parent->family->DESC->AC;
 
-  #my $location = "/nfs/research2/nobackup/rfamp/public_html/ss_images/$rfam_acc";
-  my $location = "/hps/nobackup/production/xfam/rfam/RELEASES/14.1.1/ss_images/$rfam_acc";
+  my $location = $config->config->{ssImages} . "/$rfam_acc";
   File::Path::make_path($location);
   my $seed_loc = "$location/$rfam_acc.SEED";
   my $CM_loc = "$location/$rfam_acc.CM";
@@ -280,7 +279,7 @@ sub makeBling {
   chdir($location);
 
   use IPC::Run qw(run);
-  my @cmd2 = ("/nfs/production/xfam/rfam/rfam_rh74/software/bin/RNAplot", "-o", "svg");
+  my @cmd2 = ("/hps/software/users/agb/rfam/bin/RNAplot", "-o", "svg");
   run \@cmd2, '<', $RNAplot;
 
   unless(-e $RNAplot_img) {

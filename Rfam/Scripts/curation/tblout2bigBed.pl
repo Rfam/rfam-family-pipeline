@@ -56,9 +56,9 @@ system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 
 
 #use fetchChromSizes to create chrom.sizes file
-system("/nfs/production/xfam/rfam/software/fetchChromSizes $db > chrom.sizes") and die "Could not create chrom.sizes for $db $!\n";
+system("/hps/software/users/agb/rfam/bin/fetchChromSizes $db > chrom.sizes") and die "Could not create chrom.sizes for $db $!\n";
 
 
 #use bedToBigBed to convert BED to bigBed
 my $bigbedfile = $infile . ".bb";
-system ("/nfs/production/xfam/rfam/software/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+system ("/hps/software/users/agb/rfam/bin/bedToBigBed $sortedfile chrom.sizes $bigbedfile") and die "Could not convert BED to bigBed $!\n";

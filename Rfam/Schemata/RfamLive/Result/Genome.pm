@@ -230,7 +230,7 @@ __PACKAGE__->set_primary_key("upid");
 
 # Created by DBIx::Class::Schema::Loader v0.07046 @ 2018-03-19 17:50:00
 # DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:H7UGLFjK+yDOgHsjSPrp0Q
-# These lines were loaded from '/nfs/production/xfam/rfam/rfam_rh7/production_software/rfam_production/rfam-family-pipeline/Rfam/Schemata/RfamLive/Result/Genome.pm' found in @INC.
+# These lines were loaded from '/rfam-family-pipeline/Rfam/Schemata/RfamLive/Result/Genome.pm' found in @INC.
 # They are now part of the custom portion of this file
 # for you to hand-edit.  If you do not either delete
 # this section or remove that file from @INC, this section
@@ -415,7 +415,7 @@ __PACKAGE__->has_many(
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration
 1;
-# End of lines loaded from '/nfs/production/xfam/rfam/rfam_rh7/production_software/rfam_production/rfam-family-pipeline/Rfam/Schemata/RfamLive/Result/Genome.pm'
+# End of lines loaded from '/rfam-family-pipeline/Rfam/Schemata/RfamLive/Result/Genome.pm'
 
 
 # You can replace this text with custom code or comments, and it will be preserved on regeneration

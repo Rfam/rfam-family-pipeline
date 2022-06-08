@@ -379,7 +379,7 @@ sub checkoutFamily {
       ->checkout( $url, $dest, $self->revision ? $self->revision : 'HEAD', 1 );
   };
 
-  #Confess if we observe a proble,
+  #Confess if we observe a problem,
   if ($@) {
     confess("Failed to check out family, ".$self->familyLocation."/$entry, :[$@]\n");
   }

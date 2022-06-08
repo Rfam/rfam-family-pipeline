@@ -58,7 +58,7 @@ if (! defined $user || length($user) == 0) {
 
 # Specify the CMdb directory - CHANGE TO BE SET IN RFAM_CONFIG
 my $CMdb = "CM";
-my $CM_dir="/nfs/production/xfam/rfam/MOTIFS/cmdb/";
+my $CM_dir=$config->config->{productionPath}."/MOTIFS/cmdb/";
 my $CMdb_loc=$CM_dir.$CMdb;
 
 # Determine if the CMdb file specified as arguments exists
@@ -78,8 +78,8 @@ unless (defined $familyObj) {
 # Generate the SEED file in stockholm format
 my $famSeedObj=$familyObj->SEED;
 
-File::Path::make_path("/nfs/production/xfam/rfam/MOTIFS/results/$rfam_acc/");
-my $fam_dir="/nfs/production/xfam/rfam/MOTIFS/results/$rfam_acc/";
+File::Path::make_path($config->config->{productionPath}."/MOTIFS/results/$rfam_acc/");
+my $fam_dir=$config->config->{productionPath}."/MOTIFS/results/$rfam_acc/";
 
 my $STK = $fam_dir."SEED";
 $famSeedObj->write_msa($STK, "stockholm");
@@ -113,7 +113,7 @@ print "Running Round 1 of cmscan: Filtered SEED \n";
 submitToCmscan($rfam_acc, $filteredSTK, $CMdb_loc, $fam_dir, "filtered.TBL");
 
 # Parse the results of the first cmscan to an array of match objects with only matches
-my $TBL = "/nfs/production/xfam/rfam/MOTIFS/results/$rfam_acc/filtered.TBL";
+my $TBL = $config->config->{productionPath}."/MOTIFS/results/$rfam_acc/filtered.TBL";
 my @motifMatches = parseTBL2MotifMatchObj($TBL,$rfam_acc, @all_motifs);
 
 #------------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ submitToCmscan($rfam_acc, $STK, $CMdb_loc, $fam_dir, "TBL");
 
 
 # Parse the results of the first cmscan to an array of match objects with only matches
-$TBL = "/nfs/production/xfam/rfam/MOTIFS/results/$rfam_acc/TBL";
+$TBL = $config->config->{productionPath}."/MOTIFS/results/$rfam_acc/TBL";
 my @AllowedMatches = parseTBL2MotifMatchObj($TBL,$rfam_acc, @allowed_motifs);
 
 foreach my $motifMatchObj (@AllowedMatches) {

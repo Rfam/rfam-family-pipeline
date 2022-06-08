@@ -100,7 +100,7 @@ system("sort -k1,1 -k2,2n $bedfile > $sortedfile");
 
 # DO this later - need a script to replace UCSC's fetchChromSizes
 #use fetchChromSizes to create chrom.sizes file
-#system("/nfs/production/xfam/rfam/software/fetchChromSizes $db > chrom.sizes") and die "Could not create chrom.sizes for $db $!\n";
+#system("/software/bin/fetchChromSizes $db > chrom.sizes") and die "Could not create chrom.sizes for $db $!\n";
 
 # generate chrom.sizes file using the chromosome sizes hash generated in the previous step
 open (CHRSIZES, ">$chrom_sizes_file") or die "Cannot open file $chrom_sizes_file $!\n";
@@ -112,5 +112,5 @@ close (CHRSIZES);
 
 #use bedToBigBed to convert BED to bigBed
 my $bigbedfile = $dirname . '/' . $upid . ".bigBed";
-system ("/nfs/production/xfam/rfam/rfam_rh7/software/bin/bedToBigBed $sortedfile $chrom_sizes_file $bigbedfile") and die "Could not convert BED to bigBed $!\n";
+system ("/hps/software/users/agb/rfam/bin/bedToBigBed $sortedfile $chrom_sizes_file $bigbedfile") and die "Could not convert BED to bigBed $!\n";
 

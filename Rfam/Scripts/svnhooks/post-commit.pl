@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# This script is run by the svn repository as part of the post-commmit hook. The
+# This script is run by the svn repository as part of the post-commit hook. The
 # methods in this script deal automatically adding accessions to the repository
 # and moving new entries into the repository.
 #

@@ -1459,7 +1459,7 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
 
             OTHER OPTIONS:
             -q <str>     specify queue to submit job to as <str> (EBI \'-q <str>\' JFRC: \'-l <str>=true\')
-                         (shortcuts: use <str>='p' for 'production-rh7', <str>='r' for 'research-rh7')
+                         (shortcuts: use <str>='p' for 'production', <str>='r' for 'research')
             -ssopt <str> add extra arbitrary string <str> to qsub cmsearch commands, for multiple options use multiple -ssopt <s>
             -nodesc      create a default DESC file, because none exists, also requires one of -t, -e or -cut_ga
             -quiet       be quiet; do not output anything to stdout (rfsearch.log still created)
