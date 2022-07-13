@@ -6,7 +6,7 @@ with 'MooseX::Role::Pluggable::Plugin';
 sub process {
   my $this = shift;
   print "In Bio::Rfam::View::Plugin::Species::process\n";
-  print 'Making subburst for ' . $this->_mxrp_parent->family->DESC->AC . "\n";
+  print 'Making sunburst for ' . $this->_mxrp_parent->family->DESC->AC . "\n";
 }
 
 sub makeSpeciesJsonString {
