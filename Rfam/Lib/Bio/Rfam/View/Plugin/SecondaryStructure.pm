@@ -110,7 +110,7 @@ sub makeRscape{
         }
 
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --fold $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir --informat stockholm -s --Rfam --cacofold $seed_loc";
 
 	print "Making rscape image for $rfam_acc\n";
 
@@ -126,9 +126,9 @@ sub makeRscape{
 		$rscape_img = "$outdir/SEED_1.R2R.sto.svg";
 	}
 
-	my $rscape_cyk_img = "$outdir/$rfam_id.fold.R2R.sto.svg";
+	my $rscape_cyk_img = "$outdir/$rfam_id.cacofold.R2R.sto.svg";
 	if (not -e $rscape_cyk_img){
-		$rscape_cyk_img = "$outdir/SEED_1.fold.R2R.sto.svg";
+		$rscape_cyk_img = "$outdir/SEED_1.cacofold.R2R.sto.svg";
 	}
 
 	my $rscapeImgGzipped;

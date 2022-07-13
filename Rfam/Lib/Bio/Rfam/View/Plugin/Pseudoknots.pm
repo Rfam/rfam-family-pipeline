@@ -53,7 +53,7 @@ sub populatePseudoknots{
 	}
 		                                	
 	my $rscape_exec = $config->config->{binLocation} . '/R-scape';
-	my $rscape_cmd = "$rscape_exec --outdir $outdir -s --fold $seed_loc";
+	my $rscape_cmd = "$rscape_exec --outdir $outdir --informat stockholm -s --Rfam --cacofold $seed_loc";
 	print "Making rscape image for $rfam_acc\n";
 	system ($rscape_cmd);
 	
@@ -65,9 +65,9 @@ sub populatePseudoknots{
         if (not -e $rscape_sto){
 		$rscape_sto = "$outdir/SEED_1.R2R.sto";
        	}
-	my $rscape_cyk_sto = "$outdir/$rfam_id.fold.R2R.sto";	
+	my $rscape_cyk_sto = "$outdir/$rfam_id.cacofold.R2R.sto";	
 	if (not -e $rscape_cyk_sto){	
-		$rscape_cyk_sto = "$outdir/SEED_1.fold.R2R.sto";	
+		$rscape_cyk_sto = "$outdir/SEED_1.cacofold.R2R.sto";	
 	}
 
 	# Find any SEED pseudoknots first
