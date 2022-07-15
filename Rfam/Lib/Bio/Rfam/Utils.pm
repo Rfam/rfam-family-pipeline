@@ -86,6 +86,8 @@ sub submit_nonmpi_job {
   if($location eq "EBI") {
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
     if(! defined $reqMb) { die "submit_nonmpi_job(), location is EBI, but reqMb is undefined"; }
+    #TODO: update this block to work with 'sbatch' instead of 'bsub', may require creating a
+    #new file that is the 'script' that is used as command-line argument to 'sbatch' 
     $submit_cmd = "bsub ";
     if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
     if(defined $queue && $queue ne "") {
@@ -167,6 +169,7 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
+    #TODO: update 'bsub' to 'sbatch'
     $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
     # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
     # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
@@ -211,7 +214,7 @@ sub submit_mpi_job {
              :
              : See an alternative function that serves the same purpose:
              : 'wait_for_cluster_light' but that uses the expensive
-             : 'qstat' or 'bjobs' calls less frequently.
+             : 'qstat', 'bjobs' or 'squeue' calls less frequently.
              :
              : Ways to return or die:
              : (1) Returns if all jobs finish and all jobs output files
@@ -252,6 +255,7 @@ sub wait_for_cluster {
   # sanity check
   if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster(), internal error, number of elements in jobnameAR and outnameAR differ"; }
 
+  # TODO: update this subroutine to work with 'squeue'
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
   if($location eq "EBI") {
     if(length($username) > 7) {
@@ -384,8 +388,8 @@ sub wait_for_cluster {
              : This function (the '_light' version) determines which jobs
              : are finished mostly using the existence of error files and
              : by looking for the success string in those error files
-             : and tries to use expensive 'qstat' or 'bjobs' calls infrequently.
-             : The non-light version (wait_for_cluster()) calls 'qstat'/'bjobs'
+             : and tries to use expensive 'qstat', 'bjobs' or 'squeue' calls infrequently.
+             : The non-light version (wait_for_cluster()) calls 'qstat'/'bjobs'/'squeue'
              : once every minute.
              :
              : If $max_minutes is defined and != -1, we will die if all jobs
@@ -432,6 +436,7 @@ sub wait_for_cluster_light {
   if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
   if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
 
+  #TODO: update this subroutine to work with 'squeue'
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
   if($location eq "EBI") {
     if(length($username) > 7) {

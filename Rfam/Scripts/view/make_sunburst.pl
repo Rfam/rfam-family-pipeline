@@ -173,6 +173,7 @@ The script will generate sunbursts for families specified in one of three ways:
 The ability to process families in chunks allows the script to be run on the
 farm, using a submission command something like:
 
+  TODO: update this from bsub to sbatch
   bsub -q normal  -R"select[mem>4000] rusage[mem=4000]" -M 4000000 \
   -J "sunburst[1-20]" -o "sunburst.\%J.\%I.log" '$0 \
   -chunksize 684 -chunk \$\{LSB_JOBINDEX\}'

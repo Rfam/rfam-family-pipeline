@@ -52,8 +52,8 @@ my $ncpus_cmsearch;             # number of CPUs for cmsearch calls
 my $mxsize_opt = undef;         # we'll pass '--mxsize $mxsize_opt' to cmsearch
 my @cmosA = ();                 # extra single '-' cmsearch options (e.g. -g)
 my @cmodA = ();                 # extra double '--' cmsearch options (e.g. --cyk)
-my @ssoptA = ();                # strings to add to cmsearch qsub/bsub commands
-my $ssopt_str = "";             # string to add to cmsearch qsub/bsub commands
+my @ssoptA = ();                # strings to add to cmsearch qsub/bsub/sbatch commands
+my $ssopt_str = "";             # string to add to cmsearch qsub/bsub/sbatch commands
 my $ignore_sm = 0;              # TRUE to ignore BM in DESC for cmbuild options
 # debugging options
 my $do_hmmonly = 0;             # TRUE to run cmsearch in hmmonly mode

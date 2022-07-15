@@ -162,7 +162,7 @@ sub cmcalibrate_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $gbPerThread:  number of Gb of memory to request per thread
@@ -191,7 +191,7 @@ sub cmsearch_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $do_locally:   '1' to run locally, else run on cluster
@@ -221,7 +221,7 @@ sub cmscan_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $gbPerThread:  number of Gb of memory to request per thread
