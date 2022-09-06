@@ -495,11 +495,23 @@ if (defined $cm && $cm->is_calibrated) {
   $is_cm_calibrated = 1;
 }
 
+my $cm_is_latest_version = 0;
+my $inf_latest_version = "1.1.4";
+if(defined $cm) {
+  if($cm->{cmHeader}->{version} =~ /\[(1\.\d+\.\d+)/) { 
+    if($1 eq $inf_latest_version) { 
+      $cm_is_latest_version = 1;
+    }
+  }
+}
+
+
 # figure out if we have to build
 my $do_build = 0;
 if (($force_build)                       || # user set -b on command line
     ($only_build)                        || # user set -onlybuild on command line
     (! defined $cm)                      || # 'CM' does not exist
+    (! $cm_is_latest_version)            || # CM was not created with latest version of Infernal
     (! $is_cm_calibrated)                || # 'CM' is not calibrated
     ($do_noss || $do_hand || $do_enone)  || # -noss, -hand or -enone set on cmdline
     ($allow_no_desc)                     || # -nodesc, DESC just created, we'll need a BM line so rebuild
@@ -1415,7 +1427,7 @@ rfsearch.pl: $exec_description
 Usage:      rfsearch.pl [options]
 
 Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
-	    -b         : always run cmbuild (default: only run if 'CM' is v1.0, is older than SEED or doesn't exist)
+	    -b         : always run cmbuild (default: only run if 'CM' is pre-v1.1.4, is older than SEED or doesn't exist)
 	    -onlybuild : build CM and then exit, do not calibrate, do not search
 	    -noss      : rewrite SEED with zero basepairs, then exit; do not build, calibrate, or search
             -hand      : pass --hand option to cmbuild, SEED must have nongap RF annotation
