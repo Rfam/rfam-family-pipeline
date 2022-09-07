@@ -250,7 +250,7 @@ my $stk_file     = "$$.stk";
 my $err_file     = "a.$$.err";
 my $align_opts = "-o $stk_file --noprob"; # PPs will just increase size of file -- we won't use them
 if(! $do_local) { $align_opts .= " -g"; }
-Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fa_file, $cmalign_file, "a.$$.err", $nhit + $nmatch, $nhit_res + $nmatch_res, 1, 0, "", -1, $logFH, 1);
+Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fa_file, $cmalign_file, "a.$$.err", $nhit + $nmatch, $nhit_res + $nmatch_res, 1, 0, 0, "", -1, $logFH, 1);
 push(@unlinkA, ($cmalign_file, $err_file, $fa_file, $stk_file));
 
 # read in MSA we just created

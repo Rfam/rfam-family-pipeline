@@ -562,7 +562,7 @@ if ($do_build) {
   my $emit_fafile         = "e.$$.fa";
   my $cmalign_mapali_file = "ma.$$.stk";
   Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, "", 1, undef, 0);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
 
   # add RF annotation from cmalign --mapali output file to original SEED
   # to create a new SEED file 

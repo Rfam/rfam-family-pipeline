@@ -538,7 +538,7 @@ sub cmalign_seed_and_hits {
   my $align_opts = "-o $stkfile --noprob"; # PPs will just increase size of file -- we won't use them
   my $cmalign_file = "$$.cmalign";
   if(! $do_local) { $align_opts .= " -g"; }
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fafile, "$$.cmalign", "a.$$.err", $nhit, $nhit_res, 1, 0, "", -1, $logFH, 1);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fafile, "$$.cmalign", "a.$$.err", $nhit, $nhit_res, 1, 0, 0, "", -1, $logFH, 1);
   foreach my $file ($cmalign_file) { unlink $file; }
   
   my $msa = Bio::Easel::MSA->new({
