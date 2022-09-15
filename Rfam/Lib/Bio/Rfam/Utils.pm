@@ -2588,11 +2588,20 @@ sub genbank_fetch_seq_info {
           # printf("Retrying to fetch for $name\n");
           $xml_string = get($genbank_url);
           if(defined $xml_string) {
-            # to save memory, remove sequence info from the xml_string since we don't need it
-            # remove <GBSeq_sequence> lines
-            $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
-            # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
-            $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+            # Previously, we tried to substitute out the GBSeq_sequence and translation lines
+            # but in Sept 2022 this was identified as a bottleneck for at least some families
+            # these substitution commands are now commented out but left here for reference.
+            # The motivation for them in the first place was to save memory so if memory
+            # does not become an issue it should be fine to leave them commented out:
+            # --------------
+            ## to save memory, remove sequence info from the xml_string since we don't need it
+            ## remove <GBSeq_sequence> lines
+            # first substition commented out in Sept 2022:
+            #$xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+            ## remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+            # second substition commented out in Sept 2022:
+            #$xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+            #---------------
             $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
             if($@) { $xml_valid = 0; }
             else   { $xml_valid = 1; }
