@@ -110,7 +110,7 @@ sub cmcalibrate_wrapper {
   my $forecast_out = File::Spec->catfile($workdir, "cfc.$$.out");
   Bio::Rfam::Utils::run_local_command("$cmcalibratePath --forecast --nforecast $nproc $cmPath > $forecast_out");
 
-  # parse cmcalibrate output
+  # parse cmcalibrate --forecast output
   my $predicted_seconds;
   open(IN, $forecast_out) || die "unable to open $forecast_out";
   while (my $line = <IN>) { 
@@ -123,7 +123,28 @@ sub cmcalibrate_wrapper {
   }
   if (! defined $predicted_seconds) { die "cmcalibrate prediction failed"; }
   unlink $forecast_out;
-  
+
+  # run cmcalibrate --memreq to determine how much RAM we need per thread
+  my $memreq_out = File::Spec->catfile($workdir, "cmr.$$.out");
+  Bio::Rfam::Utils::run_local_command("$cmcalibratePath --memreq $cmPath > $memreq_out");
+  # parse cmcalibrate --memreq output
+  # example:
+  ##                         total Mb    total Mb
+  ##                       single CPU     16 CPUs
+  ## --------------------  ----------  ----------
+  #  SEED                      6480.7    103666.1
+  my $predicted_Mb_per_thread = undef;
+  open(IN, $memreq_out) || die "unable to open $memreq_out";
+  while (my $line = <IN>) { 
+    if($line !~ m/^\#/) {
+      if($line =~ /^\s*\S+\s+(\S+)/) {
+        $predicted_Mb_per_thread = $1;
+      }
+    }
+  }
+  if (! defined $predicted_Mb_per_thread) { die "cmcalibrate memory forecast failed"; }
+  unlink $memreq_out;
+
   # submit job
   if($do_locally) { 
     Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
@@ -133,8 +154,12 @@ sub cmcalibrate_wrapper {
       Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
     }
     else { 
-      my $gbPerThread = 3.0;
-      my $requiredMb = $nproc * $gbPerThread * 1000.;
+      my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
+      if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
+      my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
+      
+      printf("HEYA: requiredMb is $requiredMb\n");
+
       
       #if ($config->location eq 'CLOUD'){
       #$requiredMb = 6000;
