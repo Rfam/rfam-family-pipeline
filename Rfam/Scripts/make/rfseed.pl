@@ -207,7 +207,7 @@ else { # adding seqs
   my $align_opts = "-o SEED --mapali SEED.$$ --mapstr";
   if(! $do_prob)  { $align_opts .= " --noprob"; }
   if(! $do_local) { $align_opts .= " -g"; }
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fafile, $cmalign_file, $err_file, $nseq, $nres, 1, 0, "", -1, $logFH, $do_stdout);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $align_opts, "CM", $fafile, $cmalign_file, $err_file, $nseq, $nres, 1, 0, 0, "", -1, $logFH, $do_stdout);
   push(@unlinkA, ($err_file, $fafile));
 }
 
