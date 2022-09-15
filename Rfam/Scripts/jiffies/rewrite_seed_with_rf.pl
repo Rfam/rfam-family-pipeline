@@ -574,7 +574,7 @@ sub verify_cm_built_from_seed {
   else { 
     $unlink_stkfile = 0;
   }
-  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali $seedfile -o $stkfile", "CM", $fafile, undef, "", 1, 100, 1, 0, "", 1, undef, 0);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali $seedfile -o $stkfile", "CM", $fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
   # we'll die if $seedfile wasn't used to build $cmfile
 
   unlink $fafile;
