@@ -41,7 +41,7 @@ my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in GenB
 # calibration related options
 my $force_calibrate = 0;        # TRUE to force calibration
 my $ncpus_cmcalibrate;          # number of CPUs for cmcalibrate call
-my $calibrate_nompi = 0;        # TRUE to calibrate without MPI
+my $calibrate_mpi = 0;          # TRUE to calibrate with MPI
 # search related options
 my $no_search = 0;              # TRUE to skip search
 my $no_rev_search = 0;          # TRUE to skip reversed search
@@ -97,7 +97,7 @@ my $options_okay =
                  "relax"      => \$relax_about_seed,
                  "c"          => \$force_calibrate,
                  "ccpu=s"     => \$ncpus_cmcalibrate,
-                 "cnompi"     => \$calibrate_nompi,
+                 "cmpi"       => \$calibrate_mpi,
                  "e=s",       => \$e_opt,
                  "t=s",       => \$t_opt,
                  "cut_ga",    => \$do_cutga,
@@ -377,7 +377,7 @@ if($do_enone)                  { push(@opt_lhsA, "# pass --enone to cmbuild: ");
 if($ignore_bm)                 { push(@opt_lhsA, "# ignore DESC's BM line: ");              push(@opt_rhsA, "yes [-ignorebm]"); }
 if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in GB/RNAc:");   push(@opt_rhsA, "yes [-relax]"); }
 if($force_calibrate)           { push(@opt_lhsA, "# force cmcalibrate step: ");             push(@opt_rhsA, "yes [-c]"); }
-if($calibrate_nompi)           { push(@opt_lhsA, "# threaded calibration, not MPI: ");      push(@opt_rhsA, "yes [-cnompi]"); }
+if($calibrate_mpi)             { push(@opt_lhsA, "# MPI calibration, not threaded: ");      push(@opt_rhsA, "yes [-cmpi]"); }
 if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for cmcalibrate: ");     push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
 if(defined $e_opt)             { push(@opt_lhsA, "# E-value cutoff: ");                     push(@opt_rhsA, $e_opt . " [-e]"); }
 if(defined $t_opt)             { push(@opt_lhsA, "# bit score cutoff: ");                   push(@opt_rhsA, $t_opt . " [-t]"); }
@@ -457,7 +457,7 @@ Bio::Rfam::Utils::log_output_progress_column_headings($logFH, "per-stage progres
 my $do_all_local = $do_local_opt; # will be '1' if -local, else '0'
 # we also run everything locally is if location is set to the empty string or to 'docker'
 if($config->location eq "")       { $do_all_local = 1; } 
-if($do_all_local) { $calibrate_nompi = 1; } # if we're running locally, we don't use MPI
+if($do_all_local) { $calibrate_mpi = 0; } # if we're running locally, we don't use MPI
 
 ##############################################################################################
 # Preliminary check: verify that all sequences in the SEED are from GenBank, ENA or RNAcentral, unless -relax
@@ -616,7 +616,7 @@ my $calibrate_max_wait_secs = 0;
 my $calibrateO     = "c-$$.out"; # cmcalibrate output file
 my $calibrate_errO = "c-$$.err"; # error output
 my $did_calibrate = 0;
-if(! defined $ncpus_cmcalibrate) { $ncpus_cmcalibrate = ($calibrate_nompi) ? 8 : 81; }
+if(! defined $ncpus_cmcalibrate) { $ncpus_cmcalibrate = ($calibrate_mpi) ? 81 : 8; }
 my $do_calibrate = 
     (! $only_build) &&         # -onlybuild NOT enabled
     (! $do_hmmonly) &&         # -hmmonly NOT enabled
@@ -635,14 +635,14 @@ if($do_calibrate) {
                                                                    File::Spec->rel2abs($calibrate_errO),# path to error output file 
                                                                    $ncpus_cmcalibrate,    		# number of processors
                                                                    $q_opt,                		# queue to use, "" for default, ignored if location eq "EBI"
-                                                                   (! $calibrate_nompi),  		# use MPI? 
+                                                                   ($calibrate_mpi),  		        # use MPI? 
                                                                    ($do_all_local));      		# run job locally?
   my @jobnameA = ("c-$$");
   my @outnameA = ("c-$$.out");
   my @errnameA = ("$calibrate_errO"); 
   #$calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@jobnameA, \@outnameA, "[ok]", "cmcalibrate-mpi", $logFH, 
                                                                 #sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
-  my $cmcalibrate_string = ($calibrate_nompi) ? "cmcalibrate-thr" : "cmcalibrate-mpi";
+  my $cmcalibrate_string = ($calibrate_mpi) ? "cmcalibrate-mpi" : "cmcalibrate-thr";
 
   if(! $do_all_local) { # job is running on the cluster
     $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
@@ -1437,8 +1437,8 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
 
             OPTIONS RELATED TO CALIBRATION STEP (cmcalibrate):
 	    -c         : always run cmcalibrate (default: only run if 'CM' is not calibrated)
-            -ccpu <n>  : set number of CPUs for MPI cmcalibrate job to <n>
-            -cnompi    : run threaded cmcalibrate, not MPI
+            -ccpu <n>  : set number of CPUs for cmcalibrate (MPI or multithreaded) job to <n>
+            -cmpi      : run MPI cmcalibrate, not multithreaded
 
             OPTIONS RELATED TO SEARCH STEP (cmsearch):
             -e <f>      : set cmsearch E-value threshold as <f>
