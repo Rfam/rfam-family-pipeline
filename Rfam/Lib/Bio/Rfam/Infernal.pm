@@ -147,25 +147,22 @@ sub cmcalibrate_wrapper {
 
   # submit job
   if($do_locally) { 
-    Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
+    Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $options $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
   }
   else { 
     if($doMPI) { 
-      Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
+      Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
     }
     else { 
       my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
       if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
       my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
       
-      printf("HEYA: requiredMb is $requiredMb\n");
-
-      
       #if ($config->location eq 'CLOUD'){
       #$requiredMb = 6000;
       #}
       # if the job is run in the cloud, assign the job an index
-      Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
+      Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
   }
   return ($predicted_seconds / 60);
