@@ -1138,14 +1138,28 @@ exit(0);
 sub submit_or_run_cmsearch_jobs {
   my ($config, $ndbfiles, $prefix, $searchopts, $w, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
   my ($idx, $file_idx, $dbfile);
-
-  # determine Gb of memory we need per thread based on $w, if it's >= 1000, require 8Gb,
-  # otherwise use 3gb.
-  my $gbPerThread = 3.0;
-  if($w >= 1000) { 
+  
+  # determine Gb of memory we need per thread based on $w:
+  # 0    <  w < 1000: 4Gb per thread
+  # 1000 <= w < 2000: 8Gb per thread
+  # 2000 <= w < 3000:12Gb per thread
+  # 3000 <= w < 4000:16Gb per thread
+  # 4000 <= w:      :20Gb per thread
+  
+  my $gbPerThread = 4.0;
+  if($w >= 4000) { # only Euk LSU (RF02543) as of Sep 2022
+    $gbPerThread = 20.0; 
+  }
+  elsif($w >= 3000) { 
+    $gbPerThread = 16.0; 
+  }
+  elsif($w >= 2000) { 
+    $gbPerThread = 12.0; 
+  }
+  elsif($w >= 1000) { 
     $gbPerThread = 8.0; 
   }
-
+  
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
     $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 0..$ndbfiles-1
     $jobnameAR->[$idx] = $prefix . "$$-$file_idx";  
