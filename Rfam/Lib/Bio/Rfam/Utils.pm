@@ -2569,7 +2569,11 @@ sub genbank_fetch_seq_info {
       # but in Sept 2022 this was identified as a bottleneck for at least some families
       # these substitution commands are now commented out but left here for reference.
       # The motivation for them in the first place was to save memory so if memory
-      # does not become an issue it should be fine to leave them commented out:
+      # does not become an issue it should be fine to leave them commented out.
+      # However, if we do want to put the substitution commands back in, an alternative
+      # strategy might be to add a 'usleep(0.1)' call just prior to the substitution
+      # commands. In 2019 testing, this seemed to work when I encountered flakiness
+      # related to these substitution commands (see git commits on 7/9/2019, e.g. d1547f8)
       # --------------
       ## to save memory, remove sequence info from the xml_string since we don't need it
       ## remove <GBSeq_sequence> lines
