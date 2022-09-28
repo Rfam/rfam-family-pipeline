@@ -4094,7 +4094,7 @@ sub fetch_seed_sequence_info {
   }
 
   if(scalar(@lookup_genbank_A) > 0) { 
-    Bio::Rfam::Utils::genbank_fetch_seq_info(\@lookup_genbank_A, \%seed_name_info_HH);
+    Bio::Rfam::Utils::genbank_fetch_seq_info(\@lookup_genbank_A, \%seed_name_info_HH, 200, 3);
   }
 
   foreach $seed_name (@seed_name_A) { 
