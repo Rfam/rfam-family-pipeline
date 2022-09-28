@@ -4028,16 +4028,16 @@ sub validate_species_format {
 
   Title    : fetch_seed_sequence_info
   Incept   : EPN, Wed May  8 15:08:06 2019
-  Usage    : Bio::Rfam::FamilyIO::fetch_seed_sequence_info($seed_name_AR, $seed_info_HHR)
+  Usage    : Bio::Rfam::FamilyIO::fetch_seed_sequence_info($seed_name_AR, $sthRfamseqSeed, $sthTaxSeed, $seed_info_HHR)
   Function : Fetch information on seed sequences in @{$seed_name_AR} from either 
            : the RfamLive DB or NCBI's Genbank/Taxonomy and fill in data in 
            : %{$seed_info_HHR}.
   Args     : $seedmsa:         Bio::Rfam::Family::MSA object, the seed alignment
            : $sthRfamseqSeed:  prepared database query for fetching taxid and seq description from RfamLive Rfamseq table
-           :                   ($rfdbh->prepare_seqaccToTaxIdAndDescAndLengthription())
+           :                   ($rfdbh->prepare_seqaccToTaxIdAndDescLengthMolTypeAndSource())
            :                   undef to NOT try to fetch from RfamLive rfamseq table
            : $sthTaxSeed:      prepared database query for fetching species and tax string from RfamLive taxonomy table
-           :                   ($rfdbh->prepare_taxIdToSpeciesAndTaxString())
+           :                   ($rfdbh->prepare_taxIdToSpeciesDisplayNamesAndTaxString())
            :                   undef to NOT try to fetch from RfamLive taxonomy table
            : $seed_info_HHR:   ref to 2D hash with seed info, FILLED HERE
            :                   1D key is seed name (name/start-end), 2D keys are:
