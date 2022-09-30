@@ -42,6 +42,7 @@ my $relax_about_seed = 0;       # TRUE to allow SEED sequences to not be in GenB
 my $force_calibrate = 0;        # TRUE to force calibration
 my $ncpus_cmcalibrate;          # number of CPUs for cmcalibrate call
 my $calibrate_mpi = 0;          # TRUE to calibrate with MPI
+my $calibrate_gtailn = undef;   # defined to use --gtailn <$calibrate_gtailn> with cmcalibrate
 # search related options
 my $no_search = 0;              # TRUE to skip search
 my $no_rev_search = 0;          # TRUE to skip reversed search
@@ -98,6 +99,7 @@ my $options_okay =
                  "c"          => \$force_calibrate,
                  "ccpu=s"     => \$ncpus_cmcalibrate,
                  "cmpi"       => \$calibrate_mpi,
+                 "cgtailn=s"  => \$calibrate_gtailn,
                  "e=s",       => \$e_opt,
                  "t=s",       => \$t_opt,
                  "cut_ga",    => \$do_cutga,
@@ -378,6 +380,7 @@ if($ignore_bm)                 { push(@opt_lhsA, "# ignore DESC's BM line: ");  
 if($relax_about_seed)          { push(@opt_lhsA, "# allowing SEED seqs not in GB/RNAc:");   push(@opt_rhsA, "yes [-relax]"); }
 if($force_calibrate)           { push(@opt_lhsA, "# force cmcalibrate step: ");             push(@opt_rhsA, "yes [-c]"); }
 if($calibrate_mpi)             { push(@opt_lhsA, "# MPI calibration, not threaded: ");      push(@opt_rhsA, "yes [-cmpi]"); }
+if($calibrate_gtailn)          { push(@opt_lhsA, "# --gtailn <n> option to cmcalibrate: "); push(@opt_rhsA, "$calibrate_gtailn [-cgtailn]"); }
 if(defined $ncpus_cmcalibrate) { push(@opt_lhsA, "# num processors for cmcalibrate: ");     push(@opt_rhsA, "$ncpus_cmcalibrate [-ccpu]"); }
 if(defined $e_opt)             { push(@opt_lhsA, "# E-value cutoff: ");                     push(@opt_rhsA, $e_opt . " [-e]"); }
 if(defined $t_opt)             { push(@opt_lhsA, "# bit score cutoff: ");                   push(@opt_rhsA, $t_opt . " [-t]"); }
@@ -627,9 +630,13 @@ my $do_calibrate =
 if($do_calibrate) { 
   my $calibrate_start_time = time();
 #  Calibration prediction time not currently used, since we can't accurately predict search time anyway
+  my $calibrate_opts = "";
+  if(defined $calibrate_gtailn) {
+    $calibrate_opts .= " --gtailn $calibrate_gtailn";
+  }
   my $predicted_minutes = Bio::Rfam::Infernal::cmcalibrate_wrapper($config, 
-                                                                  "c-$$",                 		# job name
-                                                                   "",                    		# options for cmcalibrate, NOTE: we don't allow ANY 
+                                                                   "c-$$",                 		# job name
+                                                                   $calibrate_opts,            		# options for cmcalibrate, only possible --gtailn <n>
                                                                    File::Spec->rel2abs("CM"), 		# absolute path to CM file
                                                                    File::Spec->rel2abs($calibrateO),     # path to output file 
                                                                    File::Spec->rel2abs($calibrate_errO),# path to error output file 
@@ -1131,14 +1138,28 @@ exit(0);
 sub submit_or_run_cmsearch_jobs {
   my ($config, $ndbfiles, $prefix, $searchopts, $w, $cmfile, $dbfileAR, $jobnameAR, $tblOAR, $cmsOAR, $errOAR, $ssopt_str, $q_opt, $do_local) = @_;
   my ($idx, $file_idx, $dbfile);
-
-  # determine Gb of memory we need per thread based on $w, if it's >= 1000, require 8Gb,
-  # otherwise use 3gb.
-  my $gbPerThread = 3.0;
-  if($w >= 1000) { 
+  
+  # determine Gb of memory we need per thread based on $w:
+  # 0    <  w < 1000: 4Gb per thread
+  # 1000 <= w < 2000: 8Gb per thread
+  # 2000 <= w < 3000:12Gb per thread
+  # 3000 <= w < 4000:16Gb per thread
+  # 4000 <= w:      :20Gb per thread
+  
+  my $gbPerThread = 4.0;
+  if($w >= 4000) { # only Euk LSU (RF02543) as of Sep 2022
+    $gbPerThread = 20.0; 
+  }
+  elsif($w >= 3000) { 
+    $gbPerThread = 16.0; 
+  }
+  elsif($w >= 2000) { 
+    $gbPerThread = 12.0; 
+  }
+  elsif($w >= 1000) { 
     $gbPerThread = 8.0; 
   }
-
+  
   for($idx = 0; $idx < $ndbfiles; $idx++) { 
     $file_idx = $idx + 1; # off-by-one w.r.t $idx, because database file names are 1..$ndbfiles, not 0..$ndbfiles-1
     $jobnameAR->[$idx] = $prefix . "$$-$file_idx";  
@@ -1436,9 +1457,10 @@ Options:    OPTIONS RELATED TO BUILD STEP (cmbuild):
             -relax     : relax requirement that all SEED seqs exist are in GenBank or RNAcentral
 
             OPTIONS RELATED TO CALIBRATION STEP (cmcalibrate):
-	    -c         : always run cmcalibrate (default: only run if 'CM' is not calibrated)
-            -ccpu <n>  : set number of CPUs for cmcalibrate (MPI or multithreaded) job to <n>
-            -cmpi      : run MPI cmcalibrate, not multithreaded
+	    -c          : always run cmcalibrate (default: only run if 'CM' is not calibrated)
+            -ccpu <n>    : set number of CPUs for cmcalibrate (MPI or multithreaded) job to <n>
+            -cmpi        : run MPI cmcalibrate, not multithreaded
+            -cgtailn <n> : provide --gtailn <n> option to cmcalibrate
 
             OPTIONS RELATED TO SEARCH STEP (cmsearch):
             -e <f>      : set cmsearch E-value threshold as <f>
