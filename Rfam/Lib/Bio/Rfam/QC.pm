@@ -1904,8 +1904,19 @@ sub optional {
     }
   }
 
-  #Okay, hack time; allow overlaps....for some families
+  # check for overlaps between full set of this family and every other family
+  # but if this family is in a clan, ignore any other families in the same clan.
   if(!exists($override->{overlap})){
+    #is the family part of a clan?
+    if ($newFamily->DESC->CL) {
+      my $clan = $newFamily->DESC->CL;
+      # get clan membership and add members to ignore hash
+      my @rs = $config->rfamlive->resultset('ClanMembership')->search( { clan_acc => $clan });
+      foreach my $row (@rs){
+        my $rfam_acc = $row->rfam_acc->rfam_acc;
+        $ignore->{$rfam_acc}=1;
+      }
+    }
     open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
     $error = findExternalOverlaps($newFamily, $config->rfamlive, $ignore, $config, $OVERLAP);
     close($OVERLAP);
