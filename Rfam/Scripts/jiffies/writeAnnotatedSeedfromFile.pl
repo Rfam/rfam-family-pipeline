@@ -45,6 +45,8 @@ while (<SEED>) {
   my $line = $_;
   if ($line =~ /#=GC/ || $line !~ /#/) {
     print OUTFILE "$line\n";
+  if ($line =~ /#=GR/ || $line !~ /#/) {
+    print OUTFILE "$line\n";
   } else {
     next;
   }
