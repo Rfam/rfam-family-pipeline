@@ -191,11 +191,16 @@ sub _commitEntry {
     $self->{logger}->debug( 'only the DESC file was changed' );
   }else{
     #There is more to change than just the DESC file....
-    # fetch current info for the SEED seqs from GenBank/Rnacentral
+    # fetch current info for the SEED seqs from GenBank/Rnacentral or RfamLive if they're already there
     my %seed_info_HH; # 1D key is seed sequence name (name/start-end format)
                       # 2D keys are many of the field names in Rfamseq and Taxonomy tables 
                       # (see fetch_seed_sequence_info() for details)
-    Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH);
+    my $sthRfamseqSeed = $rfamdb->prepare_seqaccToTaxIdDescLengthMolTypeAndSource();
+    my $sthTaxSeed     = $rfamdb->prepare_taxIdToSpeciesDisplayNamesAndTaxString();
+    # we don't fetch data on seqs already in rfamlive, to do that use second call below commented out
+    # below which passes 2nd and 3rd args as undef
+    Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, $sthRfamseqSeed, $sthTaxSeed, \%seed_info_HH);
+    #Bio::Rfam::FamilyIO::fetch_seed_sequence_info($familyObj->SEED, undef, undef, \%seed_info_HH); 
     $self->{logger}->debug( 'fetched seed sequence info' );
 
     # order of updates: taxonomy, rfamseq, seed_region, full_region, rnacentral_matches

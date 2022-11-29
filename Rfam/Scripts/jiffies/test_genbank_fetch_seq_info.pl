@@ -23,8 +23,6 @@ my %info_HH = ();
 
 Bio::Rfam::Utils::genbank_fetch_seq_info(\@name_A, \%info_HH);
 
-printf("HEYA back from genbank_fetch_seq_info()\n");
-
 exit 0;
 
 
