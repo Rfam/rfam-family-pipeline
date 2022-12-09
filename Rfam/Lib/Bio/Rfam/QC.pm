@@ -1938,6 +1938,16 @@ sub optional {
     warn "Ignoring check on minimum consensus length of model.\n";
   }
 
+  if(!exists($override->{seedrf})){
+    $error = checkSeedRfConventions($newFamily);
+    if($error){
+      warn "Failed check on RF conventions of SEEDs (upper/lowercase and SS_cons).\n";
+      $masterError =1;
+    }
+  }else{
+    warn "Ignoring check on SEED upper/lowercase and SS_cons agreement with RF annotation.\n";
+  }
+
   return($masterError);
 }
 
@@ -2170,7 +2180,6 @@ sub checkCMLength {
   }
   my $error = 0;
 
-  #Check that the CM and internal HMM agree.
   if ( $familyObj->CM->cmHeader->{clen} < $act_min) {
     $error = 1;
     warn "FATAL: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is below minimum ($act_min)";
@@ -2178,6 +2187,80 @@ sub checkCMLength {
   }
   elsif ( $familyObj->CM->cmHeader->{clen} < $warn_min) {
     warn "WARNING: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is low but above minimum of $act_min (not FATAL)";
+  }
+
+  return $error;
+}
+
+#------------------------------------------------------------------------------
+
+=head2 checkSeedRfConventions
+
+  Title    : checkSeedRfConventions
+  Incept   : EPN, Thu Dec  8 19:16:40 2022
+  Usage    : Bio::Rfam::QC::checkSeedRfConventions($familyObj)
+  Function : Checks that SEED MSA follows RF annotation conventions
+           : using Bio-Easel's esl-alicapitalize.pl script.
+           : These are the conventions followed by Infernal programs.
+           : For aligned sequences:
+           : - All nucleotides in    gap RF positions should be lowercase
+           : - All nucleotides in nongap RF positions should be uppercase
+           : - All gaps in    gap RF positions should be '.'
+           : - All gaps in nongap RF positions should be '-'
+           : For SS_cons:
+           : - SS_cons should be in full WUSS format (see Infernal user guide)
+           : - SS_cons characters in gap RF positions should be '.'
+           :
+  Args     : $familyObj:  Bio::Rfam::Family object
+           : $scriptPath: path to 'esl-alicapitalize.pl' executable
+           : $outDiffFile: path for output of 'esl-alicapitalize.pl --checkonly'
+           : $outSeedFile: path for output of 'esl-alicapitalize.pl'
+           : 
+  Returns  : 1 if SEED does not follow these conventions, 0 if it does
+           : If '0' $outDiffFile will be deleted and $outSeedFile will never be created
+           : If '1' $outDiffFile and $outSeedFile will exist on the filesystem upon return
+=cut
+
+sub checkSeedRfConventions {
+  my ($familyObj, $scriptPath, $outDiffFile, $outSeedFile) = @_;
+
+  my $sub_name = "checkSeedRfConventions";
+
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    warn "\nFATAL ERROR in $sub_name, did not get passed in a Bio::Rfam::Family object\n";
+    return 1;
+  }
+  if (! defined $scriptPath) {
+    warn "FATAL ERROR in $sub_name, did not get passed in a script path\n";
+    return 1;
+  }
+  if (! defined $outDiffFile) {
+    warn "FATAL ERROR in $sub_name, did not get passed in an output diff file name\n";
+    return 1;
+  }
+  if (! defined $outSeedFile) {
+    warn "FATAL ERROR in $sub_name, did not get passed in an output seed file name\n";
+    return 1;
+  }
+  my $error = 0;
+
+  # Use the Bio-Easel esl-alicapitalize.pl script to actually do the work here
+  my $seed_file = $familyObj->SEED->path;
+  Bio::Rfam::Utils::run_local_command("perl $scriptPath --checkonly --perposn $seed_file > $outDiffFile");
+  
+  # 1st line of $outDiffFile will be '1' if SEED currently follows all conventions
+  # and '0' if SEED does not, in which case detailed list of changes will follow
+  open(DIFF, $outDiffFile) || die "ERROR unable to open $outDiffFile for reading";
+  my $result = <DIFF>;
+  chomp $result;
+  if($result eq "PASS") {
+    # SEED passes, remove temporary file
+    #unlink $outDiffFile;
+  }
+  else {
+    # SEED doesn't meet conventions, create one that does
+    Bio::Rfam::Utils::run_local_command("perl $scriptPath $seed_file > $outSeedFile");
+    $error = 1;
   }
 
   return $error;
