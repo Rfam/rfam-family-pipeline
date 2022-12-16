@@ -42,18 +42,27 @@ use Bio::Easel::MSA;
 
 use Getopt::Long;
 
-my $usage  = "Usage:\nperl rewrite_seed_with_rf.pl [OPTIONS (called from within a family directory)\n\n";
+my $usage  = "rewrite_seed_with_rf.pl: updates SEED to follow infernal RF conventions,\n";
+$usage .= "                         preserving pseudoknots, and verifies new SEED would\n";
+$usage .= "                         create an identical CM to existing CM. Other files\n";
+$usage .= "                         (DESC, REVTLBOUT, SCORES, TBLOUT, SEEDTBLOUT, SEEDSCORES)\n";
+$usage .= "                         are 'touch'ed to update their timestamps (this is ok since\n";
+$usage .= "                         we verified CM is unchanged). This script should be called\n";
+$usage .= "                         from within a family directory (requires other files besides SEED).\n\n";
+$usage .= "Usage: perl rewrite_seed_with_rf.pl [OPTIONS] SEED\n\n";
 $usage .= "\tOPTIONS:\n";
-$usage .= "\t--keep: leave all output files instead of deleting them\n";
+$usage .= "\t--keep:  leave all intermediate output files instead of deleting them\n";
+$usage .= "\t--quiet: do not output per-position SS_cons differences between input SEED and newly created SEED\n";
 
-my $do_help = 0;
-my $do_keep = 0;
-&GetOptions( "h"    => \$do_help,
-             "keep" => \$do_keep);
+my $do_keep  = 0;
+my $do_quiet = 0;
+&GetOptions( "keep"  => \$do_keep,
+             "quiet" => \$do_quiet);
 
-if($do_help) {
-  die $usage;
-}
+if(scalar(@ARGV) != 1) { die $usage; }
+my ($in_seed) = @ARGV;
+
+if($in_seed ne "SEED") { die $usage; }
 
 # required files in three 'tiers'. Files in tier 1 must be younger
 # than those in tiers 2 and 3, and files in tier 2 must be younger
@@ -187,8 +196,11 @@ if($desc_buildopts ne $cm_buildopts) { die "ERROR cmbuild option/command read fr
 # NEW WAY: use cmalign --mapali output alignment, which preserves the input alignment
 # (the original seed in this case) exactly (it never doctors parsetrees (yes, HMMER
 # works the same way)).
+
+# if --checkonly used, 
+
 if(-e "SEED") { copy("SEED", "SEED.0"); }
-add_rf_and_ss_cons_given_cmalign_mapali_output("SEED", "SEED.1", "SEED.2", $orig_cm->{cmHeader}->{clen});
+my $diff_str = add_rf_and_ss_cons_given_cmalign_mapali_output("SEED", "SEED.1", "SEED.2", $orig_cm->{cmHeader}->{clen}, $do_quiet);
 
 ##############################################################
 # 4. Builds even newer CM from even newer SEED and verifies 
@@ -248,6 +260,12 @@ if(! $do_keep) {
   }
 }
 
+print "New      CM and seed alignment saved as CM and SEED\n";
+print "Original CM and seed alignment saved as CM.0 and SEED.0\n";
+print "CM parameters verified to be identical in files CM and CM.0\n";
+print $diff_str . "\n";
+
+
 ###############
 # SUBROUTINES #
 ###############
@@ -257,15 +275,18 @@ if(! $do_keep) {
 # output from cmalign --mapali ($cmalign_mapali_infile) with a single extra sequence other
 # than the original SEED, add RF and SS_cons annotation to the original SEED alignment 
 # and save it as $outfile.
+#
+# Returns possibly multi-line string reporting per-position changes in SS_cons
+# or "SS_cons unchanged" if it does not change.
 sub add_rf_and_ss_cons_given_cmalign_mapali_output {
-
-  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen) = @_;
+  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen, $do_quiet) = @_;
 
   # read in original seed
   my $orig_seed = Bio::Easel::MSA->new({
     fileLocation => $orig_infile,
     forceText    => 1
-      });
+                                       });
+  my $save_orig_ss_cons = $orig_seed->get_ss_cons();
   
   # read in new seed plus consensus sequence aligned (created with cmalign --mapali SEED CM c.fa)
   my $tmp_seed  = Bio::Easel::MSA->new({
@@ -280,7 +301,7 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
   for($i = $orig_seed->nseq(); $i < $tmp_seed->nseq;  $i++) { $usemeA[$i] = 0; }
   my $new_seed = $tmp_seed->sequence_subset(\@usemeA);
   undef $tmp_seed;
-  
+
   # verify sequences are in the same order in each MSA
   for(my $i = 0; $i < $orig_seed->nseq(); $i++) { 
     if($orig_seed->get_sqname($i) ne $new_seed->get_sqname($i)) { 
@@ -343,10 +364,37 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
   $orig_seed->set_ss_cons($orig_ss_cons);
   $orig_seed->capitalize_based_on_rf();
   $orig_seed->remove_gap_rf_basepairs(1); # 1: wussify SS_cons and change gap RF columns to '.' in SS_cons
+
+  # determine if SS_cons has changed, and construct return string
+  my $new_orig_ss_cons = $orig_seed->get_ss_cons();
+  my $ret_str = undef;
+  if($save_orig_ss_cons ne $new_orig_ss_cons) {
+    if(length($save_orig_ss_cons) == length($new_orig_ss_cons)) {
+      if(! $do_quiet) { 
+        $ret_str = "Between SEED and SEED.0, SS_cons changed, per-position differences:\n";
+        my @save_A = split("", $save_orig_ss_cons);
+        my @new_A  = split("", $new_orig_ss_cons);
+        for(my $z = 0; $z < scalar(@save_A); $z++) {
+          if($save_A[$z] ne $new_A[$z]) { 
+            $ret_str .= sprintf("\tposition %5d changed from %s to %s\n", $z, $save_A[$z], $new_A[$z]);
+          }
+        }
+      }
+      else {
+        $ret_str = "Between SEED and SEED.0, SS_cons changed.";
+      }
+    }
+    else { 
+      $ret_str = "Between SEED and SEED.0, SS_cons changed, lengths differ, compare SEED.0 and SEED to see differences.";
+    }
+  }
+  else {
+o    $ret_str = "Between SEED and SEED.0 SS_cons unchanged.";
+  }
   
   $orig_seed->write_msa($outfile);
   
-  return;
+  return $ret_str;
 }
 
 #######################################################################
