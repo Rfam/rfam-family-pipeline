@@ -30,30 +30,41 @@
 
 use strict;
 use warnings;
-#use Cwd;
-#use Getopt::Long;
+use Getopt::Long;
 use File::Copy;
-#use Data::Printer;
-#use Carp;
 
 use Bio::Rfam::Config;
 use Bio::Rfam::FamilyIO;
-#use Bio::Rfam::Family::MSA;
 use Bio::Rfam::Infernal;
 use Bio::Rfam::Utils;
 
 use Bio::Easel::MSA;
-#use Bio::Easel::SqFile;
-#use Bio::Easel::Random;
+
+use Getopt::Long;
+
+my $usage  = "Usage:\nperl rewrite_seed_with_rf.pl [OPTIONS (called from within a family directory)\n\n";
+$usage .= "\tOPTIONS:\n";
+$usage .= "\t--keep: leave all output files instead of deleting them\n";
+
+my $do_help = 0;
+my $do_keep = 0;
+&GetOptions( "h"    => \$do_help,
+             "keep" => \$do_keep);
+
+if($do_help) {
+  die $usage;
+}
 
 # required files in three 'tiers'. Files in tier 1 must be younger
 # than those in tiers 2 and 3, and files in tier 2 must be younger
 # than those in tier 3.
 my @reqdFiles_t1 = ("SEED");
 my @reqdFiles_t2 = ("CM");
-my @reqdFiles_t3 = ("DESC", "outlist", "outlist.pdf", "REVTBLOUT", "SCORES", "species",
-                    "species.pdf", "taxinfo", "TBLOUT");
-my @nonreqdFiles = ("revoutlist", "revspecies"); # these will only exist if there were >0 reverse hits
+#my @reqdFiles_t3 = ("DESC", "outlist", "outlist.pdf", "REVTBLOUT", "SCORES", "species",
+#                    "species.pdf", "taxinfo", "TBLOUT");
+#my @nonreqdFiles = ("revoutlist", "revspecies"); # these will only exist if there were >0 reverse hits
+my @reqdFiles_t3 = ("DESC", "REVTBLOUT", "SCORES", "TBLOUT", "SEEDTBLOUT", "SEEDSCORES");
+my @nonreqdFiles = ("outlist", "outlist.pdf", "species", "species.pdf", "taxinfo", "revoutlist", "revspecies"); # these will only exist if rfsearch.pl/rfmake.pl has been run
 
 foreach my $file (@reqdFiles_t1, @reqdFiles_t2, @reqdFiles_t3) { 
   if(! -e $file) { die "ERROR, required file $file does not exist"; }
@@ -151,7 +162,7 @@ foreach $file1 (@reqdFiles_t2) {
 #    matches the one in the CM file, and save the output alignment
 #    as SEED.1, we'll use this to map RF annotation to the original
 #    SEED.
-verify_cm_built_from_seed($config, "CM", "SEED", "SEED.1");
+verify_cm_built_from_seed($config, "CM", "SEED", "SEED.1", $do_keep);
 
 # B. verify the COM cmbuild line matches the passed in $desc_opts
 #    which were read from the DESC file.
@@ -192,8 +203,9 @@ if(-e "CM")   { copy("CM"  , "CM.0"); }
 
 Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", "CM.1", "SEED.2", $outfile);
 verify_two_cms_have_identical_parameters("CM.1", "CM", 0.00000001);
-unlink $outfile;
-
+if(! $do_keep) { 
+  unlink $outfile;
+}
 
 ##############################################################
 # 5. Adds E-value stats from original CM to even newer CM.
@@ -207,7 +219,7 @@ else          { die "ERROR, CM.2 does not exist"; }
 if(-e "SEED.2") { copy("SEED.2", "SEED"); }
 else          { die "ERROR, SEED.2 does not exist"; }
 
-verify_cm_built_from_seed($config, "CM", "SEED");
+verify_cm_built_from_seed($config, "CM", "SEED", undef, $do_keep);
 # now CM and SEED are the updated versions
 
 ##############################################################
@@ -219,19 +231,21 @@ my $file;
 foreach $file (@reqdFiles_t1, @reqdFiles_t2, @reqdFiles_t3) { 
   if(! -e $file) { die "ERROR file $file does not exist"; }
   system("touch $file");
-  sleep(0.1);
+  sleep(1);
 }
 
 foreach $file (@nonreqdFiles) { 
   if(-e $file) { 
     system("touch $file");
   }
-  sleep(0.1);
+  sleep(1);
 }
 
 # clean up
-foreach $file ("SEED.1", "SEED.2", "CM.1", "CM.2") { 
-  if(-e $file) { unlink $file; }
+if(! $do_keep) { 
+  foreach $file ("SEED.1", "SEED.2", "CM.1", "CM.2") { 
+    if(-e $file) { unlink $file; }
+  }
 }
 
 ###############
@@ -328,6 +342,7 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
   $orig_seed->set_rf($orig_rf);
   $orig_seed->set_ss_cons($orig_ss_cons);
   $orig_seed->capitalize_based_on_rf();
+  $orig_seed->remove_gap_rf_basepairs(1); # 1: wussify SS_cons and change gap RF columns to '.' in SS_cons
   
   $orig_seed->write_msa($outfile);
   
@@ -553,9 +568,11 @@ sub add_evalue_and_com_lines_to_cm {
 #
 # If $stkfile is undefined, unlink it at end of function, otherwise
 # save output alignment as $stkfile and don't unlink it.
+#
+# If $do_keep: don't unlink any files
 sub verify_cm_built_from_seed { 
 
-  my ($config, $cmfile, $seedfile, $stkfile) = @_;
+  my ($config, $cmfile, $seedfile, $stkfile, $do_keep) = @_;
 
   my $unlink_stkfile;
 
@@ -574,12 +591,14 @@ sub verify_cm_built_from_seed {
   else { 
     $unlink_stkfile = 0;
   }
-  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali $seedfile -o $stkfile", "CM", $fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapstr --mapali $seedfile -o $stkfile", "CM", $fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
   # we'll die if $seedfile wasn't used to build $cmfile
 
-  unlink $fafile;
-  if($unlink_stkfile) { 
-    unlink $stkfile;
+  if(! $do_keep) { 
+    unlink $fafile;
+    if($unlink_stkfile) { 
+      unlink $stkfile;
+    }
   }
 
   return;
