@@ -2046,15 +2046,12 @@ sub optional {
   if(!exists($override->{seedrf})){
     # TEMPORARY
     my $capitalizePath = "/homes/nawrocki/git/nawrockie/Bio-Easel/scripts/esl-alicapitalize.pl";
-    my $seed_diff_file = "$dir/qc.SEED.diff";
-    my $seed_new_file  = "$dir/qc.SEED.new";
+    my $seed_diff_file = 
     $error = checkSeedRfConventions($newFamily,
                                     $capitalizePath,
-                                    $seed_diff_file,
-                                    $seed_new_file);
+                                    "$dir/qc.SEED.diff"); # this file will be deleted if SEED passes, kept if not
     if($error){
-      warn "Failed check on RF conventions of SEEDs (upper/lowercase and SS_cons).\n";
-      warn "\tdescription of changes required in SEED saved in file: $seed_diff_file\n\tnew SEED that would pass saved in file: $seed_new_file\n";
+      warn "Found problem with SEED related to RF conventions";
       $masterError =1;
     }
   }else{
@@ -2327,15 +2324,14 @@ sub checkCMLength {
   Args     : $familyObj:  Bio::Rfam::Family object
            : $scriptPath: path to 'esl-alicapitalize.pl' executable
            : $outDiffFile: path for output of 'esl-alicapitalize.pl --checkonly'
-           : $outSeedFile: path for output of 'esl-alicapitalize.pl'
            : 
   Returns  : 1 if SEED does not follow these conventions, 0 if it does
-           : If '0' $outDiffFile will be deleted and $outSeedFile will never be created
-           : If '1' $outDiffFile and $outSeedFile will exist on the filesystem upon return
+           : If '0' $outDiffFile will be deleted 
+           : If '1' $outDiffFile will exist on the filesystem upon return
 =cut
 
 sub checkSeedRfConventions {
-  my ($familyObj, $scriptPath, $outDiffFile, $outSeedFile) = @_;
+  my ($familyObj, $scriptPath, $outDiffFile) = @_;
 
   my $sub_name = "checkSeedRfConventions";
 
@@ -2351,10 +2347,6 @@ sub checkSeedRfConventions {
     warn "FATAL ERROR in $sub_name, did not get passed in an output diff file name\n";
     return 1;
   }
-  if (! defined $outSeedFile) {
-    warn "FATAL ERROR in $sub_name, did not get passed in an output seed file name\n";
-    return 1;
-  }
   my $error = 0;
 
   # Use the Bio-Easel esl-alicapitalize.pl script to actually do the work here
@@ -2368,11 +2360,10 @@ sub checkSeedRfConventions {
   chomp $result;
   if($result eq "PASS") {
     # SEED passes, remove temporary file
-    #unlink $outDiffFile;
+    unlink $outDiffFile;
   }
   else {
-    # SEED doesn't meet conventions, create one that does
-    Bio::Rfam::Utils::run_local_command("perl $scriptPath $seed_file > $outSeedFile");
+    print STDERR ("FATAL: SEED doesn't match expected conventions, description saved in file: $outDiffFile\nRun rewrite_seed_with_rf.pl jiffy script to update SEED to match conventions.\n");
     $error = 1;
   }
 
