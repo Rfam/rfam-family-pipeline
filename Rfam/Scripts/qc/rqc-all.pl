@@ -265,18 +265,15 @@ print $L "\n** SEED upper/lowercase and SS_cons check **\n";
 $error = 0;
 
 my $capitalizePath = "/homes/nawrocki/git/nawrockie/Bio-Easel/scripts/esl-alicapitalize.pl";
-printf("calling checkSeedRfConventions()\n");
 # we don't use 'eval' here. I'm not sure why that was done in the
 # first place. If we have an error serious enough to 'die' we should 'die'.
-my $seed_diff_file = "$family/allqc.SEED.diff";
-my $seed_new_file  = "$family/allqc.SEED.new";
 $error = Bio::Rfam::QC::checkSeedRfConventions($familyObj,
                                                $capitalizePath,
-                                               $seed_diff_file, 
-                                               $seed_new_file);
+                                               "$family/allqc.SEED.diff");
 if ($error) {
   $masterError++;
-  print STDERR "\t--errors\n\tdescription of changes required in SEED saved in file: $seed_diff_file\n\tnew SEED that would pass saved in file: $seed_new_file\n";
+  print STDERR "\t--errors"
+  
 } else {
   print STDERR "\t--Check of SEED RF conventions completed with no major errors";
 }
