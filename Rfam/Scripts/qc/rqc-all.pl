@@ -72,7 +72,7 @@ print $L "\n** CM check **\n";
 my $error = 0;
 my $masterError = 0;
 eval{
-  $error = Bio::Rfam::QC::checkCMFormat($familyObj);
+  $error = Bio::Rfam::QC::checkCMFormat($familyObj, $config);
 };
 print $L $@ if($@);
 if ($error){
