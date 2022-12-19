@@ -267,6 +267,7 @@ sub parseCM {
   $self->_parseCMBody( $cm, \$i );
   $self->_parseCMHMMHeader( $cm, \$i );
   $self->_parseHMMBody($cm, \$i);
+  $cm->{path} = $file;
   my $cmObj = 'Bio::Rfam::Family::CM'->new($cm);
   return ($cmObj);
 }
