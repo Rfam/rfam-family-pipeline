@@ -2363,7 +2363,7 @@ sub checkSeedRfConventions {
     unlink $outDiffFile;
   }
   else {
-    print STDERR ("FATAL: SEED doesn't match expected conventions, description saved in file: $outDiffFile\nRun rewrite_seed_with_rf.pl jiffy script to update SEED to match conventions.\n");
+    print STDERR ("FATAL: SEED doesn't follow expected conventions, description saved in file: $outDiffFile\nRun rewrite_seed_with_rf.pl jiffy script to update SEED to follow conventions.\n");
     $error = 1;
   }
 
