@@ -40,9 +40,13 @@ eval {
 
   my $config = Bio::Rfam::Config->new;
 
-  #Now see what has just been done for this revision.
+  # Now see what has just been done for this revision.
   my $logMessage = $revlook->log_msg;
   print STDERR $logMessage."\n";
+
+  my $author = $revlook->author();
+  $logger->debug( qq(author:  "$author") );
+
   # The following actions will trigger a SVN post-commit
   #------------------------------------------------------
 
@@ -64,7 +68,7 @@ eval {
 
     my $tmpDir = File::Temp->newdir( 'CLEANUP' => 1 );
 
-    #Move the entry
+    # Move the entry
     my $dest = $tmpDir->dirname;
     chdir($dest) or die "Could not change into $dest dir:$!";
     open( M, ">.default" . $$ . "rfnewmove" )
@@ -75,22 +79,22 @@ eval {
     $client->addRFNEWMOVELog;
     $client->moveNewFamily( $family, $entry->rfam_acc );
 
-    #Now checkout and automatically add the accession to the DESC file
+    # Now checkout and automatically add the accession to the DESC file
     open( M, ">.default" . $$ . "rfnewmove" )
       or die "Could not open $dest/.default" . $$ . "rfnewmove:$!";
     print M "Automatically adding accession.";
     close(M);
     $client->addRFNEWMOVELog;
-    #Now checkout and add the accession to the DESC file!
+    # Now checkout and add the accession to the DESC file!
     $client->checkoutFamily( $entry->rfam_acc, $dest );
 
-    #parse the DESC file
+    # parse the DESC file
     my $familyIO = Bio::Rfam::FamilyIO->new;
     my $descObj = $familyIO->parseDESC("$dest/DESC");
     $descObj->AC( $entry->rfam_acc );
     $familyIO->writeDESC( $descObj, $dest );
 
-    #Commit back in
+    # Commit back in
     $client->commitFamily($dest);
     chdir($cwd);
   }elsif ( $logMessage =~ /^CLNEW\:(\S+)/ ) {
@@ -108,7 +112,7 @@ eval {
 
     my $tmpDir = File::Temp->newdir( 'CLEANUP' => 1 );
 
-    #Move the entry
+    # Move the entry
     my $dest = $tmpDir->dirname;
     chdir $dest
       or die "ERROR: could not change into dir '$dest': $!";
@@ -121,22 +125,22 @@ eval {
     $client->addRCLNEWMOVELog;
     $client->moveNewClan( $clan_id, $clan->clan_acc );
 
-    #Now checkout and automatically add the accession to the DESC file
+    # Now checkout and automatically add the accession to the DESC file
     open( M, '>', $file_path )
       or die "ERROR: could not open '$file_path' to write accession log: $!";
     print M "Automatically adding accession.";
     close M;
     $client->addRCLNEWMOVELog;
-    #Now checkout and add the accession to the DESC file!
+    # Now checkout and add the accession to the DESC file!
     $client->checkoutClan( $clan->clan_acc, $dest );
 
-    #parse the CLANDESC file
+    # parse the CLANDESC file
     my $clanIO = Bio::Rfam::ClanIO->new;
     my $descObj = $clanIO->parseDESC("$dest/CLANDESC");
     $descObj->AC( $clan->clan_acc );
     $clanIO->writeDESC( $descObj, $dest );
 
-    #Commit back in
+    # Commit back in
     $client->commitClan($dest);
 
 
@@ -161,7 +165,7 @@ eval {
      }
 
      my $client = Bio::Rfam::SVN::Client->new;
-     #parse the DESC file
+     # parse the DESC file
      my $familyIO = Bio::Rfam::FamilyIO->new;
      print STDERR "Checking out $family to $dest\n";
 
@@ -169,11 +173,11 @@ eval {
      print STDERR "Parsing DESC\n";
      my $descObj = $familyIO->parseDESC("$dest/DESC");
 
-     #Now validate clan membership.
+     # Now validate clan membership.
      validateClanMembership($descObj, $config, $client);
 
   }else {
-    #No other commits require post-commit processing
+    # No other commits require post-commit processing
     ;
   }
 };
@@ -204,7 +208,7 @@ sub validateClanMembership{
   my $rfamdb = $config->rfamlive;
   $client = Bio::Rfam::SVN::Client->new if(!$client);
   my @row = $rfamdb->resultset('ClanMembership')->search({ rfam_acc => $descObj->AC });
-  #Need to put a transaction around this block
+  # Need to put a transaction around this block
   my $guard = $rfamdb->txn_scope_guard;
 
   if(defined($descObj->CL) and $descObj->CL =~ /CL\d{5}/ ){
@@ -213,7 +217,7 @@ sub validateClanMembership{
         die "Major error ".$row[0]->clan_acc." does not match ".$descObj->CL."\n";
       }
     }else{
-      #The clan must have been added, so add to the table.
+      # The clan must have been added, so add to the table.
       $rfamdb->resultset('ClanMembership')
               ->create({rfam_acc => $descObj->AC,
                         clan_acc => $descObj->CL});
@@ -226,7 +230,7 @@ sub validateClanMembership{
     }
   }
   if($add or $remove){
-    #Check out the clan and update the MEMB-ership.
+    # Check out the clan and update the MEMB-ership.
 
     my $tmpDir = File::Temp->newdir( 'CLEANUP' => 1 );
     my $dest = $tmpDir->dirname;
@@ -236,14 +240,14 @@ sub validateClanMembership{
     }else{
      $clan_acc = $row[0]->clan_acc->clan_acc;
     }
-    #Now checkout and add the accession to the DESC file!
+    # Now checkout and add the accession to the DESC file!
     $client->checkoutClan( $clan_acc, $dest );
-    #parse the CLANDESC file
+    # parse the CLANDESC file
     my $clanIO = Bio::Rfam::ClanIO->new;
     my $clanDescObj = $clanIO->parseDESC("$dest/CLANDESC");
 
     if($add){
-     #In the case of new clans, this will be undefined.
+     # In the case of new clans, this will be undefined.
      if(!defined($clanDescObj->MEMB)){
         $clanDescObj->MEMB([]);
      }
@@ -260,7 +264,7 @@ sub validateClanMembership{
     $clanIO->writeDESC( $clanDescObj, $dest );
 
 
-    #Now checkout and automatically add the accession to the DESC file
+    # Now checkout and automatically add the accession to the DESC file
     open( M, ">.default" . $$ . "rclmem" )
       or die "Could not open $dest/.default" . $$ . "rclmem:$!";
     print M "Automatically updating memberhsip, ";
@@ -269,7 +273,7 @@ sub validateClanMembership{
     close(M);
     $client->addRCLMEMLog;
 
-    #Commit back in
+    # Commit back in
     $client->commitClan($dest);
   }
   $guard->commit;

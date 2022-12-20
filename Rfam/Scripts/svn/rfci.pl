@@ -26,6 +26,7 @@ my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan 
   "add_to_clan"      => \$addToClan,
   "remove_from_clan" => \$removeFromClan,
   "help"             => \$help
+  "user"             => \$user
 ) or die "Unrecognised option passed in to the script.\n";
 
 my $family = shift;
@@ -70,6 +71,13 @@ if ( -s ".default" . $$ . "rfci" ) {
 if ($message) {
   open( M, ">.default" . $$ . "rfci" ) or die "Could not open message file\n";
   print M $message;
+  close(M);
+}
+
+# add user info in a similar way to message
+if ($user) {
+  open( M, ">.default" . $$ . "rfci" ) or die "Could not open message file\n";
+  print M $user;
   close(M);
 }
 
@@ -233,6 +241,8 @@ OPTIONS:
                       a clan. The flag confirms that clan removal is intentional.
   -preseed            Use this flag to update an old Rfam family that does not yet have SEEDTBLOUT
                       and SEEDSCORES files in the SVN.
+  -user             - Use this flag to specify the user that is carrying out the commit; necessary if we are using
+                      shared user `rfamprod`
 EOF
 
 exit(1);
