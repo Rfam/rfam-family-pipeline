@@ -16,7 +16,7 @@ use Bio::Rfam::QC;
 #-------------------------------------------------------------------------------
 # Deal with all of the options
 
-my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan );
+my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan, $user );
 
 &GetOptions(
   "m=s"              => \$message,
@@ -25,8 +25,8 @@ my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan 
   "onlydesc"         => \$onlydesc,
   "add_to_clan"      => \$addToClan,
   "remove_from_clan" => \$removeFromClan,
+  "user"             => \$user,
   "help"             => \$help
-  "user"             => \$user
 ) or die "Unrecognised option passed in to the script.\n";
 
 my $family = shift;
