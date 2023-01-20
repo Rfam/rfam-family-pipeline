@@ -2934,7 +2934,7 @@ sub rnacentral_id_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5"; }
+  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using id: " . $in_id; }
   # Decode the entire JSON
   my $decoded_json = decode_json($json);
   #print Dumper $decoded_json;
