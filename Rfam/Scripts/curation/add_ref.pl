@@ -34,10 +34,8 @@ if ( !$nodesc ) {
     $file = "CLANDESC";
   }
   elsif ( -e "DESC" and -e "CLANDESC" ) {
-    die
-"\nFound both a DESC file and CLANDESC file!! Delete the incorrect one and re-run!\n";
-  }
-  else {
+    die "\nFound both a DESC file and CLANDESC file!! Delete the incorrect one and re-run!\n";
+  } else {
     warn "Could not find a DESC or CLANDESC file\n";
     warn "Writing to STDOUT ......\n";
     warn "--------------------------------------\n";
@@ -62,7 +60,10 @@ foreach my $pmid (@ARGV) {
     next;
   }
   my $ref = Bio::Rfam::RfamReference->new();
-  $ref->get_ref_by_pubmed($pmid);
+  if ( $ref->get_ref_by_pubmed($pmid) -eq 0 ) {
+    warn "Failed to fetch reference for $pmid";
+    next;
+  }
   push( @refs, $ref );
 }
 
