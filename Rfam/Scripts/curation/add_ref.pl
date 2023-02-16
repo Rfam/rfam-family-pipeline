@@ -60,7 +60,8 @@ foreach my $pmid (@ARGV) {
     next;
   }
   my $ref = Bio::Rfam::RfamReference->new();
-  if ( $ref->get_ref_by_pubmed($pmid) -eq 0 ) {
+  my $ret = $ref->get_ref_by_pubmed($pmid);
+  if ( $ret == 0 ) {
     warn "Failed to fetch reference for $pmid";
     next;
   }
