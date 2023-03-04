@@ -220,8 +220,8 @@ cpan -f install Bio::Annotation::Reference && \
 cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
-cpan -f install File::Spec
-#cpan -f install SVN::Client
+cpan -f install File::Spec && \
+cpan -f install JSON
 
 # install latest version of R-scape
 RUN cd /Rfam/software && \
