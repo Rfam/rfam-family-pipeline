@@ -3,38 +3,41 @@ FROM ubuntu:xenial
 USER root
 
 # might need to install a particular version of perl
-RUN apt-get update && apt-get install -y curl \
-    gcc \
-    git \
-    tar \
-    unzip \
-    perl \
-    wget \
-    make \
+RUN apt-get update
+RUN apt-get install -y curl \
     automake \
     curl \
-    gzip \
-    g++ \
-    vim \
-    gfortran \
     default-jdk \
+    fort77 \
+    g++ \
+    gcc \
+    gfortran \
+    git \
+    gzip \
+    less \
+    libcatalyst-action-renderview-perl \
+    libconvert-color-perl \
+    libdata-pageset-perl \
+    libdata-uuid-perl \
+    libdbd-mysql-perl \
+    libimage-size-perl \
+    libio-all-perl \
+    libsearch-queryparser-perl \
+    libsvn-perl \
+    libtest-most-perl \
+    libx11-6 \
+    libxml2 \
+    libxml2-dev \
+    make \
+    perl \
     r-base \
     r-base-dev \
-    less \
-    fort77
+    tar \
+    unzip \
+    vim \
+    wget
 
-RUN apt-get install -y libimage-size-perl \
-  libtest-most-perl \
-  libdbd-mysql-perl \
-  libdata-uuid-perl \
-  libconvert-color-perl \
-  libio-all-perl \
-  libdata-pageset-perl \
-  libsearch-queryparser-perl \
-  libcatalyst-action-renderview-perl \
-  libx11-6 \
-  libsvn-perl \
-  && apt-get clean
+RUN apt-get clean
 
 # create an Rfam directory where all software will be installed
 RUN mkdir /Rfam
