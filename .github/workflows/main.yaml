@@ -52,7 +52,7 @@ jobs:
   singularity-conversion:
     needs:
       - create-docker-image
-    uses: rfam/family-pipeline/.github/workflows/singularity.yaml@dev
+    uses: rfam/rfam-family-pipeline/.github/workflows/singularity.yaml@dev
     secrets: inherit
 
 
