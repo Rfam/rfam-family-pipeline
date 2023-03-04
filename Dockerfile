@@ -190,6 +190,9 @@ cd tcoffee/t_coffee/src && \
 make t_coffee && \
 mv t_coffee /Rfam/software/bin/.
 
+RUN cpan -f install Inline && \
+  cpan -f install Inline::C
+
 # install Bio-Easel
 RUN cd /Rfam && \
 git clone https://github.com/nawrockie/Bio-Easel.git && \
