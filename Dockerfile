@@ -200,7 +200,9 @@ cpan -f install File::Touch && \
 cpan -f install IPC::Run && \
 cpan -f install Term::ReadPassword && \
 cpan -f install File::Spec && \
-cpan -f install JSON
+cpan -f install JSON && \
+cpan -f install XML::LibXML && \
+cpan -f install Catalyst::Utils
 
 # install latest version of R-scape
 RUN cd /Rfam/software && \
