@@ -49,22 +49,6 @@ RUN mkdir /workdir
 #gunzip rfamseq14_test.tar.gz && \
 #tar -xvf rfamseq14_test.tar
 
-RUN cpan -f install File::ShareDir::Install && \
-cpan -f install Inline::C && \
-cpan -f install Data::Printer && \
-cpan -f install Config::General && \
-cpan -f install DBIx::Class::Schema && \
-cpan -f install DateTime && \
-cpan -f install DateTime::Format::MySQL && \
-cpan -f install MooseX::NonMoose && \
-cpan -f install Bio::Annotation::Reference && \
-cpan -f install File::Touch && \
-cpan -f install IPC::Run && \
-cpan -f install Term::ReadPassword && \
-cpan -f install File::Spec
-#cpan -f install SVN::Client
-
-
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
 ENV DISPLAY=0.0
@@ -227,16 +211,28 @@ pip install requests
 #RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
 #cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
-# install kubectl to establish communication with the k8s cluster
-RUN cd /Rfam/software/bin && \
-curl -LO curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && \
-chmod +x ./kubectl
+RUN cpan -f install File::ShareDir::Install && \
+cpan -f install Inline::C && \
+cpan -f install Data::Printer && \
+cpan -f install Config::General && \
+cpan -f install DBIx::Class::Schema && \
+cpan -f install DateTime && \
+cpan -f install DateTime::Format::MySQL && \
+cpan -f install MooseX::NonMoose && \
+cpan -f install Bio::Annotation::Reference && \
+cpan -f install File::Touch && \
+cpan -f install IPC::Run && \
+cpan -f install Term::ReadPassword && \
+cpan -f install File::Spec
+#cpan -f install SVN::Client
+
+
 
 # install kubernetes client python API
 #RUN cd /Rfam && \
 #git clone --recursive https://github.com/kubernetes-client/python.git && \
 # pip install setuptools && \
-#cd python && python setup.py install 
+#cd python && python setup.py install
 
 RUN apt-get install -y python3 && \
 python3 /Rfam/get-pip.py && \
@@ -247,12 +243,11 @@ RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar xf rscape.tar.gz && rm rscape.tar.gz && \
 cd rscape_* && \
-./configure && \ 
-#--prefix=/Rfam/software/rscape_* && \
+./configure && \
 make && \
 make install
 
-# copy R-scape to the Rfam bin directory 
+# copy R-scape to the Rfam bin directory
 RUN cd /Rfam/software/rscape*/bin && \
 cp R-scape /Rfam/software/bin/.
 
