@@ -204,12 +204,6 @@ cd /Rfam/Bio-Easel && perl Makefile.PL && \
 make && \
 make install
 
-# install some python tools
-RUN cd /Rfam && \
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-python get-pip.py && \
-pip install requests
-
 # clone Rfam repo
 #RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
 #cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
@@ -229,18 +223,6 @@ cpan -f install Term::ReadPassword && \
 cpan -f install File::Spec
 #cpan -f install SVN::Client
 
-
-
-# install kubernetes client python API
-#RUN cd /Rfam && \
-#git clone --recursive https://github.com/kubernetes-client/python.git && \
-# pip install setuptools && \
-#cd python && python setup.py install
-
-RUN apt-get install -y python3 && \
-python3 /Rfam/get-pip.py && \
-pip3 install kubernetes
-
 # install latest version of R-scape
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
@@ -254,24 +236,7 @@ make install
 RUN cd /Rfam/software/rscape*/bin && \
 cp R-scape /Rfam/software/bin/.
 
-RUN apt-get update && apt-get install -y nano
-
-RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
-cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
-
-# this requires that the repo already exists
-RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
-cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
-
 RUN apt-get autoclean
-
-# set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash rfam-user
-WORKDIR /home/rfam-user
-USER rfam-user
-
-# add command to bashrc to move to /workdir
-RUN echo "cd /workdir" >> ~/.bashrc
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
