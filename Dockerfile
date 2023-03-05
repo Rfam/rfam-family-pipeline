@@ -59,119 +59,119 @@ ENV DISPLAY=0.0
 
 # SOFTWARE INSTALLATION
 # Infernal installation
-# RUN cd /Rfam/software && \
-# curl -OL http://eddylab.org/infernal/infernal-1.1.2.tar.gz && \
-# tar -xvzf infernal-1.1.2.tar.gz && rm infernal-1.1.2.tar.gz && \
-# cd infernal-1.1.2 && \
-# ./configure && \
-# make && \
-# make install && \
-# cd /Rfam/software/infernal-1.1.2/easel && \
-# make install
+RUN cd /Rfam/software && \
+curl -OL http://eddylab.org/infernal/infernal-1.1.2.tar.gz && \
+tar -xvzf infernal-1.1.2.tar.gz && rm infernal-1.1.2.tar.gz && \
+cd infernal-1.1.2 && \
+./configure && \
+make && \
+make install && \
+cd /Rfam/software/infernal-1.1.2/easel && \
+make install
 
 # CMfinder installation
-# RUN cd /Rfam/software && \
-# wget http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
-# tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
-# cd CMfinder_0.2 && \
-# make && \
-# cp bin/cmfinder /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+wget http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
+tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
+cd CMfinder_0.2 && \
+make && \
+cp bin/cmfinder /Rfam/software/bin/.
 
 # HMMER installation
-# RUN cd /Rfam/software && \
-# wget http://eddylab.org/software/hmmer/hmmer-3.2.1.tar.gz && \
-# tar -xzf hmmer-3.2.1.tar.gz && rm hmmer-3.2.1.tar.gz && \
-# cd /Rfam/software/hmmer-3.2.1 && \
-# ./configure && \
-# make && \
-# make install
+RUN cd /Rfam/software && \
+wget http://eddylab.org/software/hmmer/hmmer-3.2.1.tar.gz && \
+tar -xzf hmmer-3.2.1.tar.gz && rm hmmer-3.2.1.tar.gz && \
+cd /Rfam/software/hmmer-3.2.1 && \
+./configure && \
+make && \
+make install
 
 # MAFFT installation
-# RUN cd /Rfam/software && \
-# curl -OL https://mafft.cbrc.jp/alignment/software/mafft-7.402-with-extensions-src.tgz && \
-# tar -xzf mafft-7.402-with-extensions-src.tgz && rm mafft-7.402-with-extensions-src.tgz && \
-# cd mafft-7.402-with-extensions/core && \
-# make clean && \
-# make && \
-# make install
+RUN cd /Rfam/software && \
+curl -OL https://mafft.cbrc.jp/alignment/software/mafft-7.402-with-extensions-src.tgz && \
+tar -xzf mafft-7.402-with-extensions-src.tgz && rm mafft-7.402-with-extensions-src.tgz && \
+cd mafft-7.402-with-extensions/core && \
+make clean && \
+make && \
+make install
 
 # ERATE installation
-# RUN cd /Rfam/software && \
-# curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
-# tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
-# cd erate-v.0.8/phylip3.66-erate/src && \
-# make dnaml && \
-# cp dnaml /Rfam/software/bin/
+RUN cd /Rfam/software && \
+curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
+tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
+cd erate-v.0.8/phylip3.66-erate/src && \
+make dnaml && \
+cp dnaml /Rfam/software/bin/
 
 # RNAcode installation
-# RUN cd /Rfam/software && \
-# curl -OL http://github.com/downloads/wash/rnacode/RNAcode-0.3.tar.gz && \
-# tar -xzf RNAcode-0.3.tar.gz && rm RNAcode-0.3.tar.gz && \
-# cd RNAcode-0.3 && \
-# ./configure --prefix=/Rfam/software/RNAcode-0.3 && \
-# make && \
-# make install && \
-# cp /Rfam/software/RNAcode-0.3/bin/RNAcode /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+curl -OL http://github.com/downloads/wash/rnacode/RNAcode-0.3.tar.gz && \
+tar -xzf RNAcode-0.3.tar.gz && rm RNAcode-0.3.tar.gz && \
+cd RNAcode-0.3 && \
+./configure --prefix=/Rfam/software/RNAcode-0.3 && \
+make && \
+make install && \
+cp /Rfam/software/RNAcode-0.3/bin/RNAcode /Rfam/software/bin/.
 
 # MUSCLE installation
-# RUN cd /Rfam/software && \
-# curl -OL http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz && \
-# tar -zxvf muscle3.8.31_i86linux64.tar.gz && rm muscle3.8.31_i86linux64.tar.gz && \
-# cp /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
+RUN cd /Rfam/software && \
+curl -OL http://www.drive5.com/muscle/downloads3.8.31/muscle3.8.31_i86linux64.tar.gz && \
+tar -zxvf muscle3.8.31_i86linux64.tar.gz && rm muscle3.8.31_i86linux64.tar.gz && \
+cp /Rfam/software/muscle3.8.31_i86linux64 /Rfam/software/bin/muscle
 
 # argtable2/ClustalW dependencies
-# RUN cd /Rfam/software && \
-# curl -OL http://prdownloads.sourceforge.net/argtable/argtable2-13.tar.gz && \
-# tar -zxvf argtable2-13.tar.gz && rm argtable2-13.tar.gz && \
-# cd argtable2-13 && \
-# ./configure --prefix=/Rfam/software/argtable2-13 && \
-# make && \
-# make install
+RUN cd /Rfam/software && \
+curl -OL http://prdownloads.sourceforge.net/argtable/argtable2-13.tar.gz && \
+tar -zxvf argtable2-13.tar.gz && rm argtable2-13.tar.gz && \
+cd argtable2-13 && \
+./configure --prefix=/Rfam/software/argtable2-13 && \
+make && \
+make install
 
 # ClustalW installation
-# RUN cd /Rfam/software && \
-# curl -OL http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz && \
-# tar -zxvf clustal-omega-1.2.4.tar.gz && rm clustal-omega-1.2.4.tar.gz && \
-# cd clustal-omega-1.2.4 && \
-# ./configure CFLAGS=-I/Rfam/software/argtable2-13/include LDFLAGS=-L/Rfam/software/argtable2-13/lib --prefix=/Rfam/software/clustal-omega-1.2.4 && \
-# make && \
-# make install && \
-# cp /Rfam/software/clustal-omega-1.2.4/bin/clustalo /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+curl -OL http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz && \
+tar -zxvf clustal-omega-1.2.4.tar.gz && rm clustal-omega-1.2.4.tar.gz && \
+cd clustal-omega-1.2.4 && \
+./configure CFLAGS=-I/Rfam/software/argtable2-13/include LDFLAGS=-L/Rfam/software/argtable2-13/lib --prefix=/Rfam/software/clustal-omega-1.2.4 && \
+make && \
+make install && \
+cp /Rfam/software/clustal-omega-1.2.4/bin/clustalo /Rfam/software/bin/.
 
 # PPFold installation
-# RUN cd /Rfam/software && \
-# curl -OL http://www.daimi.au.dk/~compbio/pfold/PPfold/PPfold3.1.1.jar && \
-# cp PPfold3.1.1.jar /Rfam/software/bin/. && rm PPfold3.1.1.jar
+RUN cd /Rfam/software && \
+curl -OL http://www.daimi.au.dk/~compbio/pfold/PPfold/PPfold3.1.1.jar && \
+cp PPfold3.1.1.jar /Rfam/software/bin/. && rm PPfold3.1.1.jar
 
 # RAxML installation
-# RUN cd /Rfam/software && \
-# git clone https://github.com/stamatak/standard-RAxML.git && \
-# cd /Rfam/software/standard-RAxML && \
-# make -f Makefile.gcc && \
-# cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+git clone https://github.com/stamatak/standard-RAxML.git && \
+cd /Rfam/software/standard-RAxML && \
+make -f Makefile.gcc && \
+cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
-#RUN cd /Rfam/software && \
-#curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-#tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-#cd /Rfam/software/ncbi-blast-2.9.0+/bin
-#cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.§1
+RUN cd /Rfam/software && \
+curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+cd /Rfam/software/ncbi-blast-2.9.0+/bin && \
+cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.
 
 # ViennaRNA installation
-# RUN cd /Rfam/software && \
-# curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
-# tar -zxvf ViennaRNA-2.4.9.tar.gz && rm ViennaRNA-2.4.9.tar.gz && \
-# cd ViennaRNA-2.4.9 && \
-# ./configure && \
-# make && \
-# make install
+RUN cd /Rfam/software && \
+curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
+tar -zxvf ViennaRNA-2.4.9.tar.gz && rm ViennaRNA-2.4.9.tar.gz && \
+cd ViennaRNA-2.4.9 && \
+./configure && \
+make && \
+make install
 
 #TCOFFEE installation -- test and fix
-# RUN cd /Rfam/software && \
-# git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
-# cd tcoffee/t_coffee/src && \
-# make t_coffee && \
-# mv t_coffee /Rfam/software/bin/.
+RUN cd /Rfam/software && \
+git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
+cd tcoffee/t_coffee/src && \
+make t_coffee && \
+mv t_coffee /Rfam/software/bin/.
 
 RUN cpan -f install Inline && \
   cpan -f install Inline::C
