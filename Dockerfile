@@ -38,6 +38,7 @@ RUN apt-get install -y curl \
     wget
 
 RUN apt-get clean
+RUN apt-get autoclean
 
 # create an Rfam directory where all software will be installed
 RUN mkdir /Rfam
@@ -187,7 +188,7 @@ make && \
 make install
 
 # clone Rfam repo
-#RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git
 #cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
 RUN cpan -f install File::ShareDir::Install && \
@@ -220,12 +221,11 @@ make install
 RUN cd /Rfam/software/rscape*/bin && \
 cp R-scape /Rfam/software/bin/.
 
-RUN apt-get autoclean
-
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
-ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+# ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+ENV RFAM_CONFIG=/Rfam/config/rfam.conf
 
 ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:$PERL5LIB
 
