@@ -151,11 +151,11 @@ make -f Makefile.gcc && \
 cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
-RUN cd /Rfam/software && \
-curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-cd /Rfam/software/ncbi-blast-2.9.0+/bin && \
-cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.
+# RUN cd /Rfam/software && \
+# curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+# tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+# cd /Rfam/software/ncbi-blast-2.9.0+/bin && \
+# cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.
 
 # ViennaRNA installation
 RUN cd /Rfam/software && \
