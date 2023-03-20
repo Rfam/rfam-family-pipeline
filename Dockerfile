@@ -4,8 +4,10 @@ USER root
 
 # might need to install a particular version of perl
 RUN apt-get update
-RUN apt-get install -y curl \
+RUN apt-get install -y \
+    aspell \
     automake \
+    curl \
     curl \
     default-jdk \
     fort77 \
