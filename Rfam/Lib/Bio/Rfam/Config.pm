@@ -515,5 +515,12 @@ sub ssImages {
   return $self->{'_config'}->{ssImages};
 }
 
+sub rfamTeam {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{rfamTeam};
+}
 
 1;

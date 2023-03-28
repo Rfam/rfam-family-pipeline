@@ -288,7 +288,7 @@ sub checkNewFamilyDoesNotExist {
   unless ($@) {
     confess( "$entry exist in the repository, at $url.  "
         . "This should not happen, as the new family should be moved into "
-        . "the repoistory shortly after being added.  Please try again in a "
+        . "the repository shortly after being added.  Please try again in a "
         . "few minutes, if the problem persists, then something is wrong!\n" );
   }
 }
@@ -1512,7 +1512,7 @@ sub checkNewClanDoesNotExist {
   unless ($@) {
     confess( "$entry exist in the repository, at $url.  "
         . "This should not happen, as the new family should be moved into "
-        . "the repoistory shortly after being added.  Please try again in a "
+        . "the repository shortly after being added.  Please try again in a "
         . "few minutes, if the problem persists, then something is wrong!\n" );
   }
 }
@@ -1549,7 +1549,7 @@ sub addClan {
     confess("Failed to check out new clan dir, $url to $dest:[$@]\n");
   }
 
- #Copy the directory to pending families directory. Only copy the files we need!
+ #Copy the directory to pending clans directory. Only copy the files we need!
   unless ( -e "$dest/$newClanId" ) {
     mkdir("$dest/$newClanId")
       or confess("Could not make directory $dest/$newClanId:[$!]\n");

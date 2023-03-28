@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
-# rfnew.pl - This script allows one to check in a family to the SVN repository
-# containing rfam families. The family that you wish to add to the database
+# rclnew.pl - This script allows one to check in a clan to the SVN repository
+# containing rfam families. The clan that you wish to add to the database
 # should be passed in as a parameter.
 #
 
@@ -118,7 +118,7 @@ close M;
 $client->addRCLNEWLog();
 
 #-------------------------------------------------------------------------------
-#If we get here, then great! We can now add the family!
+#If we get here, then great! We can now add the clan!
 my $caught_cntrl_c;
 $SIG{INT} = sub { $caught_cntrl_c = 1; };    # don't allow control C for a bit!
 
