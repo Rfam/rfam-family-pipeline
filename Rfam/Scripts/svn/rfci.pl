@@ -224,7 +224,8 @@ OPTIONS:
                       adding a family to a clan. If you are uncertain of what you are doing, do
                       not use this option.
   -i <option>       - Ignore some of the QC steps to speed up check-in or get family through.
-                      Valid options are: 'overlap', 'spell', 'coding', 'seed', 'missing', and 'length'
+                      Valid options are: 'overlap', 'spell', 'coding', 'seed', 'missing', 'length'
+                      and 'seedrf'. 
                       To skip more than one, use -i <s> multiple times
   -m                - Specify the message that describes the changes you have made to this family
                       on the command line, avoid being prompted for it at a later stage.

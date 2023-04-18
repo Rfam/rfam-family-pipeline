@@ -50,7 +50,7 @@ if(!$error){
 
 #------------------------------------------------------------------------------
 #Check the format of the files.
-$error = Bio::Rfam::QC::checkFamilyFormat( $familyObj );
+$error = Bio::Rfam::QC::checkFamilyFormat( $familyObj, $config);
 
 #------------------------------------------------------------------------------
 
