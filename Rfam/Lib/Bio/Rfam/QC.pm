@@ -2045,7 +2045,7 @@ sub optional {
 
   if(!exists($override->{seedrf})){
     # TEMPORARY
-    my $capitalizePath = "/homes/nawrocki/git/nawrockie/Bio-Easel/scripts/esl-alicapitalize.pl";
+    my $capitalizePath = $config->binLocation;
     my $seed_diff_file = 
     $error = checkSeedRfConventions($newFamily,
                                     $capitalizePath,
