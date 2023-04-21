@@ -1894,7 +1894,7 @@ sub essential {
     $masterError = 1;
   }
 
-  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
+  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily, $config);
   if($error){
     warn "Family failed essential format checks.\n";
     $masterError = 1;
@@ -2045,7 +2045,7 @@ sub optional {
 
   if(!exists($override->{seedrf})){
     # TEMPORARY
-    my $capitalizePath = $config->binLocation;
+    my $capitalizePath = $config->binLocation . "esl-alicapitalize.pl";
     my $seed_diff_file = 
     $error = checkSeedRfConventions($newFamily,
                                     $capitalizePath,
