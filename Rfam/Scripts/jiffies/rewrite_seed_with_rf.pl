@@ -389,7 +389,7 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
     }
   }
   else {
-o    $ret_str = "Between SEED and SEED.0 SS_cons unchanged.";
+    $ret_str = "Between SEED and SEED.0 SS_cons unchanged.";
   }
   
   $orig_seed->write_msa($outfile);
