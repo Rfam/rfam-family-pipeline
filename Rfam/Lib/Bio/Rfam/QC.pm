@@ -2094,7 +2094,7 @@ sub processIgnoreOpt {
   #Go through each option passed in and see if it is allowed.
   foreach my $i (@{$ignoreRef}){
     if(! exists($allowedOpts->{$i})){
-      die "$i is an unknow QC 'ignore' option.\n";
+      die "$i is an unknown QC 'ignore' option.\n";
     }
   }
   #Now, convert it to a hash.
