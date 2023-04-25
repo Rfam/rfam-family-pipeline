@@ -995,7 +995,7 @@ sub checkTimestamps {
   }
   if(Bio::Rfam::Utils::youngerThan("$fam/TBLOUT", "$fam/SCORES")) {
     warn
-"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your scores [$fam/scores].\n";
+"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your SCORES [$fam/scores].\n";
     $error = 1;
   }
   return $error;
@@ -1894,7 +1894,7 @@ sub essential {
     $masterError = 1;
   }
 
-  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
+  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily, $config);
   if($error){
     warn "Family failed essential format checks.\n";
     $masterError = 1;
@@ -2045,7 +2045,7 @@ sub optional {
 
   if(!exists($override->{seedrf})){
     # TEMPORARY
-    my $capitalizePath = $config->binLocation;
+    my $capitalizePath = $config->binLocation . "esl-alicapitalize.pl";
     my $seed_diff_file = 
     $error = checkSeedRfConventions($newFamily,
                                     $capitalizePath,
