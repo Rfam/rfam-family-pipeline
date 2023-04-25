@@ -995,7 +995,7 @@ sub checkTimestamps {
   }
   if(Bio::Rfam::Utils::youngerThan("$fam/TBLOUT", "$fam/SCORES")) {
     warn
-"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your scores [$fam/scores].\n";
+"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your SCORES [$fam/scores].\n";
     $error = 1;
   }
   return $error;
