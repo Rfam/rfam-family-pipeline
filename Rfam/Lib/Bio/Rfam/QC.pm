@@ -2353,12 +2353,12 @@ sub checkSeedRfConventions {
   my $seed_file = $familyObj->SEED->path;
   Bio::Rfam::Utils::run_local_command("perl $scriptPath --checkonly --perposn $seed_file > $outDiffFile");
   
-  # 1st line of $outDiffFile will be '1' if SEED currently follows all conventions
-  # and '0' if SEED does not, in which case detailed list of changes will follow
+  # 1st line of $outDiffFile will be '0' if SEED currently follows all conventions
+  # and '1' if SEED does not, in which case detailed list of changes will follow
   open(DIFF, $outDiffFile) || die "ERROR unable to open $outDiffFile for reading";
   my $result = <DIFF>;
   chomp $result;
-  if($result eq "PASS") {
+  if($result eq "0") {
     # SEED passes, remove temporary file
     unlink $outDiffFile;
   }
