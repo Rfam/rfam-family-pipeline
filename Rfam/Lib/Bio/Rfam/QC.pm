@@ -2358,7 +2358,7 @@ sub checkSeedRfConventions {
   open(DIFF, $outDiffFile) || die "ERROR unable to open $outDiffFile for reading";
   my $result = <DIFF>;
   chomp $result;
-  if($result eq "0") {
+  if($result eq "PASS" | $result eq "0") {
     # SEED passes, remove temporary file
     unlink $outDiffFile;
   }
