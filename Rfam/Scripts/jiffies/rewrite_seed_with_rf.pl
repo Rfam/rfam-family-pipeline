@@ -72,7 +72,7 @@ my @reqdFiles_t2 = ("CM");
 #my @reqdFiles_t3 = ("DESC", "outlist", "outlist.pdf", "REVTBLOUT", "SCORES", "species",
 #                    "species.pdf", "taxinfo", "TBLOUT");
 #my @nonreqdFiles = ("revoutlist", "revspecies"); # these will only exist if there were >0 reverse hits
-my @reqdFiles_t3 = ("DESC", "SCORES", "SEEDSCORES", "TBLOUT", "REVTBLOUT", "SEEDTBLOUT");
+my @reqdFiles_t3 = ("DESC", "TBLOUT", "SCORES", "SEEDSCORES", "REVTBLOUT", "SEEDTBLOUT");
 my @nonreqdFiles = ("outlist", "outlist.pdf", "species", "species.pdf", "taxinfo", "revoutlist", "revspecies"); # these will only exist if rfsearch.pl/rfmake.pl has been run
 
 foreach my $file (@reqdFiles_t1, @reqdFiles_t2, @reqdFiles_t3) { 
