@@ -4,12 +4,12 @@
 # and output Pfam, Rfam, miRNA formats
 #
 # This is a copy of PfamReference.pm with minor modifications
-# to work for Rfam. This is an attempt to remove dependency 
+# to work for Rfam. This is an attempt to remove dependency
 # on Pfam config
 #
 =head1 COPYRIGHT
 
-File: RfamReference.pm 
+File: RfamReference.pm
 
 Copyright (c) 2007: Genome Research Ltd.
 
@@ -19,17 +19,17 @@ Authors: Rob Finn (rdf@sanger.ac.uk), John Tate (jt6@sanger.ac.uk)
  modify it under the terms of the GNU General Public License
  as published by the Free Software Foundation; either version 2
  of the License, or (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program; if not, write to the Free Software
  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  or see the on-line version at http://www.gnu.org/copyleft/gpl.txt
- 
+
 =cut
 
 
@@ -69,15 +69,15 @@ sub new {
 }
 
 #-------------------------------------------------------------------------------
-=head2 location 
+=head2 location
 
   Title    : location
   Usage    : $bioPfamRef->location('PFAM');
-  Function : Build the string of the location of article, suitable for use in 
+  Function : Build the string of the location of article, suitable for use in
            : DESC files.  Note, you need to have already fetched the article.
   Args     : A style, which can be of type EMBL or PFAM
   Returns  : The jorunal name, volume, pages etc of the article
-  
+
 =cut
 
 sub location {
@@ -124,14 +124,14 @@ sub location {
 
 
 #-------------------------------------------------------------------------------
-=head2 journal 
+=head2 journal
 
   Title    : journal
   Usage    : $bioPfamRef->journal
   Function : Gets/sets the journal name
   Args     : journal name (optional)
   Returns  : journal name
-  
+
 =cut
 
 sub journal {
@@ -143,14 +143,14 @@ sub journal {
 
 
 #-------------------------------------------------------------------------------
-=head2 year 
+=head2 year
 
   Title    : year
   Usage    : $bioPfamRef->year
   Function : Gets/sets the year the article was published
   Args     : year (optional)
   Returns  : year
-  
+
 =cut
 
 
@@ -169,7 +169,7 @@ sub year {
   Function : Gets/sets the volume of the article
   Args     : volume (optional)
   Returns  : volume
-  
+
 =cut
 
 
@@ -188,7 +188,7 @@ sub volume {
   Function : Gets/sets the number of the article
   Args     : number (optional)
   Returns  : number
-  
+
 =cut
 
 
@@ -207,7 +207,7 @@ sub number {
   Function : Gets/sets the first page of the article
   Args     : page number (optional)
   Returns  : page
-  
+
 =cut
 
 sub page_from {
@@ -225,7 +225,7 @@ sub page_from {
   Function : Gets/sets the last page of the article
   Args     : page number (optional)
   Returns  : last page number
-  
+
 =cut
 
 sub page_to {
@@ -243,7 +243,7 @@ sub page_to {
   Function : Gets/sets the epub statemennt
   Args     : epub statement
   Returns  : epub statement
-  
+
 =cut
 
 sub epub {
@@ -261,7 +261,7 @@ sub epub {
   Function : Gets/sets the inpress statemennt
   Args     : inpress statement
   Returns  : epub statement
-  
+
 =cut
 
 
@@ -273,19 +273,19 @@ sub inpress {
 }
 
 #-------------------------------------------------------------------------------
-=head2 config 
+=head2 config
 
   Title    : config
-  Usage    : $bioPfamLit->config 
+  Usage    : $bioPfamLit->config
   Function : returns the Pfam Config object. Initiated during new.
   Args     : Nothing
   Returns  : config Object
-  
+
 =cut
 
 
 sub config {
-  my ($self) = @_;  
+  my ($self) = @_;
   return $self->{config};
 }
 
@@ -298,7 +298,7 @@ sub config {
   Function : Queries ncbi to get article data for a given pubmed.
   Args     : a pubmed id
   Returns  : 0/1 success or failure.  Object itself gets populated.
-  
+
 =cut
 
 sub get_ref_by_pubmed {
@@ -316,92 +316,90 @@ sub get_ref_by_pubmed {
   my $url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=$pubmed&retmode=text&rettype=medline&api_key=" . $api_key;
   my $req = new HTTP::Request GET => $url;
   my $res = $ua->request($req);
-  if ( $res->is_success ) {
-    my %data;
-    my $tag;
-    foreach ( split( /\n/, $res->content ) ) {
-      s/\r//g;    # remove dos new lines
-
-      #	    print "$_\n";
-      if ( /^(\w+)\s*-\s+(.*)$/ or /^<\S+><\S+>(\w+)\s*- (.*)$/ ) {
-        $tag = $1;
-        if ( !$data{$tag} ) {
-          $data{$tag} = $2;
-        }
-        else {
-          $data{$tag} .= ", " . $2;
-        }
-      }
-      elsif ( /^\s{6}(.*)$/ and $tag ) {
-        $data{$tag} .= " " . $1;
-
-        # Ignore html
-      }
-      elsif (/^\s*$/) {
-      }
-      elsif (/</) {
-      }
-      else {
-
-        #		print STDERR "Unrecognised line\n[$_]\n";
-      }
-    }
-
-    # remove [see comments] from TI
-    if ( $data{'TI'} =~ /\[see comments\]/ ) {
-      my @title_with_comment = split( /\[see/, $data{'TI'} );
-      $data{'TI'} = $title_with_comment[0];
-    }
-
-    # remove trailing . from TI
-    if ( $data{'TI'} =~ /\.\s*$/ ) {
-      chop $data{'TI'};
-    }
-    $self->title( "\"" . $data{'TI'} . "\"" );
-
-    if ( $data{'AU'} ) {
-      $self->authors( $data{'AU'} );
-    }
-    if ( $data{'SO'} =~ /(.*)\s+(\d{4}).*;(.*)/ ) {
-      $self->journal($1);
-      $self->year($2);
-      my $rest = $3;
-      my ( $volume, $page_from, $page_to, $epub );
-
-      if ( $rest =~ /(\d+).*:(\w*\d+)-?(\d*)/ ) {
-        $self->volume($1);
-        $self->page_from($2);
-        $self->page_to($3);
-
-        # convert pubmeds stupid 160-3 page numbering to 160-163.
-        my $fromlen = length( $self->page_from );
-        my $tolen   = length( $self->page_to );
-
-        if ( $tolen and $fromlen > $tolen )
-        {    # Stupid numbering better do something!
-          $self->page_to(
-            substr( $self->page_from, 0, $fromlen - $tolen ) . $self->page_to );
-        }
-      }
-      else {
-        
-        # probably epub prior to print
-        $self->epub(1);
-      }
-    }elsif($data{'SO'} =~ /(.*)\s+(\d{4})/){
-      #Have not matched the first pattern.
-      $self->journal($1);
-      $self->year($2);
-      # probably epub prior to print
-      $self->epub(1); 
-    }else{
-      warn "Falied to match SO line\n";
-    }
-    return 1;
-  }
-  else {
+  if ( ! $res->is_success ) {
+    warn "Failed to fetch publication information from NCBI for: $pubmed";
     return 0;
   }
+
+  my %data;
+  my $tag;
+  foreach ( split( /\n/, $res->content ) ) {
+    s/\r//g;    # remove dos new lines
+
+    #	    print "$_\n";
+    if ( /^(\w+)\s*-\s+(.*)$/ or /^<\S+><\S+>(\w+)\s*- (.*)$/ ) {
+      $tag = $1;
+      if ( !$data{$tag} ) {
+        $data{$tag} = $2;
+      }
+      else {
+        $data{$tag} .= ", " . $2;
+      }
+    }
+    elsif ( /^\s{6}(.*)$/ and $tag ) {
+      $data{$tag} .= " " . $1;
+
+      # Ignore html
+    }
+    elsif (/^\s*$/) {
+    }
+    elsif (/</) {
+    }
+    else {
+      warn "Unrecognised line:\n[$_]\n";
+    }
+  }
+
+  # remove [see comments] from TI
+  if ( $data{'TI'} =~ /\[see comments\]/ ) {
+    my @title_with_comment = split( /\[see/, $data{'TI'} );
+    $data{'TI'} = $title_with_comment[0];
+  }
+
+  # remove trailing . from TI
+  if ( $data{'TI'} =~ /\.\s*$/ ) {
+    chop $data{'TI'};
+  }
+  $self->title( "\"" . $data{'TI'} . "\"" );
+
+  if ( $data{'AU'} ) {
+    $self->authors( $data{'AU'} );
+  }
+  if ( $data{'SO'} =~ /(.*)\s+(\d{4}).*;(.*)/ ) {
+    $self->journal($1);
+    $self->year($2);
+    my $rest = $3;
+    my ( $volume, $page_from, $page_to, $epub );
+
+    if ( $rest =~ /(\d+).*:(\w*\d+)-?(\d*)/ ) {
+      $self->volume($1);
+      $self->page_from($2);
+      $self->page_to($3);
+
+      # convert pubmeds stupid 160-3 page numbering to 160-163.
+      my $fromlen = length( $self->page_from );
+      my $tolen   = length( $self->page_to );
+
+      if ( $tolen and $fromlen > $tolen )
+      {    # Stupid numbering better do something!
+        $self->page_to(
+          substr( $self->page_from, 0, $fromlen - $tolen ) . $self->page_to );
+      }
+    }
+    else {
+      # probably epub prior to print
+      $self->epub(1);
+    }
+  } elsif($data{'SO'} =~ /(.*)\s+(\d{4})/) {
+    #Have not matched the first pattern.
+    $self->journal($1);
+    $self->year($2);
+    # probably epub prior to print
+    $self->epub(1);
+  } else {
+    warn "Falied to match SO line\n";
+  }
+  return 1;
 }
 
 1;

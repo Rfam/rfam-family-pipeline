@@ -86,7 +86,7 @@ sub checkQCPerformed {
 =cut
 
 sub checkFamilyFormat {
-  my ($familyObj) = @_;
+  my ($familyObj, $config) = @_;
 	#print "$familyObj\n";
   if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
     #print "$familyObj\n";
@@ -102,7 +102,7 @@ sub checkFamilyFormat {
   if ($error) {
     return $error;
   }
-  $error = checkCMFormat($familyObj);
+  $error = checkCMFormat($familyObj, $config);
   if ($error) {
     return $error;
   }
@@ -191,13 +191,15 @@ sub checkSEEDFormat {
            : does not perform integrity checks. This checks that the number of
            : SEED sequences and CM are consistent and that the number of sequences
            : in the CM and internal HMM agree.
+           : Also checks that the secondary structure of the CM matches that of the
+           : SEED.
   Args     : A Bio::Rfam::Family object
   Returns  : 1 on error, 0 on passing checks.
 
 =cut
 
 sub checkCMFormat {
-  my ($familyObj) = @_;
+  my ($familyObj, $config) = @_;
 
   if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
     die "Did not get passed in a Bio::Rfam::Family object\n";
@@ -234,19 +236,122 @@ sub checkCMFormat {
   }
 
   # Make sure the CLEN in the CM is the same as the nongap RF length in the SEED
+  # also make sure that secondary structure in CM matches that in the SEED
+  # get the SS_cons from the CM using cmemit -c | cmalign
+  my $ss_cons_file = "$$.ss_cons";
+  my $cmemitPath  = $config->infernalPath . "cmemit";
+  my $cmalignPath = $config->infernalPath . "cmalign";
+  my $cmPath = $familyObj->CM->path;
+  my $line;
+  my $cmd = "$cmemitPath -c $cmPath | $cmalignPath --outformat pfam $cmPath - | grep SS\_cons > $$.ss_cons";
+  eval{
+    Bio::Rfam::Utils::run_local_command("$cmd");
+  };
+  if($@) {
+    foreach $line ($@) {
+      warn $line . "\n";
+    }
+    $error = 1;
+    return $error;
+  }
+
+  my $cm_ss_cons = undef;
+  if(open(IN, $ss_cons_file)) {
+    $line = <IN>;
+    chomp $line;
+    if($line =~ /^#=GC\s+SS_cons\s+(\S+)/) {
+      $cm_ss_cons = $1;
+    }
+    else {
+      warn "Failed to read SS_cons from alignment created with command $cmd\n";
+      $error = 1;
+      return $error;
+    }
+    close(IN);
+    unlink $ss_cons_file;
+  }
+  else {
+    warn "Failed to create alignment with command $cmd\n";
+    $error = 1;
+    return $error;
+  }
+  
   if(! $familyObj->SEED->has_rf) {
     printf STDERR "FATAL: SEED does not have an RF line\n";
     $error = 1;
     return $error;
   }
-  my $rf = $familyObj->SEED->get_rf;
-  $rf =~ s/\.//g; # remove gaps
-  if(length($rf) != $familyObj->CM->cmHeader->{clen}) {
-    printf STDERR ("FATAL: CLEN in CM does not match nogap RF length in SEED.\n");
+  my $rf      = $familyObj->SEED->get_rf;
+  my $ss_cons = $familyObj->SEED->get_ss_cons;
+  my @rf_A      = split("", $rf);
+  my @ss_cons_A = split("", $ss_cons);
+  my $gapless_rf      = "";
+  my $gapless_ss_cons = "";
+  for(my $i = 0; $i < scalar(@rf_A); $i++) {
+    if($rf_A[$i] ne ".") {
+      $gapless_rf      .= $rf_A[$i];
+      $gapless_ss_cons .= $ss_cons_A[$i];
+    }
+  }
+
+  # the following should be equal:
+  # - length of $gapless_rf
+  # - length of $gapless_ss_cons
+  # - CM's clen
+  # - length of $cm_ss_cons
+  if(length($gapless_rf) != $familyObj->CM->cmHeader->{clen}) {
+    printf STDERR ("FATAL: CLEN in CM does not match nongap RF length in SEED.\n");
+    $error = 1;
+    return $error;
+  }
+  if(length($gapless_ss_cons) != length($cm_ss_cons)) { # this shouldn't happen since cmemit -c length should be clen
+    printf STDERR ("FATAL: length of SS_cons from SEED does not match CM structure length.\n");
     $error = 1;
     return $error;
   }
 
+  my @seed_ss_cons_A = split("", $gapless_ss_cons);
+  my @cm_ss_cons_A   = split("", $cm_ss_cons);
+  my $identical = 1;  # set to 0 if not identical in basepaired positions
+  my $compatible = 1; # set to 0 if not compatible (different base pairs)
+  for(my $i = 0; $i < scalar(@seed_ss_cons_A); $i++) {
+    my $seed_left  = ($seed_ss_cons_A[$i] =~ m/[\<\(\{\[]/) ? 1 : 0;
+    my $seed_right = ($seed_ss_cons_A[$i] =~ m/[\>\)\}\]]/) ? 1 : 0;
+    my $seed_ss    = ($seed_left || $seed_right) ? 0 : 1;
+    my $cm_left    = ($cm_ss_cons_A[$i] =~ m/[\<\(\{\[]/) ? 1 : 0;
+    my $cm_right   = ($cm_ss_cons_A[$i] =~ m/[\>\)\}\]]/) ? 1 : 0;
+    my $cm_ss      = ($cm_left || $cm_right) ? 0 : 1;
+    #print STDERR ("$i $seed_ss_cons_A[$i] $cm_ss_cons_A[$i] $seed_left $seed_right $seed_ss $cm_left $cm_right $cm_ss\n");
+    if(($seed_left  && $cm_left)  || 
+       ($seed_right && $cm_right) || 
+       ($seed_ss    && $cm_ss)) {
+      if($seed_left || $seed_right) { # a left or right half of a basepair
+        if($seed_ss_cons_A[$i] ne $cm_ss_cons_A[$i]) {
+          print STDERR ("$i $seed_ss_cons_A[$i] $cm_ss_cons_A[$i] $seed_left $seed_right $seed_ss $cm_left $cm_right $cm_ss\n");
+          $identical = 0;
+        }
+        else {
+          #print STDERR ("$i $seed_ss_cons_A[$i] eq $cm_ss_cons_A[$i]\n");
+        }
+      }
+    }
+    else { # CM and SEED don't match left/right/ss
+      printf STDERR ("RF nongap position %d: SEED SS_cons character (%s) doesn't match CM SS_cons character (%s)\n", ($i+1), $seed_ss_cons_A[$i], $cm_ss_cons_A[$i]);
+      $compatible = 0;
+      $identical  = 0;
+    }        
+  }
+
+  if(! $compatible) {
+    printf STDERR ("FATAL: SS_cons implied by CM differs from that in SEED.\n");
+    $error = 1;
+    return $error;
+  }
+  if(! $identical) { 
+    printf STDERR ("FATAL: SS_cons format in CM differs from that in SEED. Run rewrite_seed_with_rf.pl jiffy script to update SEED.\n");
+    $error = 1;
+    return $error;
+  }
   return $error;
 }
 
@@ -890,7 +995,7 @@ sub checkTimestamps {
   }
   if(Bio::Rfam::Utils::youngerThan("$fam/TBLOUT", "$fam/SCORES")) {
     warn
-"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your scores [$fam/scores].\n";
+"\nFATAL ERROR: $fam: Your TBLOUT [$fam/TBLOUT] is younger than your SCORES [$fam/scores].\n";
     $error = 1;
   }
   return $error;
@@ -1789,7 +1894,7 @@ sub essential {
     $masterError = 1;
   }
 
-  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily);
+  $error = Bio::Rfam::QC::checkFamilyFormat($newFamily, $config);
   if($error){
     warn "Family failed essential format checks.\n";
     $masterError = 1;
@@ -1904,8 +2009,19 @@ sub optional {
     }
   }
 
-  #Okay, hack time; allow overlaps....for some families
+  # check for overlaps between full set of this family and every other family
+  # but if this family is in a clan, ignore any other families in the same clan.
   if(!exists($override->{overlap})){
+    #is the family part of a clan?
+    if ($newFamily->DESC->CL) {
+      my $clan = $newFamily->DESC->CL;
+      # get clan membership and add members to ignore hash
+      my @rs = $config->rfamlive->resultset('ClanMembership')->search( { clan_acc => $clan });
+      foreach my $row (@rs){
+        my $rfam_acc = $row->rfam_acc->rfam_acc;
+        $ignore->{$rfam_acc}=1;
+      }
+    }
     open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
     $error = findExternalOverlaps($newFamily, $config->rfamlive, $ignore, $config, $OVERLAP);
     close($OVERLAP);
@@ -1925,6 +2041,21 @@ sub optional {
     }
   }else{
     warn "Ignoring check on minimum consensus length of model.\n";
+  }
+
+  if(!exists($override->{seedrf})){
+    # TEMPORARY
+    my $capitalizePath = $config->binLocation . "esl-alicapitalize.pl";
+    my $seed_diff_file = 
+    $error = checkSeedRfConventions($newFamily,
+                                    $capitalizePath,
+                                    "$dir/qc.SEED.diff"); # this file will be deleted if SEED passes, kept if not
+    if($error){
+      warn "Found problem with SEED related to RF conventions";
+      $masterError =1;
+    }
+  }else{
+    warn "Ignoring check on SEED upper/lowercase and SS_cons agreement with RF annotation.\n";
   }
 
   return($masterError);
@@ -1963,7 +2094,7 @@ sub processIgnoreOpt {
   #Go through each option passed in and see if it is allowed.
   foreach my $i (@{$ignoreRef}){
     if(! exists($allowedOpts->{$i})){
-      die "$i is an unknow QC 'ignore' option.\n";
+      die "$i is an unknown QC 'ignore' option.\n";
     }
   }
   #Now, convert it to a hash.
@@ -2159,7 +2290,6 @@ sub checkCMLength {
   }
   my $error = 0;
 
-  #Check that the CM and internal HMM agree.
   if ( $familyObj->CM->cmHeader->{clen} < $act_min) {
     $error = 1;
     warn "FATAL: CM consensus length of " . $familyObj->CM->cmHeader->{clen} . " is below minimum ($act_min)";
@@ -2172,4 +2302,73 @@ sub checkCMLength {
   return $error;
 }
 
+#------------------------------------------------------------------------------
+
+=head2 checkSeedRfConventions
+
+  Title    : checkSeedRfConventions
+  Incept   : EPN, Thu Dec  8 19:16:40 2022
+  Usage    : Bio::Rfam::QC::checkSeedRfConventions($familyObj)
+  Function : Checks that SEED MSA follows RF annotation conventions
+           : using Bio-Easel's esl-alicapitalize.pl script.
+           : These are the conventions followed by Infernal programs.
+           : For aligned sequences:
+           : - All nucleotides in    gap RF positions should be lowercase
+           : - All nucleotides in nongap RF positions should be uppercase
+           : - All gaps in    gap RF positions should be '.'
+           : - All gaps in nongap RF positions should be '-'
+           : For SS_cons:
+           : - SS_cons should be in full WUSS format (see Infernal user guide)
+           : - SS_cons characters in gap RF positions should be '.'
+           :
+  Args     : $familyObj:  Bio::Rfam::Family object
+           : $scriptPath: path to 'esl-alicapitalize.pl' executable
+           : $outDiffFile: path for output of 'esl-alicapitalize.pl --checkonly'
+           : 
+  Returns  : 1 if SEED does not follow these conventions, 0 if it does
+           : If '0' $outDiffFile will be deleted 
+           : If '1' $outDiffFile will exist on the filesystem upon return
+=cut
+
+sub checkSeedRfConventions {
+  my ($familyObj, $scriptPath, $outDiffFile) = @_;
+
+  my $sub_name = "checkSeedRfConventions";
+
+  if ( !$familyObj or !$familyObj->isa('Bio::Rfam::Family') ) {
+    warn "\nFATAL ERROR in $sub_name, did not get passed in a Bio::Rfam::Family object\n";
+    return 1;
+  }
+  if (! defined $scriptPath) {
+    warn "FATAL ERROR in $sub_name, did not get passed in a script path\n";
+    return 1;
+  }
+  if (! defined $outDiffFile) {
+    warn "FATAL ERROR in $sub_name, did not get passed in an output diff file name\n";
+    return 1;
+  }
+  my $error = 0;
+
+  # Use the Bio-Easel esl-alicapitalize.pl script to actually do the work here
+  my $seed_file = $familyObj->SEED->path;
+  Bio::Rfam::Utils::run_local_command("perl $scriptPath --checkonly --perposn $seed_file > $outDiffFile");
+  
+  # 1st line of $outDiffFile will be '0' if SEED currently follows all conventions
+  # and '1' if SEED does not, in which case detailed list of changes will follow
+  open(DIFF, $outDiffFile) || die "ERROR unable to open $outDiffFile for reading";
+  my $result = <DIFF>;
+  chomp $result;
+  if($result eq "PASS" | $result eq "0") {
+    # SEED passes, remove temporary file
+    unlink $outDiffFile;
+  }
+  else {
+    print STDERR ("FATAL: SEED doesn't follow expected conventions, description saved in file: $outDiffFile\nRun rewrite_seed_with_rf.pl jiffy script to update SEED to follow conventions.\n");
+    $error = 1;
+  }
+
+  return $error;
+}
+
+#------------------------------------------------------------------------------
 1;

@@ -2570,11 +2570,21 @@ sub genbank_fetch_seq_info {
     my $xml_string = get($genbank_url);
     my $xml_valid = 0;
     if(defined $xml_string) {
-      # to save memory, remove sequence info from the xml_string since we don't need it
-      # remove <GBSeq_sequence> lines
-      $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
-      # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
-      $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+      # Previously, we tried to substitute out the GBSeq_sequence and translation lines
+      # but in Sept 2022 this was identified as a bottleneck for at least some families
+      # these substitution commands are now commented out but left here for reference.
+      # The motivation for them in the first place was to save memory so if memory
+      # does not become an issue it should be fine to leave them commented out.
+      # However, if we do want to put the substitution commands back in, an alternative
+      # strategy might be to add a 'usleep(0.1)' call just prior to the substitution
+      # commands. In 2019 testing, this seemed to work when I encountered flakiness
+      # related to these substitution commands (see git commits on 7/9/2019, e.g. d1547f8)
+      # --------------
+      ## to save memory, remove sequence info from the xml_string since we don't need it
+      ## remove <GBSeq_sequence> lines
+      #$xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+      ## remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+      #$xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
       $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
       if($@) { $xml_valid = 0; }
       else   { $xml_valid = 1; }
@@ -2593,11 +2603,17 @@ sub genbank_fetch_seq_info {
           # printf("Retrying to fetch for $name\n");
           $xml_string = get($genbank_url);
           if(defined $xml_string) {
-            # to save memory, remove sequence info from the xml_string since we don't need it
-            # remove <GBSeq_sequence> lines
-            $xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
-            # remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
-            $xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+            # Two substitions below are commented out, see comment above
+            # in analogous position (search for 'Sept 2022')
+            # --------------
+            ## to save memory, remove sequence info from the xml_string since we don't need it
+            ## remove <GBSeq_sequence> lines
+            # first substition commented out in Sept 2022:
+            #$xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+            ## remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+            # second substition commented out in Sept 2022:
+            #$xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+            #---------------
             $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
             if($@) { $xml_valid = 0; }
             else   { $xml_valid = 1; }
@@ -2880,7 +2896,7 @@ sub rnacentral_md5_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna?md5=" . $in_md5;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5"; }
+  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5: " . $in_md5; }
   # Decode the entire JSON
   my $decoded_json = decode_json($json);
   #print Dumper $decoded_json;
@@ -2923,7 +2939,7 @@ sub rnacentral_id_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5"; }
+  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using id: " . $in_id; }
   # Decode the entire JSON
   my $decoded_json = decode_json($json);
   #print Dumper $decoded_json;

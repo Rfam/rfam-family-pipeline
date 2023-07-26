@@ -3,38 +3,44 @@ FROM ubuntu:xenial
 USER root
 
 # might need to install a particular version of perl
-RUN apt-get update && apt-get install -y curl \
-    gcc \
-    git \
-    tar \
-    unzip \
-    perl \
-    wget \
-    make \
+RUN apt-get update
+RUN apt-get install -y \
+    aspell \
     automake \
     curl \
-    gzip \
-    g++ \
-    vim \
-    gfortran \
+    curl \
     default-jdk \
+    fort77 \
+    g++ \
+    gcc \
+    gfortran \
+    git \
+    gzip \
+    less \
+    libcatalyst-action-renderview-perl \
+    libconvert-color-perl \
+    libdata-pageset-perl \
+    libdata-uuid-perl \
+    libdbd-mysql-perl \
+    libimage-size-perl \
+    libio-all-perl \
+    libsearch-queryparser-perl \
+    libsvn-perl \
+    libtest-most-perl \
+    libx11-6 \
+    libxml2 \
+    libxml2-dev \
+    make \
+    perl \
     r-base \
     r-base-dev \
-    less \
-    fort77
+    tar \
+    unzip \
+    vim \
+    wget
 
-RUN apt-get install -y libimage-size-perl \
-  libtest-most-perl \
-  libdbd-mysql-perl \
-  libdata-uuid-perl \
-  libconvert-color-perl \
-  libio-all-perl \
-  libdata-pageset-perl \
-  libsearch-queryparser-perl \
-  libcatalyst-action-renderview-perl \
-  libx11-6 \
-  libsvn-perl \
-  && apt-get clean
+RUN apt-get clean
+RUN apt-get autoclean
 
 # create an Rfam directory where all software will be installed
 RUN mkdir /Rfam
@@ -48,22 +54,6 @@ RUN mkdir /workdir
 #wget ftp://ftp.ebi.ac.uk/pub/databases/Rfam/misc/rfamseq14_test.tar.gz && \
 #gunzip rfamseq14_test.tar.gz && \
 #tar -xvf rfamseq14_test.tar
-
-RUN cpan -f install File::ShareDir::Install && \
-cpan -f install Inline::C && \
-cpan -f install Data::Printer && \
-cpan -f install Config::General && \
-cpan -f install DBIx::Class::Schema && \
-cpan -f install DateTime && \
-cpan -f install DateTime::Format::MySQL && \
-cpan -f install MooseX::NonMoose && \
-cpan -f install Bio::Annotation::Reference && \
-cpan -f install File::Touch && \
-cpan -f install IPC::Run && \
-cpan -f install Term::ReadPassword && \
-cpan -f install File::Spec
-#cpan -f install SVN::Client
-
 
 ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
 ENV USR_BIN=/Rfam/software/bin
@@ -79,17 +69,7 @@ cd infernal-1.1.2 && \
 make && \
 make install && \
 cd /Rfam/software/infernal-1.1.2/easel && \
-make install && \
-cd miniapps && \
-#cp /Rfam/software/infernal-1.1.2/bin/* /Rfam/software/bin/.
-cp esl-afetch esl-alimanip esl-alimap esl-alimask esl-alimerge esl-alipid /Rfam/software/bin/. && \
-cp esl-alirev esl-cluster esl-alistat esl-compalign esl-compstruct esl-construct /Rfam/software/bin/. && \
-cp esl-histplot esl-mask esl-reformat esl-selectn esl-seqrange esl-seqstat /Rfam/software/bin/. && \
-cp esl-sfetch esl-shuffle esl-ssdraw esl-translate esl-weight /Rfam/software/bin/.
-
-# make infernal tools available in software bin
-RUN cd /Rfam/software/infernal-1.1.2/src && \
-cp cmalign cmbuild cmscan cmemit cmpress cmstat cmsearch cmcalibrate /Rfam/software/bin/.
+make install
 
 # CMfinder installation
 RUN cd /Rfam/software && \
@@ -106,11 +86,7 @@ tar -xzf hmmer-3.2.1.tar.gz && rm hmmer-3.2.1.tar.gz && \
 cd /Rfam/software/hmmer-3.2.1 && \
 ./configure && \
 make && \
-make install && \
-cd /Rfam/software/hmmer-3.2.1/src && \
-cp alimask hmmalign hmmbuild hmmc2 hmmconvert hmmemit hmmerfm-exactmatch /Rfam/software/bin/. && \
-cp hmmfetch hmmlogo hmmpgmd hmmpress hmmscan hmmsearch hmmsim hmmstat /Rfam/software/bin/. && \
-cp jackhmmer makehmmerdb nhmmer nhmmscan phmmer /Rfam/software/bin/.
+make install
 
 # MAFFT installation
 RUN cd /Rfam/software && \
@@ -119,9 +95,7 @@ tar -xzf mafft-7.402-with-extensions-src.tgz && rm mafft-7.402-with-extensions-s
 cd mafft-7.402-with-extensions/core && \
 make clean && \
 make && \
-make install && \
-cd /Rfam/software/mafft-7.402-with-extensions/binaries && \
-cp mafft.1 /Rfam/software/bin/mafft
+make install
 
 # ERATE installation
 RUN cd /Rfam/software && \
@@ -129,7 +103,7 @@ curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
 tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
 cd erate-v.0.8/phylip3.66-erate/src && \
 make dnaml && \
-cp dnaml /Rfam/software/bin/.
+cp dnaml /Rfam/software/bin/
 
 # RNAcode installation
 RUN cd /Rfam/software && \
@@ -179,25 +153,20 @@ make -f Makefile.gcc && \
 cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # Blast installation
-#RUN cd /Rfam/software && \
-#curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-#tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
-#cd /Rfam/software/ncbi-blast-2.9.0+/bin
-#cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.§1
+# RUN cd /Rfam/software && \
+# curl -OL ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+# tar -zxvf ncbi-blast-2.9.0+-x64-linux.tar.gz && \
+# cd /Rfam/software/ncbi-blast-2.9.0+/bin && \
+# cp /Rfam/software/ncbi-blast-2.9.0+/bin/. /Rfam/software/bin/.
 
 # ViennaRNA installation
 RUN cd /Rfam/software && \
 curl -OL https://www.tbi.univie.ac.at/RNA/download/sourcecode/2_4_x/ViennaRNA-2.4.9.tar.gz && \
 tar -zxvf ViennaRNA-2.4.9.tar.gz && rm ViennaRNA-2.4.9.tar.gz && \
 cd ViennaRNA-2.4.9 && \
-./configure --prefix=/Rfam/software/ViennaRNA-2.4.9 && \
+./configure && \
 make && \
-make install && \
-cd bin && \
-cp RNA2Dfold RNALalifold RNALfold RNAPKplex RNAaliduplex RNAalifold /Rfam/software/bin/. && \
-cp RNAcofold RNAdistance RNAduplex RNAeval RNAfold RNAforester RNAheat /Rfam/software/bin/. && \
-cp RNAinverse RNAlocmin RNApaln RNAparconv RNApdist RNAplex RNAplfold /Rfam/software/bin/. && \
-cp RNAplot RNApvmin RNAsnoop RNAsubopt RNAup /Rfam/software/bin/.
+make install
 
 #TCOFFEE installation -- test and fix
 RUN cd /Rfam/software && \
@@ -205,6 +174,9 @@ git clone https://github.com/cbcrg/tcoffee.git tcoffee && \
 cd tcoffee/t_coffee/src && \
 make t_coffee && \
 mv t_coffee /Rfam/software/bin/.
+
+RUN cpan -f install Inline && \
+  cpan -f install Inline::C
 
 # install Bio-Easel
 RUN cd /Rfam && \
@@ -217,68 +189,45 @@ cd /Rfam/Bio-Easel && perl Makefile.PL && \
 make && \
 make install
 
-# install some python tools
-RUN cd /Rfam && \
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-python get-pip.py && \
-pip install requests
-
 # clone Rfam repo
-#RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
+RUN cd /Rfam && git clone https://github.com/Rfam/rfam-family-pipeline.git
 #cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
 
-# install kubectl to establish communication with the k8s cluster
-RUN cd /Rfam/software/bin && \
-curl -LO curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl && \
-chmod +x ./kubectl
-
-# install kubernetes client python API
-#RUN cd /Rfam && \
-#git clone --recursive https://github.com/kubernetes-client/python.git && \
-# pip install setuptools && \
-#cd python && python setup.py install 
-
-RUN apt-get install -y python3 && \
-python3 /Rfam/get-pip.py && \
-pip3 install kubernetes
+RUN cpan -f install File::ShareDir::Install && \
+cpan -f install Inline::C && \
+cpan -f install Data::Printer && \
+cpan -f install Config::General && \
+cpan -f install DBIx::Class::Schema && \
+cpan -f install DateTime && \
+cpan -f install DateTime::Format::MySQL && \
+cpan -f install MooseX::NonMoose && \
+cpan -f install Bio::Annotation::Reference && \
+cpan -f install File::Touch && \
+cpan -f install IPC::Run && \
+cpan -f install Term::ReadPassword && \
+cpan -f install File::Spec && \
+cpan -f install JSON && \
+cpan -f install XML::LibXML && \
+cpan -f install Catalyst::Utils
 
 # install latest version of R-scape
 RUN cd /Rfam/software && \
 wget http://eddylab.org/software/rscape/rscape.tar.gz && \
 tar xf rscape.tar.gz && rm rscape.tar.gz && \
 cd rscape_* && \
-./configure && \ 
-#--prefix=/Rfam/software/rscape_* && \
+./configure && \
 make && \
 make install
 
-# copy R-scape to the Rfam bin directory 
+# copy R-scape to the Rfam bin directory
 RUN cd /Rfam/software/rscape*/bin && \
 cp R-scape /Rfam/software/bin/.
-
-RUN apt-get update && apt-get install -y nano
-
-RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
-cp /Rfam/rfam-family-pipeline/dependencies/plot_outlist.R /Rfam/software/bin/.
-
-# this requires that the repo already exists
-RUN chmod +x /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py && \
-cp /Rfam/rfam-family-pipeline/kubernetes/rfkubesub.py /Rfam/software/bin/.
-
-RUN apt-get autoclean
-
-# set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash rfam-user
-WORKDIR /home/rfam-user
-USER rfam-user
-
-# add command to bashrc to move to /workdir
-RUN echo "cd /workdir" >> ~/.bashrc
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
-ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+# ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
+ENV RFAM_CONFIG=/Rfam/config/rfam.conf
 
 ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:$PERL5LIB
 

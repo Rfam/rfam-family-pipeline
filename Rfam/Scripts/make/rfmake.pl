@@ -42,7 +42,7 @@ my $df_seed     = 181;          # RNG seed, set with -seed <n>, only relevant if
 my $do_align    = 0;            # TRUE to create align file
 my $do_repalign = 0;            # TRUE to create REPALIGN
 my $always_local= 0;            # TRUE to always run alignments locally (never on farm)
-my $always_farm = 0;            # TRUE to always run alignments on farm (never locally)
+my $use_mpi     = 0;            # TRUE to use MPI (incompatible with $always_local)
 my $nproc       = -1;           # number of processors to use for cmalign
 my $do_pp       = 0;            # TRUE to annotate alignments with posterior probabilities
 my $nper        = $df_nper;     # with -r, number of seqs to include in each group for representative alignment
@@ -86,8 +86,8 @@ my $options_okay =
                  "e=s"          => \$ga_evalue,
                  "a",           => \$do_align, 
                  "r"            => \$do_repalign,
-                 "farm"         => \$always_farm,  
                  "local"        => \$always_local,
+                 "mpi"          => \$use_mpi,
                  "nproc=n"      => \$nproc,
                  "prob"         => \$do_pp,
                  "nper=n",      => \$nper,
@@ -192,8 +192,8 @@ if(defined $ga_bitsc)          { push(@opt_lhsA, "# bit score GA threshold:");  
 if(defined $ga_evalue)         { push(@opt_lhsA, "# E-value-based GA threshold:");           push(@opt_rhsA, "$ga_evalue [-e]"); }
 if($do_align)                  { push(@opt_lhsA, "# full alignment:");                       push(@opt_rhsA, "yes [-a]"); }
 if($do_repalign)               { push(@opt_lhsA, "# 'representative' alignment:");           push(@opt_rhsA, "yes [-r]"); }
-if($always_farm)               { push(@opt_lhsA, "# force farm/cluster alignment:");         push(@opt_rhsA, "yes [-farm]"); }
 if($always_local)              { push(@opt_lhsA, "# force local CPU alignment:");            push(@opt_rhsA, "yes [-local]"); }
+if($use_mpi)                   { push(@opt_lhsA, "# use MPI on cluster:");                   push(@opt_rhsA, "yes [-mpi]"); }
 if($nproc != -1)               { push(@opt_lhsA, "# number of CPUs for cmalign:");           push(@opt_rhsA, $nproc . " [-nproc]"); }
 if($do_pp)                     { push(@opt_lhsA, "# include post probs in alignments:");     push(@opt_rhsA, "yes [-prob]"); }
 if($nper != $df_nper)          { push(@opt_lhsA, "# number of seqs per group:");             push(@opt_rhsA, $nper . " [-nper]"); }
@@ -238,8 +238,8 @@ my $do_curcomp = ($curcompdir eq "") ? 0 : 1;
 my $do_oldcomp = ($oldcompdir eq "") ? 0 : 1;
 # enforce -a or --repalign selected if align-specific options used
 if ((! $do_align) && (! $do_repalign)) { 
-  if ($always_farm)       { die "ERROR -farm  requires -a or -r"; }
   if ($always_local)      { die "ERROR -local requires -a or -r"; }
+  if ($use_mpi)           { die "ERROR -mpi requires -a or -r"; }
   if (scalar(@cmosA) > 1) { die "ERROR -cmos requires -a or -r"; }
   if (scalar(@cmodA) > 1) { die "ERROR -cmod requires -a or -r"; }
   if ($nproc != -1)       { die "ERROR -nproc requires -a or -r"; }
@@ -255,7 +255,8 @@ if((! $do_forcecomp) && ($do_curcomp || $do_oldcomp)) {
     if(-e $compfile) { die "ERROR, comparison file \"$compfile\" already exists, rename or delete it, or use -forcecomp option to overwrite it"; }
   }
 }
-
+if($use_mpi && $always_local) { die "ERROR -mpi doesn't work with -local"; }
+  
 # create hash of potential output files
 my %outfileH = ();
 my @outfile_orderA = ("SCORES", "SEEDSCORES", "outlist", "revoutlist", "seedoutlist", "species", "revspecies", "seedspecies", "outlist.pdf", "species.pdf", "taxinfo", "align", "alignout", 
@@ -394,7 +395,7 @@ if ($do_align) {
   my $options = "-o align --outformat pfam ";
   if(! $do_pp) { $options .= "--noprob " }
   $options .= Bio::Rfam::Infernal::stringize_infernal_cmdline_options(\@cmosA, \@cmodA);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", "$$.fa", "alignout", "a.$$.err", $famObj->SCORES->numRegions, $famObj->SCORES->nres, $always_local, $always_farm, $q_opt, $nproc, $logFH, $do_stdout);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", "$$.fa", "alignout", "a.$$.err", $famObj->SCORES->numRegions, $famObj->SCORES->nres, $always_local, (! $always_local), $use_mpi, $q_opt, $nproc, $logFH, $do_stdout);
   if (! $do_dirty) { unlink "$$.fa"; }
 
 } # end of if($do_align)
@@ -419,7 +420,7 @@ if ($do_repalign) {
   my $options = "-o repalign --outformat pfam ";
   if(! $do_pp) { $options .= "--noprob " }
   $options .= Bio::Rfam::Infernal::stringize_infernal_cmdline_options(\@cmosA, \@cmodA);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", "$$.all.fa", "repalignout", "a.$$.all.err", $all_nseq, $all_nres, $always_local, $always_farm, $q_opt, $nproc, $logFH, $do_stdout);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", "$$.all.fa", "repalignout", "a.$$.all.err", $all_nseq, $all_nres, $always_local, (! $always_local), $use_mpi, $q_opt, $nproc, $logFH, $do_stdout);
   if(! $do_dirty) { 
     unlink "$$.all.fa"; 
     unlink "a.$$.all.err";
@@ -628,8 +629,8 @@ sub get_representative_subset {
       # align sequences
       my $options = "-o $stkfile --noprob ";
       $options .= Bio::Rfam::Infernal::stringize_infernal_cmdline_options(\@cmosA, \@cmodA);
-      # run cmalign locally or on farm (autodetermined based on job size) 
-      Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", $fafile, $cmafile, $errfile, $nseq, $nres, $always_local, $always_farm, $q_opt, $nproc, $logFH, $do_stdout);
+      # run cmalign
+      Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "a.$$", $options, "CM", $fafile, $cmafile, $errfile, $nseq, $nres, $always_local, (! $always_local), $use_mpi, $q_opt, $nproc, $logFH, $do_stdout);
 
       # open and read the MSA
       $msa = Bio::Easel::MSA->new({
@@ -1112,8 +1113,8 @@ sub preliminaries_for_comparison_with_old
   my $options  = "-o $stkfile --noprob";
   my $ooptions = "-o $ostkfile --noprob";
   if($old_is_glocal) { $ooptions .= " -g"; }
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "ca.$$",  $options,  "CM",     $fafile,  $cmafile,  $errfile, $all_nseq, $all_nres, $always_local, $always_farm, $q_opt, $nproc, $logFH, $do_stdout);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "oca.$$", $ooptions, "CM.1p0", $fafile, $ocmafile, $oerrfile, $all_nseq, $all_nres, $always_local, $always_farm, $q_opt, $nproc, $logFH, $do_stdout);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "ca.$$",  $options,  "CM",     $fafile,  $cmafile,  $errfile, $all_nseq, $all_nres, $always_local, (! $always_local), $use_mpi, $q_opt, $nproc, $logFH, $do_stdout);
+  Bio::Rfam::Infernal::cmalign_wrapper($config, $user, "oca.$$", $ooptions, "CM.1p0", $fafile, $ocmafile, $oerrfile, $all_nseq, $all_nres, $always_local, (! $always_local), $use_mpi, $q_opt, $nproc, $logFH, $do_stdout);
 
   # parse cmalign output files to get avg bit score differences
   my $avg_bitdiff = &compare_cmalign_files($cmafile, $ocmafile);
@@ -1147,8 +1148,8 @@ Options:    -t <f> : set threshold as <f> bits
 	    OPTIONS RELATED TO CREATING ALIGNMENTS (by default none are created):
 	    -a          : create 'align' (full) alignment with all hits above GA threshold
 	    -r          : create 'repalign' alignment, with sampling of representative hits
- 	    -local      : always run cmalign locally     [default: autodetermined based on predicted time]
- 	    -farm       : always run cmalign on the farm [default: autodetermined based on predicted time]
+ 	    -local      : always run cmalign locally     [default: submit to cluster]
+            -mpi        : run cmalign in MPI model (incompatible with -local)
             -nproc      : specify number of CPUs for cmalign to use as <n>
             -prob       : annotate alignments with posterior probabilities [default: do not]
             -nper <n>   : with -r, set number of seqs per group (SEED, FULL, OTHER) to <n> [default: 30]

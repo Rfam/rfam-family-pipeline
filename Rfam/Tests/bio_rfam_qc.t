@@ -11,13 +11,14 @@ BEGIN {
 my $dir = $FindBin::Bin;
 my $test_data= $dir . '/data';
 my $test_family= 'RF00006';
+my $config = Bio::Rfam::Config->new;
 
 my $familyIO = Bio::Rfam::FamilyIO->new( );
 isa_ok($familyIO, 'Bio::Rfam::FamilyIO');
 my $family = $familyIO->loadRfamFromLocalFile($test_family, $test_data);
 
 isa_ok($family, 'Bio::Rfam::Family');
-is( Bio::Rfam::QC::checkFamilyFormat($family), 0, "Family passes check");
+is( Bio::Rfam::QC::checkFamilyFormat($family, $config), 0, "Family passes check");
 
 my $lncRNA = 'lncRNAGood';
 $family = $familyIO->loadRfamFromLocalFile($lncRNA, $test_data);
