@@ -58,12 +58,13 @@ sub run_local_command {
 
   Title    : submit_nonmpi_job()
   Incept   : EPN, Tue Apr  2 05:59:40 2013
-  Usage    : submit_nonmpi_job($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr)
+  Usage    : submit_nonmpi_job($config, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr)
   Function : Submits non-MPI job defined by command $cmd.
-           : Submission syntax depends on $location value.
+           : Submission syntax depends on $config->location and 
+           : config->scheduler values.
            : We do *not* wait for job to finish. Caller
            : must do that, probably with wait_for_cluster().
-  Args     : $location: config->location, e.g. "EBI"
+  Args     : $config:   Rfam config, with 'location' and 'scheduler'
            : $cmd:      command to run
            : $jobname:  name for job
            : $errPath:  path for stderr output
@@ -77,30 +78,34 @@ sub run_local_command {
 =cut
 
 sub submit_nonmpi_job {
-  my ($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
+  my ($config, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
 
   my $submit_cmd = "";
   if(defined $queue && $queue eq "p") { $queue = "production"; }
   if(defined $queue && $queue eq "r") { $queue = "research"; }
 
-  if($location eq "EBI") {
+  if($config->location eq "EBI") {
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
     if(! defined $reqMb) { die "submit_nonmpi_job(), location is EBI, but reqMb is undefined"; }
-    #TODO: update this block to work with 'sbatch' instead of 'bsub', may require creating a
-    #new file that is the 'script' that is used as command-line argument to 'sbatch' 
-    $submit_cmd = "bsub ";
-    if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
-    if(defined $queue && $queue ne "") {
-      $submit_cmd .= "-q $queue ";
+
+    if($config->scheduler eq "slurm") {
+      $submit_cmd = "sbatch ";
+      if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
+      $submit_cmd .= "-c $ncpu -J $jobname -o /dev/null -e $errPath --mem-per-cpu=$reqMb --wrap \"$cmd\" > /dev/null";
     }
-    else {
-      $submit_cmd .= "-q research ";
+    else { # lsf
+      $submit_cmd = "bsub ";
+      if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
+      if(defined $queue && $queue ne "") {
+        $submit_cmd .= "-q $queue ";
+      }
+      else {
+        $submit_cmd .= "-q research ";
+      }
+      $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
     }
-    $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
   elsif($location eq "CLOUD"){
-
-
     # temporarily minimize memory to 6GB only to work with the test cloud
 #    if ($reqMb >= 24000){
 #      $reqMb = 6000;
@@ -142,10 +147,11 @@ sub submit_nonmpi_job {
   Incept   : EPN, Tue Apr  2 05:59:40 2013
   Usage    : submit_mpi_job($location, $cmd, )
   Function : Submits MPI job defined by command $cmd.
-           : MPI submission syntax depends on $location value.
+           : MPI submission syntax depends on $config->location and 
+           : config->scheduler values.
            : We do *not* wait for job to finish. Caller
            : must do that, probably with wait_for_cluster().
-  Args     : $location: config->location, e.g. "EBI"
+  Args     : $config:   Rfam config, with 'location' and 'scheduler'
            : $cmd:      command to run
            : $jobname:  name for job
            : $errPath:  path for stderr output
@@ -157,10 +163,10 @@ sub submit_nonmpi_job {
 =cut
 
 sub submit_mpi_job {
-  my ($location, $cmd, $jobname, $errPath, $nproc, $queue) = @_;
+  my ($config, $cmd, $jobname, $errPath, $nproc, $queue) = @_;
 
   my $submit_cmd = "";
-  if($location eq "EBI") {
+  if($config->location eq "EBI") {
     # EPN: for some reason, this 'module' command fails inside perl..., I think it may be unnecessary because it's in my .bashrc
     #my $prepcmd = "module load openmpi-x86_64";
     #system($prepcmd);
@@ -170,9 +176,14 @@ sub submit_mpi_job {
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
     #TODO: update 'bsub' to 'sbatch'
-    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
-    # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
-    # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
+    if($config->scheduler eq "slurm") {
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -c $nproc --mem-per-cpu=$reqMb --wrap \"$cmd\" > /dev/null";
+    }
+    else { # lsf
+      $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
+      # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
+      # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
+    }
   }
   elsif($location eq "JFRC") {
     my $queue_opt = "";
