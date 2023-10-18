@@ -388,12 +388,13 @@ sub submitToCmscan {
   Bio::Rfam::Infernal::cmscan_wrapper($config, $jobname, " --tblout " . $tblO . " " . $searchopts, $CMdb, $seed, $cmsO, $errO, "", "", 0);
 
   # Change jobname and outname to an array so they can be referenced using wait_for_cluter()
-  my (@jobnameAR, @outnameAR);
+  my (@jobnameAR, @outnameAR, @errnameAR);
   push(@jobnameAR, $jobname);
   push(@outnameAR, $tblO);
+  push(@errnameAR, $errO);
 
   # Determine when the job is finished and return the time it took
-  my $wait_time = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@jobnameAR, \@outnameAR, "# [ok]", "cmscan $rfam_acc", "", "", -1, 1); 
+  my $wait_time = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameAR, \@outnameAR, \@errnameAR, "# [ok]", "cmscan $rfam_acc", "", "", -1, 1); 
 }
 
 #-------------------------------------------------------------------------------------
