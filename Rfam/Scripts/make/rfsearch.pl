@@ -143,6 +143,7 @@ Bio::Rfam::Utils::log_output_rfam_banner($logFH, $executable, $exec_description,
 
 # output header
 
+
 my $user;
 if ($config->location eq "CLOUD"){
 	my $host_string  = hostname;
@@ -652,7 +653,7 @@ if($do_calibrate) {
   my $cmcalibrate_string = ($calibrate_mpi) ? "cmcalibrate-mpi" : "cmcalibrate-thr";
 
   if(! $do_all_local) { # job is running on the cluster
-    $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
+    $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
                                                                         sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
     Bio::Rfam::Utils::checkStderrFile($config->location, $calibrate_errO);
     # if we get here, err file was empty, so we keep going
@@ -963,7 +964,7 @@ submit_or_run_cmsearch_jobs($config, 1, "ss-",  $searchopts, $cm->{cmHeader}->{w
   if(! $do_all_local) { 
     # wait for cluster jobs to finish
     #$search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@all_jobnameA, \@all_tblOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
-    $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
+    $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
   }
   $search_wall_secs     = time() - $search_start_time;
   
