@@ -1,4 +1,4 @@
-,package Bio::Rfam::Infernal;
+package Bio::Rfam::Infernal;
 
 # Wrappers for Infernal executables called by rfsearch and rfmake.
 
@@ -420,13 +420,14 @@ sub cmalign_wrapper {
     my $errPath = "a.$$.err";
     my @jobnameA = ($jobname);
     my @outnameA = ($outPath);
+    my @errnameA = ($errPath);
     if($use_mpi) { 
       Bio::Rfam::Utils::submit_mpi_job($config, "$cmalignPath --mpi $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $queue);
-      Bio::Rfam::Utils::wait_for_cluster($config->location, $uname, \@jobnameA, \@outnameA, "\# CPU time:", "cmalign-mpi", $logFH, "[$nproc processors]", -1, $do_stdout);
+      Bio::Rfam::Utils::wait_for_cluster_light($config, $uname, \@jobnameA, \@outnameA, \@errnameA, "\# CPU time:", "cmalign-mpi", $logFH, "[$nproc processors]", -1, $do_stdout);
     }
     else { # don't use MPI
       Bio::Rfam::Utils::submit_nonmpi_job($config, "$cmalignPath $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $requiredMb, "", $queue);
-      Bio::Rfam::Utils::wait_for_cluster($config->location, $uname, \@jobnameA, \@outnameA, "\# CPU time:", "cmalign-thr", $logFH, "[$nproc processors]", -1, $do_stdout);
+      Bio::Rfam::Utils::wait_for_cluster_light($config, $uname, \@jobnameA, \@outnameA, \@errnameA, "\# CPU time:", "cmalign-thr", $logFH, "[$nproc processors]", -1, $do_stdout);
     }
     unlink $errPath;
   }
