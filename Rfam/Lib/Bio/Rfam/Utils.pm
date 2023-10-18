@@ -156,6 +156,7 @@ sub submit_nonmpi_job {
            : $jobname:  name for job
            : $errPath:  path for stderr output
            : $nproc:    number of MPI processors to use
+           : $reqMb:    required number of Mb for job, can be undefined if location eq "JFRC"
            : $queue:    queue to submit to, "" for default, ignored if location eq "EBI"
   Returns  : void
   Dies     : If MPI submit command fails.
@@ -163,7 +164,7 @@ sub submit_nonmpi_job {
 =cut
 
 sub submit_mpi_job {
-  my ($config, $cmd, $jobname, $errPath, $nproc, $queue) = @_;
+  my ($config, $cmd, $jobname, $errPath, $nproc, $reqMb, $queue) = @_;
 
   my $submit_cmd = "";
   if($config->location eq "EBI") {
@@ -175,12 +176,11 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    #TODO: update 'bsub' to 'sbatch'
     if($config->scheduler eq "slurm") {
-      $submit_cmd .= "sbatch -J $jobname -e $errPath -c $nproc --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -c $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
     }
     else { # lsf
-      $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
+      $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
       # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
       # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
     }

@@ -150,14 +150,13 @@ sub cmcalibrate_wrapper {
     Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $options $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
   }
   else { 
+    my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
+    if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
+    my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
     if($doMPI) { 
-      Bio::Rfam::Utils::submit_mpi_job($config, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
+      Bio::Rfam::Utils::submit_mpi_job($config, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, $queue); 
     }
     else { 
-      my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
-      if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
-      my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
-      
       #if ($config->location eq 'CLOUD'){
       #$requiredMb = 6000;
       #}
@@ -422,7 +421,7 @@ sub cmalign_wrapper {
     my @outnameA = ($outPath);
     my @errnameA = ($errPath);
     if($use_mpi) { 
-      Bio::Rfam::Utils::submit_mpi_job($config, "$cmalignPath --mpi $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $queue);
+      Bio::Rfam::Utils::submit_mpi_job($config, "$cmalignPath --mpi $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $requiredMb, $queue);
       Bio::Rfam::Utils::wait_for_cluster_light($config, $uname, \@jobnameA, \@outnameA, \@errnameA, "\# CPU time:", "cmalign-mpi", $logFH, "[$nproc processors]", -1, $do_stdout);
     }
     else { # don't use MPI
