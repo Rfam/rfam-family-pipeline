@@ -450,7 +450,7 @@ sub wait_for_cluster_light {
   # modify username > 7 characters and job names > 10 characters if we're using lsf   at EBI, because bjobs truncates these
   # if we are using slurm we will use the --format option to squeue to deal with the fact that squeue truncates job names to 8 chars by default
   if($config->location eq "EBI") {
-    if((defined $config->scheduler) && ($config->scheduler ne "slurm")) { 
+    if((! defined $config->scheduler) || ($config->scheduler ne "slurm")) { 
       if(length($username) > 7) {
         $username = substr($username, 0, 7); # bjobs at EBI only prints first 7 letters of username
       }
