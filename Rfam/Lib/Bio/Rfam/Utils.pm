@@ -88,7 +88,7 @@ sub submit_nonmpi_job {
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
     if(! defined $reqMb) { die "submit_nonmpi_job(), location is EBI, but reqMb is undefined"; }
 
-    if($config->scheduler eq "slurm") {
+    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
       $submit_cmd = "sbatch ";
       if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
       $submit_cmd .= "-c $ncpu -J $jobname -o /dev/null -e $errPath --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"$cmd\" > /dev/null";
@@ -176,7 +176,7 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    if($config->scheduler eq "slurm") {
+    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
       $submit_cmd .= "sbatch -J $jobname -e $errPath -c $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
     }
     else { # lsf
@@ -450,7 +450,7 @@ sub wait_for_cluster_light {
   # modify username > 7 characters and job names > 10 characters if we're using lsf   at EBI, because bjobs truncates these
   # if we are using slurm we will use the --format option to squeue to deal with the fact that squeue truncates job names to 8 chars by default
   if($config->location eq "EBI") {
-    if($config->scheduler ne "slurm") { 
+    if((defined $config->scheduler) && ($config->scheduler ne "slurm")) { 
       if(length($username) > 7) {
         $username = substr($username, 0, 7); # bjobs at EBI only prints first 7 letters of username
       }
@@ -519,7 +519,7 @@ sub wait_for_cluster_light {
       if   ( $config->location eq "JFRC") {
         @infoA = split("\n", `qstat`);
       }
-      elsif(($config->location eq "EBI") && ($config->scheduler eq "slurm")) {
+      elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
         @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %10u %.8T %.12M %9N\"`);
         # --format used to specify job names can be 25 characters, instead of default 8
       } 
@@ -546,7 +546,7 @@ sub wait_for_cluster_light {
             # 565685 0.00000 c.25858    nawrockie    qw    08/01/2013 15:18:55                                                                  81
             ($jobname, $uname, $status) = ($elA[2], $elA[3], $elA[4]);
           } # closes JFRC if
-          elsif(($config->location eq "EBI") && ($config->scheduler eq "slurm")) {
+          elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
             #JOBID PARTITION NAME               USER          STATE         TIME NODELIST
             #35080251  standard rs.4002890-9       nawrocki    RUNNING         0:02 hl-codon-
             #35080252  standard rs.4002890-10      nawrocki    RUNNING         0:02 hl-codon-
