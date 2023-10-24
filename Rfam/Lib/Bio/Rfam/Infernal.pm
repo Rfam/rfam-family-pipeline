@@ -152,7 +152,7 @@ sub cmcalibrate_wrapper {
   else { 
     my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
     if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
-    my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
+    my $requiredMb = int($nproc * $gbPerThread * 1000.); # round to nearest Mb
     if($doMPI) { 
       Bio::Rfam::Utils::submit_mpi_job($config, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, $queue); 
     }

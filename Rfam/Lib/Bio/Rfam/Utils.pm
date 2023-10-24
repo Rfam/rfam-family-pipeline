@@ -69,7 +69,7 @@ sub run_local_command {
            : $jobname:  name for job
            : $errPath:  path for stderr output
            : $ncpu:     number of CPUs to run job on, can be undefined if location eq "JFRC"
-           : $reqMb:    required number of Mb for job, can be undefined if location eq "JFRC"
+           : $reqMb:    required number of Mb for job (all threads combined), can be undefined if location eq "JFRC"
            : $exStr:    extra string to add to qsub/sub command
            : $queue:    queue to submit to, "" for default, 'p' = "production", 'r' = "research";
   Returns  : void
@@ -89,6 +89,7 @@ sub submit_nonmpi_job {
     if(! defined $reqMb) { die "submit_nonmpi_job(), location is EBI, but reqMb is undefined"; }
 
     if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
+      $reqMb /= $ncpu; # we specify Mb per thread, others are total Mb for all threads
       $submit_cmd = "sbatch ";
       if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
       $submit_cmd .= "-c $ncpu -J $jobname -o /dev/null -e $errPath --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"$cmd\" > /dev/null";
@@ -156,7 +157,7 @@ sub submit_nonmpi_job {
            : $jobname:  name for job
            : $errPath:  path for stderr output
            : $nproc:    number of MPI processors to use
-           : $reqMb:    required number of Mb for job, can be undefined if location eq "JFRC"
+           : $reqMb:    required number of Mb for job (all threads), can be undefined if location eq "JFRC"
            : $queue:    queue to submit to, "" for default, ignored if location eq "EBI"
   Returns  : void
   Dies     : If MPI submit command fails.
@@ -176,8 +177,10 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
-      $submit_cmd .= "sbatch -J $jobname -e $errPath -c $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) { 
+      $reqMb /= $nproc; # we specify Mb per thread, others are total Mb for all threads
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+#      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun -n $nproc $cmd\" > /dev/null";
     }
     else { # lsf
       $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
