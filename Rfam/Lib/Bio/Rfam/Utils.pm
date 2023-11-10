@@ -179,8 +179,8 @@ sub submit_mpi_job {
     # forwarded from Jen, on 08.27.13.
     if((defined $config->scheduler) && ($config->scheduler eq "slurm")) { 
       $reqMb /= $nproc; # we specify Mb per thread, others are total Mb for all threads
-      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
-#      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun -n $nproc $cmd\" > /dev/null";
+      #$submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun --mpi=pmix -n $nproc $cmd\" > /dev/null";
     }
     else { # lsf
       $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
