@@ -145,7 +145,7 @@ rfam_family_view.pl - run the "view process" for an Rfam family
 
 This is a script to run the Rfam view process for a given family. It's intended
 to be run by the job dequeuer, which polls the rfam_jobs.job_history table for
-pending view process jobs, and runs this script on the farm via "bsub".
+pending view process jobs, and runs this script on the farm via "bsub" or "sbatch".
 
 We have the concept of plugin sets, so that we can group together view plugins
 which have common features. For example, there may be plugins that are based on
