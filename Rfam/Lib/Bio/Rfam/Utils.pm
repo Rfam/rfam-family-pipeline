@@ -589,8 +589,8 @@ sub wait_for_cluster_light {
                   }
                 }
                 elsif((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
-                  if(($status ne "RUNNING") && ($status ne "PENDING") && ($status ne "COMPLETING")) {
-                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETING\" status:\n$line";
+                  if(($status !~ m/^RUNNING/) && ($status !~ m/^PENDING/) && ($status !~ m/^COMPLETI/)) {
+                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETI\" status:\n$line";
                   }
                 }
               }
