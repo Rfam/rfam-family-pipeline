@@ -141,11 +141,10 @@ my $overlapIgnore = {};
 
 #Okay, this a full check-in, perform whole QC repetoire.
 $error = Bio::Rfam::QC::essential($newFamObj, "$pwd/$family", undef, $config);
-  die "Failed essential QC step.\n" if($error);
+die "Failed essential QC step.\n" if($error);
 $error = Bio::Rfam::QC::optional( $newFamObj, "$pwd/$family", undef, 
                                     $config, $overrideHashRef, $overlapIgnore );
 die "Failed QC step.\n" if($error);
-
 
 #Automatically write the 'new' message and add it the binding.
 open( M, ">.default" . $$ . "rfnew" )
@@ -201,7 +200,8 @@ print<<EOF;
   Aim: To perform quality control checks on a new family and add it to the SVN repository.
   
   -i <option>       - Ignore some of the QC steps to speed up check-in/get family through.
-                      Valid options are (probably): 'overlap', 'spell', 'coding', 'seed', 'missing', 'length'
+                      Valid options are (probably): 'overlap', 'spell', 'coding', 'seed', 'missing', 
+                      'length' and 'seedrf'
                       To skip more than one, use -i <s> multiple times
   -m                - Specify the message that describes the changes you have made to this family 
                       on the command line, avoid being prompted for it at a later satge.
