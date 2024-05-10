@@ -58,17 +58,18 @@ sub run_local_command {
 
   Title    : submit_nonmpi_job()
   Incept   : EPN, Tue Apr  2 05:59:40 2013
-  Usage    : submit_nonmpi_job($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr)
+  Usage    : submit_nonmpi_job($config, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr)
   Function : Submits non-MPI job defined by command $cmd.
-           : Submission syntax depends on $location value.
+           : Submission syntax depends on $config->location and 
+           : config->scheduler values.
            : We do *not* wait for job to finish. Caller
            : must do that, probably with wait_for_cluster().
-  Args     : $location: config->location, e.g. "EBI"
+  Args     : $config:   Rfam config, with 'location' and 'scheduler'
            : $cmd:      command to run
            : $jobname:  name for job
            : $errPath:  path for stderr output
            : $ncpu:     number of CPUs to run job on, can be undefined if location eq "JFRC"
-           : $reqMb:    required number of Mb for job, can be undefined if location eq "JFRC"
+           : $reqMb:    required number of Mb for job (all threads combined), can be undefined if location eq "JFRC"
            : $exStr:    extra string to add to qsub/sub command
            : $queue:    queue to submit to, "" for default, 'p' = "production", 'r' = "research";
   Returns  : void
@@ -77,35 +78,42 @@ sub run_local_command {
 =cut
 
 sub submit_nonmpi_job {
-  my ($location, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
+  my ($config, $cmd, $jobname, $errPath, $ncpu, $reqMb, $exStr, $queue) = @_;
 
   my $submit_cmd = "";
   if(defined $queue && $queue eq "p") { $queue = "production"; }
   if(defined $queue && $queue eq "r") { $queue = "research"; }
 
-  if($location eq "EBI") {
+  if($config->location eq "EBI") {
     if(! defined $ncpu)  { die "submit_nonmpi_job(), location is EBI, but ncpu is undefined"; }
     if(! defined $reqMb) { die "submit_nonmpi_job(), location is EBI, but reqMb is undefined"; }
-    $submit_cmd = "bsub ";
-    if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
-    if(defined $queue && $queue ne "") {
-      $submit_cmd .= "-q $queue ";
+
+    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
+      $reqMb /= $ncpu; # we specify Mb per thread, others are total Mb for all threads
+      $submit_cmd = "sbatch ";
+      if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
+      $submit_cmd .= "-c $ncpu -J $jobname -o /dev/null -e $errPath --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"$cmd\" > /dev/null";
     }
-    else {
-      $submit_cmd .= "-q research ";
+    else { # lsf
+      $submit_cmd = "bsub ";
+      if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
+      if(defined $queue && $queue ne "") {
+        $submit_cmd .= "-q $queue ";
+      }
+      else {
+        $submit_cmd .= "-q research ";
+      }
+      $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
     }
-    $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
   }
-  elsif($location eq "CLOUD"){
-
-
+  elsif($config->location eq "CLOUD"){
     # temporarily minimize memory to 6GB only to work with the test cloud
 #    if ($reqMb >= 24000){
 #      $reqMb = 6000;
 #    }
     $submit_cmd = "/Rfam/software/bin/rfkubesub.py \"$cmd\" $ncpu $reqMb $jobname";
   }
-  elsif($location eq "JFRC") {
+  elsif($config->location eq "JFRC") {
     my $batch_opt = "";
     if(defined $ncpu && $ncpu > 1) { $batch_opt = "-pe batch $ncpu"; }
     $submit_cmd = "qsub ";
@@ -117,11 +125,11 @@ sub submit_nonmpi_job {
     $submit_cmd .= " -N $jobname -o /dev/null -e $errPath $batch_opt -b y -cwd -V \"$cmd\" > /dev/null";
   }
   # local command
-  elsif($location eq ""){
+  elsif($config->location eq ""){
     $submit_cmd = $cmd
   }
   else {
-    die "ERROR unknown location $location in submit_nonmpi_job()";
+    die "ERROR unknown location $config->location in submit_nonmpi_job()";
   }
 
   # actually submit job
@@ -138,16 +146,18 @@ sub submit_nonmpi_job {
 
   Title    : submit_mpi_job()
   Incept   : EPN, Tue Apr  2 05:59:40 2013
-  Usage    : submit_mpi_job($location, $cmd, )
+  Usage    : submit_mpi_job($config, $cmd, )
   Function : Submits MPI job defined by command $cmd.
-           : MPI submission syntax depends on $location value.
+           : MPI submission syntax depends on $config->location and 
+           : config->scheduler values.
            : We do *not* wait for job to finish. Caller
            : must do that, probably with wait_for_cluster().
-  Args     : $location: config->location, e.g. "EBI"
+  Args     : $config:   Rfam config, with 'location' and 'scheduler'
            : $cmd:      command to run
            : $jobname:  name for job
            : $errPath:  path for stderr output
            : $nproc:    number of MPI processors to use
+           : $reqMb:    required number of Mb for job (all threads), can be undefined if location eq "JFRC"
            : $queue:    queue to submit to, "" for default, ignored if location eq "EBI"
   Returns  : void
   Dies     : If MPI submit command fails.
@@ -155,10 +165,10 @@ sub submit_nonmpi_job {
 =cut
 
 sub submit_mpi_job {
-  my ($location, $cmd, $jobname, $errPath, $nproc, $queue) = @_;
+  my ($config, $cmd, $jobname, $errPath, $nproc, $reqMb, $queue) = @_;
 
   my $submit_cmd = "";
-  if($location eq "EBI") {
+  if($config->location eq "EBI") {
     # EPN: for some reason, this 'module' command fails inside perl..., I think it may be unnecessary because it's in my .bashrc
     #my $prepcmd = "module load openmpi-x86_64";
     #system($prepcmd);
@@ -167,20 +177,27 @@ sub submit_mpi_job {
     # Need to use MPI queue ($queue is irrelevant)
     # TEMPORARILY USING research queue and span[ptile=8] as per Asier Roa's instructions, see email ("mpi jobs on cluster")
     # forwarded from Jen, on 08.27.13.
-    $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
-    # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
-    # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
+    if((defined $config->scheduler) && ($config->scheduler eq "slurm")) { 
+      $reqMb /= $nproc; # we specify Mb per thread, others are total Mb for all threads
+      #$submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun --mpi=pmix -n $nproc $cmd\" > /dev/null";
+    }
+    else { # lsf
+      $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
+      # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
+      # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
+    }
   }
-  elsif($location eq "JFRC") {
+  elsif($config->location eq "JFRC") {
     my $queue_opt = "";
     if($queue ne "") { $queue_opt = "-l $queue=true "; }
     $submit_cmd = "qsub -N $jobname -e $errPath -o /dev/null -b y -cwd -V -pe impi $nproc " . $queue_opt . "\"mpirun -np $nproc $cmd\" > /dev/null";
   }
-  elsif ($location eq "CLOUD"){
+  elsif ($config->location eq "CLOUD"){
   	die "ERROR: MPI unavailable on CLOUD. Consider using -cnompi option";
   }
   else {
-    die "ERROR unknown location $location in submit_mpi_job()";
+    die "ERROR unknown location $config->location in submit_mpi_job()";
   }
 
   # actually submit job
@@ -211,7 +228,7 @@ sub submit_mpi_job {
              :
              : See an alternative function that serves the same purpose:
              : 'wait_for_cluster_light' but that uses the expensive
-             : 'qstat' or 'bjobs' calls less frequently.
+             : 'qstat', 'bjobs' or 'squeue' calls less frequently.
              :
              : Ways to return or die:
              : (1) Returns if all jobs finish and all jobs output files
@@ -223,7 +240,7 @@ sub submit_mpi_job {
              : (3) Dies if $max_minutes is defined and != -1, and any
              :     job takes longer than $max_minutes to complete.
              :
-    Args     : $location:       location, e.g. "JFRC" or "EBI"
+    Args     : $config:         Rfam config, with 'location' and 'scheduler'
              : $username:       username the cluster jobs belong to
              : $jobnameAR:      ref to array of list of job names on cluster
              : $outnameAR:      ref to array of list of output file names, one per job
@@ -241,7 +258,7 @@ sub submit_mpi_job {
 =cut
 
 sub wait_for_cluster {
-  my ($location, $username, $jobnameAR, $outnameAR, $success_string, $program, $outFH, $extra_note, $max_minutes, $do_stdout) = @_;
+  my ($config, $username, $jobnameAR, $outnameAR, $success_string, $program, $outFH, $extra_note, $max_minutes, $do_stdout) = @_;
 
   my $start_time = time();
 
@@ -252,8 +269,9 @@ sub wait_for_cluster {
   # sanity check
   if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster(), internal error, number of elements in jobnameAR and outnameAR differ"; }
 
+  # TODO: update this subroutine to work with 'squeue'
   # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
-  if($location eq "EBI") {
+  if($config->location eq "EBI") {
     if(length($username) > 7) {
       $username = substr($username, 0, 7); # bjobs at EBI only prints first 7 letters of username
     }
@@ -263,8 +281,8 @@ sub wait_for_cluster {
       }
     }
   }
-  elsif($location ne "JFRC") {
-    die "ERROR in wait_for_cluster, unrecognized location: $location";
+  elsif($config->location ne "JFRC") {
+    die "ERROR in wait_for_cluster, unrecognized location: $config->location";
   }
 
   my $sleep_nsecs = 60;  # we'll call qstat/bjobs every 5 seconds
@@ -282,8 +300,8 @@ sub wait_for_cluster {
   sleep(2);
 
   while($nsuccess != $n) {
-    if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
-    elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
+    if   ($config->location eq "JFRC") { @infoA = split("\n", `qstat`); }
+    elsif($config->location eq "EBI")  { @infoA = split("\n", `bjobs`); }
 
     for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; }
     $nrunning  = 0;
@@ -292,13 +310,13 @@ sub wait_for_cluster {
       if($line =~ m/^\s*\d+\s+/) {
         $line =~ s/^\s*//;
         @elA = split(/\s+/, $line);
-        if($location eq "JFRC") {
+        if($config->location eq "JFRC") {
           #1232075 4.79167 QLOGIN     davisf       r     03/25/2013 14:24:11 f02.q@f02u09.int.janelia.org                                      8
           # 396183 10.25000 QLOGIN     nawrockie    r     07/26/2013 10:10:41 new.q@h02u19.int.janelia.org                                      1
           # 565685 0.00000 c.25858    nawrockie    qw    08/01/2013 15:18:55                                                                  81
           ($jobname, $uname, $status) = ($elA[2], $elA[3], $elA[4]);
         }
-        elsif($location eq "EBI") {
+        elsif($config->location eq "EBI") {
           # jobid   uname   status queue     sub node    run node    job name   date
           # 5134531 vitor   RUN   research-r ebi-004     ebi5-037    *lection.R Apr 29 18:00
           # 4422939 stauch  PEND  research-r ebi-001                 *ay[16992] Apr 26 12:56
@@ -316,12 +334,12 @@ sub wait_for_cluster {
              (! $ininfoA[$i]) &&              # we didn't already find this job in the queue
              ($jobnameAR->[$i] eq $jobname)) { # jobname match
             $ininfoA[$i] = 1;
-            if($location eq "JFRC") {
+            if($config->location eq "JFRC") {
               if($status eq "r")     { $nrunning++; }
               elsif($status =~ m/E/) { die "wait_for_cluster(), internal error, qstat shows Error status: $line"; }
               else                   { $nwaiting++; }
             }
-            elsif($location eq "EBI") {
+            elsif($config->location eq "EBI") {
               if   ($status eq "RUN")  { $nrunning++; }
               elsif($status eq "PEND") { $nwaiting++; }
               else                     { die "wait_for_cluster(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
@@ -384,8 +402,8 @@ sub wait_for_cluster {
              : This function (the '_light' version) determines which jobs
              : are finished mostly using the existence of error files and
              : by looking for the success string in those error files
-             : and tries to use expensive 'qstat' or 'bjobs' calls infrequently.
-             : The non-light version (wait_for_cluster()) calls 'qstat'/'bjobs'
+             : and tries to use expensive 'qstat', 'bjobs' or 'squeue' calls infrequently.
+             : The non-light version (wait_for_cluster()) calls 'qstat'/'bjobs'/'squeue'
              : once every minute.
              :
              : If $max_minutes is defined and != -1, we will die if all jobs
@@ -401,7 +419,7 @@ sub wait_for_cluster {
              : (3) Dies if $max_minutes is defined and != -1, and any
              :     job takes longer than $max_minutes to complete.
              :
-    Args     : $location:       location, e.g. "JFRC" or "EBI"
+    Args     : $config:         Rfam config, with 'location' and 'scheduler'
              : $username:       username the cluster jobs belong to
              : $jobnameAR:      ref to array of list of job names on cluster
              : $outnameAR:      ref to array of list of output file names, one per job
@@ -420,7 +438,7 @@ sub wait_for_cluster {
 =cut
 
 sub wait_for_cluster_light {
-  my ($location, $username, $jobnameAR, $outnameAR, $errnameAR, $success_string, $program, $outFH, $extra_note, $max_minutes, $do_stdout) = @_;
+  my ($config, $username, $jobnameAR, $outnameAR, $errnameAR, $success_string, $program, $outFH, $extra_note, $max_minutes, $do_stdout) = @_;
 
   my $start_time = time();
   my $n = scalar(@{$jobnameAR});
@@ -432,19 +450,22 @@ sub wait_for_cluster_light {
   if(scalar(@{$outnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and outnameAR differ"; }
   if(scalar(@{$errnameAR}) != $n) { die "wait_for_cluster_light(), internal error, number of elements in jobnameAR and errnameAR differ"; }
 
-  # modify username > 7 characters and job names > 10 characters if we're at EBI, because bjobs truncates these
-  if($location eq "EBI") {
-    if(length($username) > 7) {
-      $username = substr($username, 0, 7); # bjobs at EBI only prints first 7 letters of username
-    }
-    for($i = 0; $i < $n; $i++) {
-      if(length($jobnameAR->[$i]) > 10) { # NOTE: THIS WILL CHANGE THE VALUES IN THE ACTUAL ARRAY jobnameAR POINTS TO!
-        $jobnameAR->[$i] = "*" . substr($jobnameAR->[$i], -9);
+  # modify username > 7 characters and job names > 10 characters if we're using lsf   at EBI, because bjobs truncates these
+  # if we are using slurm we will use the --format option to squeue to deal with the fact that squeue truncates job names to 8 chars by default
+  if($config->location eq "EBI") {
+    if((! defined $config->scheduler) || ($config->scheduler ne "slurm")) { 
+      if(length($username) > 7) {
+        $username = substr($username, 0, 7); # bjobs at EBI only prints first 7 letters of username
+      }
+      for($i = 0; $i < $n; $i++) {
+        if(length($jobnameAR->[$i]) > 10) { # NOTE: THIS WILL CHANGE THE VALUES IN THE ACTUAL ARRAY jobnameAR POINTS TO!
+          $jobnameAR->[$i] = "*" . substr($jobnameAR->[$i], -9);
+        }
       }
     }
   }
-  elsif(($location ne "JFRC") && ($location ne "CLOUD")) {
-    die "ERROR in wait_for_cluster_light, unrecognized location: $location";
+  elsif(($config->location ne "JFRC") && ($config->location ne "CLOUD")) {
+    die "ERROR in wait_for_cluster_light, unrecognized location: $config->location";
   }
 
   my $sleep_nsecs = 30;  # we'll look at file system every 30 seconds
@@ -498,28 +519,45 @@ sub wait_for_cluster_light {
       sleep(rand(30)); # randomize wait time here, so all jobs started at same time don't run qstat/bjobs at exact same time
       $ncycle = 0; # reset to 0
       $ncluster_check++;
-      if   ($location eq "JFRC") { @infoA = split("\n", `qstat`); }
-      elsif($location eq "EBI")  { @infoA = split("\n", `bjobs`); }
+      if   ( $config->location eq "JFRC") {
+        @infoA = split("\n", `qstat`);
+      }
+      elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
+        @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %10u %.8T %.12M %9N\"`);
+        # --format used to specify job names can be 25 characters, instead of default 8
+      } 
+      elsif( $config->location eq "EBI")  { # lsf
+        @infoA = split("\n", `bjobs`);
+      }
       # Fetch all running jobs of a specific user
-      elsif($location eq "CLOUD") { @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend`);}
+      elsif($config->location eq "CLOUD") {
+        @infoA = split("\n", `kubectl get pods --selector=user=$username --selector=tier=backend`);
+      }
 
       # initialize array
       for($i = 0; $i < $n; $i++) { $ininfoA[$i] = 0; }
 
       # parse job log
       foreach $line (@infoA) {
-        if ($location ne "CLOUD"){
+        if ($config->location ne "CLOUD"){
         if($line =~ m/^\s*\d+\s+/) {
           $line =~ s/^\s*//;
           @elA = split(/\s+/, $line);
-          if($location eq "JFRC") {
+          if($config->location eq "JFRC") {
             #1232075 4.79167 QLOGIN     davisf       r     03/25/2013 14:24:11 f02.q@f02u09.int.janelia.org                                      8
             # 396183 10.25000 QLOGIN     nawrockie    r     07/26/2013 10:10:41 new.q@h02u19.int.janelia.org                                      1
             # 565685 0.00000 c.25858    nawrockie    qw    08/01/2013 15:18:55                                                                  81
             ($jobname, $uname, $status) = ($elA[2], $elA[3], $elA[4]);
           } # closes JFRC if
-
-          elsif($location eq "EBI") {
+          elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
+            #JOBID PARTITION NAME               USER          STATE         TIME NODELIST
+            #35080251  standard rs.4002890-9       nawrocki    RUNNING         0:02 hl-codon-
+            #35080252  standard rs.4002890-10      nawrocki    RUNNING         0:02 hl-codon-
+            #35080253  standard ss.4002890-1       nawrocki    RUNNING         0:02 hl-codon-
+            ($jobname, $uname, $status) = ($elA[2], $elA[3], $elA[4]);
+            # print STDERR ("uname: $uname status: $status; jobname: $jobname\n");
+          } # closes EBI + slurm elsif
+          elsif($config->location eq "EBI") { # lsf 
             # jobid   uname   status queue     sub node    run node    job name   date
             # 5134531 vitor   RUN   research-r ebi-004     ebi5-037    *lection.R Apr 29 18:00
             # 4422939 stauch  PEND  research-r ebi-001                 *ay[16992] Apr 26 12:56
@@ -527,23 +565,36 @@ sub wait_for_cluster_light {
             if($status eq "RUN") { $jobname = $elA[6]; }
             else                 { $jobname = $elA[5]; }
             #print STDERR ("uname: $uname status: $status; jobname: $jobname\n");
-          } # closes EBI if
-
+          } # closes EBI (and not slurm) elsif
           # no need to do this for CLOUD
           if($uname ne $username) { die "wait_for_cluster_light(), internal error, uname mismatch ($uname ne $username)"; }
 
           # look through our list of jobs and see if this one matches
           for($i = 0; $i < $n; $i++) { #5
             #printf("\t\tsuccess: %d\tininfo: %d\tmatch: %d\n", $successA[$i], $ininfoA[$i], ($jobnameAR->[$i] eq $jobname) ? 1 : 0);
-              if((! $successA[$i]) &&              # job didn't successfully complete already
-                 (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
-                 ($jobnameAR->[$i] eq $jobname)) { # jobname match
-                  $ininfoA[$i] = 1;
-                  $i = $n;
-
-                  if (($location eq "JFRC") && ($status =~ m/E/))                       { die "wait_for_cluster_light(), internal error, qstat shows Error status: $line"; }
-                  if (($location eq "EBI")  && ($status ne "RUN" && $status ne "PEND")) { die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line"; }
+            if((! $successA[$i]) &&              # job didn't successfully complete already
+               (! $ininfoA[$i]) &&               # we didn't already find this job in the queue
+               ($jobnameAR->[$i] eq $jobname)) { # jobname match
+              $ininfoA[$i] = 1;
+              $i = $n;
+              
+              # make sure job state is either pending, running or completing
+              if(($config->location eq "JFRC") && ($status =~ m/E/)) { 
+                die "wait_for_cluster_light(), internal error, qstat shows Error status: $line";
               }
+              if($config->location eq "EBI") {
+                if((! defined $config->scheduler) || ($config->scheduler ne "slurm")) {
+                  if(($status ne "RUN") && ($status ne "PEND")) {
+                    die "wait_for_cluster_light(), internal error, bjobs shows non-\"RUN\" and non-\"PEND\" status: $line";
+                  }
+                }
+                elsif((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
+                  if(($status !~ m/^RUNNING/) && ($status !~ m/^PENDING/) && ($status !~ m/^COMPLETI/)) {
+                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETI\" status:\n$line";
+                  }
+                }
+              }
+            }
           } # EBI/JFRC for loop
         } # first line check here
       } # EBI/JFRC location if
@@ -572,7 +623,7 @@ sub wait_for_cluster_light {
                   $i = $n; # skip the rest of the computations
               # check if job is in error status, if it is, then exit
 	      #
-              if (($location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed" && $status ne "ContainerCreating")){ die "wait_for_cluster_light(), internal error, kubectl shows Error status: $line"; }
+              if (($config->location eq "CLOUD") && ($status ne "Running" && $status ne "Pending" && $status ne "Completed" && $status ne "ContainerCreating")){ die "wait_for_cluster_light(), internal error, kubectl shows Error status: $line"; }
             } #internal if
           } # for loop
       } # cloud segment else
@@ -674,7 +725,7 @@ sub wait_for_cluster_light {
           }
         } # end of 'if(-e $errnameAR->[$i])'
         else { # err file doesn't exist yet, job is waiting (or failed) or job is running on cloud
-          if ($location ne "CLOUD"){
+          if ($config->location ne "CLOUD"){
           if($finishedA[$i] == 1) {
             die "wait_for_cluster_light() job $i finished according to qstat/bjobs, but expected output ERROR file $errnameAR->[$i] does not exist\n";
           }
@@ -3175,4 +3226,3 @@ this program. If not, see <http://www.gnu.org/licenses/>.
 
 =cut
 
-1;

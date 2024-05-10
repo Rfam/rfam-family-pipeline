@@ -523,4 +523,12 @@ sub rfamTeam {
   return $self->{'_config'}->{rfamTeam};
 }
 
+sub scheduler {
+  my $self = shift;
+  if ( $#_ >= 0 ) {
+    warn "Passed variable to ro config\n";
+  }
+  return $self->{'_config'}->{scheduler};
+}
+
 1;

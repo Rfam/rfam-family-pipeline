@@ -150,19 +150,18 @@ sub cmcalibrate_wrapper {
     Bio::Rfam::Utils::run_local_command(sprintf("$cmcalibratePath %s $options $cmPath > $outPath", ($nproc eq "") ? "" : "--cpu $nproc"));
   }
   else { 
+    my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
+    if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
+    my $requiredMb = int($nproc * $gbPerThread * 1000.); # round to nearest Mb
     if($doMPI) { 
-      Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $queue); 
+      Bio::Rfam::Utils::submit_mpi_job($config, "$cmcalibratePath --mpi $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, $queue); 
     }
     else { 
-      my $gbPerThread = (($predicted_Mb_per_thread * 2.) / 1000.); # double prediction to be safe (yes, it can be that inaccurate...)
-      if($gbPerThread < 3.0) { $gbPerThread = 3.0; } # enforce minimum of 3.0 Gb
-      my $requiredMb = int($nproc * $gbPerThread * 1000.) . "MB"; # round to nearest Mb and append MB
-      
       #if ($config->location eq 'CLOUD'){
       #$requiredMb = 6000;
       #}
       # if the job is run in the cloud, assign the job an index
-      Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmcalibratePath --cpu $nproc $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
+      Bio::Rfam::Utils::submit_nonmpi_job($config, "$cmcalibratePath --cpu $nproc $options $cmPath > $outPath", $jobname, $errPath, $nproc, $requiredMb, undef, $queue); 
     }
   }
   return ($predicted_seconds / 60);
@@ -184,7 +183,7 @@ sub cmcalibrate_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $gbPerThread:  number of Gb of memory to request per thread
@@ -213,7 +212,7 @@ sub cmsearch_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $do_locally:   '1' to run locally, else run on cluster
@@ -243,7 +242,7 @@ sub cmscan_wrapper {
            : $seqfilePath:  path to sequence file to search
            : $outPath:      file to save standard output to, if undefined send to /dev/null.
            : $errPath:      file to save standard error output to
-           : $submitExStr:  extra string to add to qsub/bsub command
+           : $submitExStr:  extra string to add to qsub/bsub/sbatch command
            : $queue:        queue to submit to, "" for default
            : $do_locally:   '1' to run locally, else run on cluster
            : $gbPerThread:  number of Gb of memory to request per thread
@@ -295,7 +294,7 @@ sub cmsearch_or_cmscan_wrapper {
     }
     
     my $requiredMb = $ncpu * $gbPerThread * 1000.; # 
-    Bio::Rfam::Utils::submit_nonmpi_job($config->location, $config->infernalPath . "$program $options $cmPath $seqfilePath > $outPath", $jobname, $errPath, $ncpu, $requiredMb, $submitExStr, $queue);
+    Bio::Rfam::Utils::submit_nonmpi_job($config, $config->infernalPath . "$program $options $cmPath $seqfilePath > $outPath", $jobname, $errPath, $ncpu, $requiredMb, $submitExStr, $queue);
   }
 
   return;
@@ -420,13 +419,14 @@ sub cmalign_wrapper {
     my $errPath = "a.$$.err";
     my @jobnameA = ($jobname);
     my @outnameA = ($outPath);
+    my @errnameA = ($errPath);
     if($use_mpi) { 
-      Bio::Rfam::Utils::submit_mpi_job($config->location, "$cmalignPath --mpi $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $queue);
-      Bio::Rfam::Utils::wait_for_cluster($config->location, $uname, \@jobnameA, \@outnameA, "\# CPU time:", "cmalign-mpi", $logFH, "[$nproc processors]", -1, $do_stdout);
+      Bio::Rfam::Utils::submit_mpi_job($config, "$cmalignPath --mpi $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $requiredMb, $queue);
+      Bio::Rfam::Utils::wait_for_cluster_light($config, $uname, \@jobnameA, \@outnameA, \@errnameA, "\# CPU time:", "cmalign-mpi", $logFH, "[$nproc processors]", -1, $do_stdout);
     }
     else { # don't use MPI
-      Bio::Rfam::Utils::submit_nonmpi_job($config->location, "$cmalignPath $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $requiredMb, "", $queue);
-      Bio::Rfam::Utils::wait_for_cluster($config->location, $uname, \@jobnameA, \@outnameA, "\# CPU time:", "cmalign-thr", $logFH, "[$nproc processors]", -1, $do_stdout);
+      Bio::Rfam::Utils::submit_nonmpi_job($config, "$cmalignPath $options $cmPath $seqfilePath > $outPath", "a.$$", "a.$$.err", $nproc, $requiredMb, "", $queue);
+      Bio::Rfam::Utils::wait_for_cluster_light($config, $uname, \@jobnameA, \@outnameA, \@errnameA, "\# CPU time:", "cmalign-thr", $logFH, "[$nproc processors]", -1, $do_stdout);
     }
     unlink $errPath;
   }

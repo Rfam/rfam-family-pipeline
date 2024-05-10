@@ -53,8 +53,8 @@ my $ncpus_cmsearch;             # number of CPUs for cmsearch calls
 my $mxsize_opt = undef;         # we'll pass '--mxsize $mxsize_opt' to cmsearch
 my @cmosA = ();                 # extra single '-' cmsearch options (e.g. -g)
 my @cmodA = ();                 # extra double '--' cmsearch options (e.g. --cyk)
-my @ssoptA = ();                # strings to add to cmsearch qsub/bsub commands
-my $ssopt_str = "";             # string to add to cmsearch qsub/bsub commands
+my @ssoptA = ();                # strings to add to cmsearch qsub/bsub/sbatch commands
+my $ssopt_str = "";             # string to add to cmsearch qsub/bsub/sbatch commands
 my $ignore_sm = 0;              # TRUE to ignore BM in DESC for cmbuild options
 # debugging options
 my $do_hmmonly = 0;             # TRUE to run cmsearch in hmmonly mode
@@ -142,6 +142,7 @@ open($logFH, ">rfsearch.log") || die "ERROR unable to open rfsearch.log for writ
 Bio::Rfam::Utils::log_output_rfam_banner($logFH, $executable, $exec_description, $do_stdout);
 
 # output header
+
 
 my $user;
 if ($config->location eq "CLOUD"){
@@ -652,11 +653,16 @@ if($do_calibrate) {
   my $cmcalibrate_string = ($calibrate_mpi) ? "cmcalibrate-mpi" : "cmcalibrate-thr";
 
   if(! $do_all_local) { # job is running on the cluster
-    $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
+    $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
                                                                         sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
-    Bio::Rfam::Utils::checkStderrFile($config->location, $calibrate_errO);
-    # if we get here, err file was empty, so we keep going
-    if(! $do_dirty) { unlink $calibrate_errO; } # this file is empty anyway 
+
+    # we used to check the $calibrate_errO file here and die if it was
+    # not empty but we don't do that anymore because slurm MPI jobs
+    # output innocuous warnings to .err file and because
+    # wait_for_cluster_light() has already checked that the stdout has
+    # the success string. We also used to erase the err file here, but
+    # now we leave it
+    # if(! $do_dirty) { unlink $calibrate_errO; } 
     $calibrate_wall_secs = time() - $calibrate_start_time;
   }
   else { # job ran locally 
@@ -963,7 +969,7 @@ submit_or_run_cmsearch_jobs($config, 1, "ss-",  $searchopts, $cm->{cmHeader}->{w
   if(! $do_all_local) { 
     # wait for cluster jobs to finish
     #$search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster($config->location, $user, \@all_jobnameA, \@all_tblOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
-    $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config->location, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
+    $search_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config, $user, \@all_jobnameA, \@all_tblOA, \@all_errOA, "# [ok]", "cmsearch", $logFH, "", -1, $do_stdout);
   }
   $search_wall_secs     = time() - $search_start_time;
   
