@@ -523,8 +523,8 @@ sub wait_for_cluster_light {
         @infoA = split("\n", `qstat`);
       }
       elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
-        @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %10u %.8T %.12M %9N\"`);
-        # --format used to specify job names can be 25 characters, instead of default 8
+        @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %25u %.8T %.12M %9N\"`);
+        # --format used to specify job names and user names can be 25 characters, instead of default 8
       } 
       elsif( $config->location eq "EBI")  { # lsf
         @infoA = split("\n", `bjobs`);
