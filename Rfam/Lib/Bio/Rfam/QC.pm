@@ -1731,7 +1731,7 @@ sub findExternalOverlaps {
         $r->[1] <= $r->[2] ? ($r->[1], $r->[2], 1) : ($r->[2], $r->[1], -1);
 
     if($currentAcc ne $r->[3]){
-      $regions = $rfamdb->resultset('FullRegion')->regionsByRfamseqAcc($r->[3]);
+      $regions = $rfamdb->resultset('FullRegion')->allRegionInfo($r->[3]);
       $currentAcc=  $r->[3];
     }
     foreach my $dbReg (@$regions){
@@ -1747,11 +1747,13 @@ sub findExternalOverlaps {
           $overlap = 'fullOL' if ( $overlap == -1 );
           my $overlapType =  $dbReg->[4] eq $or1 ? 'SS' : 'OS';
           #TODO Fix reporting when I have information.
-          my $eString = sprintf "External overlap [%s] of %s with %s by %s\n",
-            $overlapType,
-            $r->[0],
-            $dbReg->[1].":".$dbReg->[0]."/".$dbReg->[2]."-".$dbReg->[3],
-            $overlap;
+          my $eString = sprintf "External overlap [%s] of %s (%.2f bits) with %s (%.2f bits) by %s\n",
+              $overlapType,
+              $r->[0],
+              $r->[4], 
+              $dbReg->[1].":".$dbReg->[0]."/".$dbReg->[2]."-".$dbReg->[3],
+              $dbReg->[5],
+              $overlap;
           print $OVERLAP $eString;
           print STDERR $eString;
 	  $error++;

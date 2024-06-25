@@ -655,9 +655,14 @@ if($do_calibrate) {
   if(! $do_all_local) { # job is running on the cluster
     $calibrate_max_wait_secs = Bio::Rfam::Utils::wait_for_cluster_light($config, $user, \@jobnameA, \@outnameA, \@errnameA, "[ok]", $cmcalibrate_string, $logFH, 
                                                                         sprintf("[$ncpus_cmcalibrate procs, should take ~%.0f minute(s)]", $predicted_minutes), -1, $do_stdout);
-    Bio::Rfam::Utils::checkStderrFile($config->location, $calibrate_errO);
-    # if we get here, err file was empty, so we keep going
-    if(! $do_dirty) { unlink $calibrate_errO; } # this file is empty anyway 
+
+    # we used to check the $calibrate_errO file here and die if it was
+    # not empty but we don't do that anymore because slurm MPI jobs
+    # output innocuous warnings to .err file and because
+    # wait_for_cluster_light() has already checked that the stdout has
+    # the success string. We also used to erase the err file here, but
+    # now we leave it
+    # if(! $do_dirty) { unlink $calibrate_errO; } 
     $calibrate_wall_secs = time() - $calibrate_start_time;
   }
   else { # job ran locally 

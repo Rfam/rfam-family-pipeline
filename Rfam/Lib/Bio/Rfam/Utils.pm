@@ -179,8 +179,8 @@ sub submit_mpi_job {
     # forwarded from Jen, on 08.27.13.
     if((defined $config->scheduler) && ($config->scheduler eq "slurm")) { 
       $reqMb /= $nproc; # we specify Mb per thread, others are total Mb for all threads
-      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
-#      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun -n $nproc $cmd\" > /dev/null";
+      #$submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
+      $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun --mpi=pmix -n $nproc $cmd\" > /dev/null";
     }
     else { # lsf
       $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
@@ -523,8 +523,8 @@ sub wait_for_cluster_light {
         @infoA = split("\n", `qstat`);
       }
       elsif(($config->location eq "EBI") && ((defined $config->scheduler) && ($config->scheduler eq "slurm"))) {
-        @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %10u %.8T %.12M %9N\"`);
-        # --format used to specify job names can be 25 characters, instead of default 8
+        @infoA = split("\n", `squeue --format=\"%.8i %.9P %25j %25u %.8T %.12M %9N\"`);
+        # --format used to specify job names and user names can be 25 characters, instead of default 8
       } 
       elsif( $config->location eq "EBI")  { # lsf
         @infoA = split("\n", `bjobs`);
@@ -589,8 +589,8 @@ sub wait_for_cluster_light {
                   }
                 }
                 elsif((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
-                  if(($status ne "RUNNING") && ($status ne "PENDING") && ($status ne "COMPLETING")) {
-                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETING\" status:\n$line";
+                  if(($status !~ m/^RUNNING/) && ($status !~ m/^PENDING/) && ($status !~ m/^COMPLETI/)) {
+                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETI\" status:\n$line";
                   }
                 }
               }
