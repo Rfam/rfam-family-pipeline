@@ -188,7 +188,7 @@ sub start_polling {
     # get the row for the next pending job from the tracking table
     next unless my $job = $jobs->next;
 
-    # build a hash with the parameters describing the LSF job
+    # build a hash with the parameters describing the LSF or slurm job
     my $job_spec = $self->_build_job_spec( $job );
 
     # and actually submit that job to LSF or slurm
@@ -202,8 +202,13 @@ sub start_polling {
       next;
     }
 
-    $self->_log->debug( "job submitted with LSF ID $lsf_job_id" );
-
+    if((defined $rfam_config->scheduler) && ($rfam_config->scheduler eq "slurm")) {
+      $self->_log->debug( "job submitted with slurm ID $job_id" );
+    }
+    else { 
+      $self->_log->debug( "job submitted with LSF ID $job_id" );
+    }
+    
     # update the job row with the job ID for the farm job
     $job->lsf_id( $job_id ); 
 
