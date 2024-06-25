@@ -58,7 +58,7 @@ if ( $daemonise ) {
   $job_dequeuer->daemonise;
 }
 
-$job_dequeuer->start_polling;
+$job_dequeuer->start_polling($config);
 
 exit;
 

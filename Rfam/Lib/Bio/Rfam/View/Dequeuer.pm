@@ -9,7 +9,7 @@ Bio::Rfam::View::Dequeuer - poll for and submit Rfam View process jobs
 
  my $job_dequeuer = Bio::Rfam::View::Dequeuer->new( 'family' );
  $job_dequeuer->daemonise;
- $job_dequeuer->start_polling;
+ $job_dequeuer->start_polling($rfam_config);
 
 =head1 DESCRIPTION
 
@@ -162,7 +162,7 @@ as in:
 =cut
 
 sub start_polling {
-  my ( $self ) = shift;
+  my ( $self, $rfam_config ) = shift;
 
   my $delay = $self->_config->{view_process_job_dequeuer}->{polling_interval} || 2;
   $self->_log->info( "starting submission loop for '" . $self->job_type .
@@ -192,12 +192,17 @@ sub start_polling {
     my $job_spec = $self->_build_job_spec( $job );
 
     # and actually submit that job to LSF or slurm
+    my $job_id = undef;
+    if((defined $rfam_config->scheduler) && ($rfam_config->scheduler eq "slurm")) {
+      $job_id = $self->_submit_slurm_job( $job_spec ); # job_id will be undefined if something went wrong
+    }
+    else { #lsf
+      my $lsf_job = $self->_submit_lsf_job( $job_spec );
+      $job_id = $lsf_job->id;
+    }
     
-    my $lsf_job = $self->_submit_lsf_job( $job_spec );
-    my $lsf_job_id = $lsf_job->id;
-
     # make sure it submitted successfully
-    unless ( $lsf_job_id and $lsf_job_id =~ m/^\d+$/ ) {
+    unless ( $job_id and $job_id =~ m/^\d+$/ ) {
       $self->_log->error( 'there was a problem submitting the view process for '
                           . $job->job_type . ' '
                           . $job->entity_acc );
@@ -207,8 +212,8 @@ sub start_polling {
 
     $self->_log->debug( "job submitted with LSF ID $lsf_job_id" );
 
-    # update the job row with the LSF ID for the farm job
-    $job->lsf_id( $lsf_job_id ); 
+    # update the job row with the job ID for the farm job
+    $job->lsf_id( $job_id ); 
 
     # and flag the job as running. Also sets the start time
     $job->run;
@@ -417,7 +422,7 @@ sub _submit_slurm_job {
   my $slurm_output = `$submit_cmd`;
 
   # Submitted batch job 102045
-  if($slurm_output =~ m/^Submitted batch job (\d+)/) {
+  if($slurm_output =~ /^Submitted batch job (\d+)/) {
     return $1;
   }
   else {
