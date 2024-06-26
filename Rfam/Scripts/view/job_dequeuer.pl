@@ -58,7 +58,7 @@ if ( $daemonise ) {
   $job_dequeuer->daemonise;
 }
 
-$job_dequeuer->start_polling;
+$job_dequeuer->start_polling($config);
 
 exit;
 
@@ -80,7 +80,7 @@ job_dequeuer.pl - poll for and submit Rfam view process jobs
 
 This script polls the "RfamJobs" database for new view process jobs to run. If
 it finds a pending job, it builds a view process command and submits it to the
-farm using LSF. 
+farm using LSF or slurm. 
 
 Once a job is submitted, the dequeuer goes back to polling the database; it
 does not attempt to keep track of the progress or status of jobs once they have
