@@ -138,7 +138,17 @@ if(scalar(@comA)    != 2) { die "ERROR creating COM array"; }
 my ($file1, $file2);
 # verify all required files exist
 foreach $file1 (@reqdFiles_t1, @reqdFiles_t2, @reqdFiles_t3) { 
-  if(! -s $file1) { die "ERROR required file $file1 does not exist or is empty!"; }
+  if(($file1 eq "SCORES") || ($file1 eq "SEEDSCORES")) {
+    # SCORES or SEEDSCORES must exist but it may be empty
+    if(! -e $file1) {
+      die "ERROR required file $file1 does not exist";
+    }
+  }
+  else { # file other than SCORES and SEEDSCORES, should be non-empty
+    if(! -s $file1) {
+      die "ERROR required file $file1 does not exist or is empty!";
+    }
+  }
 }
 
 # IF WE WANT TO MAKE SURE SEED IS YOUNGER THAN CM, UNCOMMENT THIS BLOCK
