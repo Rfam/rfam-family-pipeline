@@ -2942,21 +2942,21 @@ sub rnacentral_md5_lookup {
   my $rnacentral_url = "https://rnacentral.org/api/v1/md5/" . $in_md5;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5: " . $in_md5; }
-  # Decode the entire JSON
-  my $decoded_json = decode_json($json);
-  #print Dumper $decoded_json;
 
   my $have_seq = 0;
   my $md5  = undef;
   my $id   = undef;
   my $desc = undef;
 
-  if((defined $decoded_json->{'rnacentral_id'})) {
-    $have_seq = 1;
-    $md5  = $in_md5;
-    $id   = $decoded_json->{'rnacentral_id'};
-    $desc = $decoded_json->{'description'};
+  if( defined $json) {
+    # Decode the entire JSON
+    my $decoded_json = decode_json($json);
+    if((defined $decoded_json->{'rnacentral_id'})) {
+      $have_seq = 1;
+      $md5  = $in_md5;
+      $id   = $decoded_json->{'rnacentral_id'};
+      $desc = $decoded_json->{'description'};
+    }
   }
 
   return ($have_seq, $md5, $id, $desc);
