@@ -2939,7 +2939,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
 sub rnacentral_md5_lookup {
   my ( $in_md5 ) = @_;
 
-  my $rnacentral_url = "https://rnacentral.org/api/v1/rna?md5=" . $in_md5;
+  my $rnacentral_url = "https://rnacentral.org/api/v1/md5/" . $in_md5;
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
   if(! defined $json) { croak "ERROR trying to fetch from rnacentral using md5: " . $in_md5; }
@@ -2952,13 +2952,11 @@ sub rnacentral_md5_lookup {
   my $id   = undef;
   my $desc = undef;
 
-  if((defined $decoded_json->{'results'}) &&
-     (defined $decoded_json->{'results'}[0]{'md5'}) &&
-     (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
+  if((defined $decoded_json->{'rnacentral_id'})) {
     $have_seq = 1;
-    $md5  = $decoded_json->{'results'}[0]{'md5'};
-    $id   = $decoded_json->{'results'}[0]{'rnacentral_id'};
-    $desc = $decoded_json->{'results'}[0]{'description'};
+    $md5  = $in_md5;
+    $id   = $decoded_json->{'rnacentral_id'};
+    $desc = $decoded_json->{'description'};
   }
 
   return ($have_seq, $md5, $id, $desc);
