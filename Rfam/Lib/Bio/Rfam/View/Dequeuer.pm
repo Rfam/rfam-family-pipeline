@@ -356,7 +356,9 @@ sub _submit_job {
                  . $job_spec->{job_id} . '.log';
   $self->_log->debug( "writing log to: |$log_file|" );
 
-  my $memory_resource = ($scheduler eq "LSF") ? 'rusage[mem=' . $job_spec->{memory} . ']' : '--mem-per-cpu=' . $job_spec->{memory};
+  my $reqMb = sprintf("%d", $job_spec->{memory}); # slurm only accepts integer values <n> for --mem-per-cpu=<n> (use int for lsf too)
+  if($reqMb < 1) { $reqMb = 1; } # just to be safe
+  my $memory_resource = ($scheduler eq "LSF") ? 'rusage[mem=' . $reqMb . ']' : '--mem-per-cpu=' . $reqMb;
   $self->_log->debug( "memory resource string: |$memory_resource|" );
 
   $self->_log->debug( "submitting $scheduler job" );
