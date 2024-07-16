@@ -90,6 +90,8 @@ sub submit_nonmpi_job {
 
     if((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
       $reqMb /= $ncpu; # we specify Mb per thread, others are total Mb for all threads
+      $reqMb = sprintf("%d", $reqMb); # slurm only accepts integer values <n> for --mem-per-cpu=<n>
+      if($reqMb < 1) { $reqMb = 1; } # just to be safe
       $submit_cmd = "sbatch ";
       if(defined $exStr && $exStr ne "") { $submit_cmd .= "$exStr "; }
       $submit_cmd .= "-c $ncpu -J $jobname -o /dev/null -e $errPath --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"$cmd\" > /dev/null";
@@ -103,6 +105,8 @@ sub submit_nonmpi_job {
       else {
         $submit_cmd .= "-q research ";
       }
+      $reqMb = sprintf("%d", $reqMb); # slurm only accepts integer values <n> for --mem-per-cpu=<n> (use int for lsf too)
+      if($reqMb < 1) { $reqMb = 1; } # just to be safe
       $submit_cmd .= "-n $ncpu -J $jobname -o /dev/null -e $errPath -M $reqMb -R \"rusage[mem=$reqMb]\" \"$cmd\" > /dev/null";
     }
   }
@@ -179,10 +183,14 @@ sub submit_mpi_job {
     # forwarded from Jen, on 08.27.13.
     if((defined $config->scheduler) && ($config->scheduler eq "slurm")) { 
       $reqMb /= $nproc; # we specify Mb per thread, others are total Mb for all threads
+      $reqMb = sprintf("%d", $reqMb); # slurm only accepts integer values <n> for --mem-per-cpu=<n>
+      if($reqMb < 1) { $reqMb = 1; } # just to be safe
       #$submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"mpirun -np $nproc $cmd\" > /dev/null";
       $submit_cmd .= "sbatch -J $jobname -e $errPath -n $nproc --mem-per-cpu=$reqMb --time=48:00:00 --wrap \"srun --mpi=pmix -n $nproc $cmd\" > /dev/null";
     }
     else { # lsf
+      $reqMb = sprintf("%d", $reqMb); # slurm only accepts integer values <n> for --mem-per-cpu=<n>, use int for lsf too
+      if($reqMb < 1) { $reqMb = 1; } # just to be safe
       $submit_cmd = "bsub -J $jobname -e $errPath -M $reqMb -q mpi -I -n $nproc -R \"span[ptile=2]\" -a openmpi mpirun -np $nproc -mca btl tcp,self $cmd";
       # ORIGINAL COMMAND (I BELIEVE WE WILL REVERT TO THIS EVENTUALLY):
       # $submit_cmd = "bsub -J $jobname -e $errPath -q mpi -I -n $nproc -a openmpi mpirun.lsf -np $nproc -mca btl tcp,self $cmd";
@@ -191,6 +199,8 @@ sub submit_mpi_job {
   elsif($config->location eq "JFRC") {
     my $queue_opt = "";
     if($queue ne "") { $queue_opt = "-l $queue=true "; }
+    $reqMb = sprintf("%d", $reqMb); # slurm only accepts integer values <n> for --mem-per-cpu=<n>, use int for JFRC too
+    if($reqMb < 1) { $reqMb = 1; } # just to be safe
     $submit_cmd = "qsub -N $jobname -e $errPath -o /dev/null -b y -cwd -V -pe impi $nproc " . $queue_opt . "\"mpirun -np $nproc $cmd\" > /dev/null";
   }
   elsif ($config->location eq "CLOUD"){
