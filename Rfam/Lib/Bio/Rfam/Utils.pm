@@ -599,8 +599,8 @@ sub wait_for_cluster_light {
                   }
                 }
                 elsif((defined $config->scheduler) && ($config->scheduler eq "slurm")) {
-                  if(($status !~ m/^RUNNING/) && ($status !~ m/^PENDING/) && ($status !~ m/^COMPLETI/)) {
-                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\" and non-\"COMPLETI\" status:\n$line";
+                  if(($status !~ m/^RUNNING/) && ($status !~ m/^PENDING/) && ($status !~ m/^COMPLETI/) && ($status !~ m/^CONFIGUR/)) {
+                    die "wait_for_cluster_light(), internal error, squeue shows non-\"RUNNING\", non-\"PENDING\", non-\"COMPLETI\" and non-\"CONFIGUR\" status:\n$line";
                   }
                 }
               }
