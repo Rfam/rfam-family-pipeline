@@ -93,9 +93,9 @@ sub loadRfamFromLocalFile {
                 'DESC'       => $self->parseDESC("$dir/$family/DESC"),
                 'CM'         => $self->parseCM("$dir/$family/CM"),
                 'SCORES'     => $self->parseScores("$dir/$family/SCORES"),
-                'SEEDSCORES' => $self->parseScores("$dir/$family/SEEDSCORES"),
+#                'SEEDSCORES' => $self->parseScores("$dir/$family/SEEDSCORES"),
                 'TBLOUT'     => { fileLocation => "$dir/$family/TBLOUT" },
-                'SEEDTBLOUT' => { fileLocation => "$dir/$family/SEEDTBLOUT" }
+#                'SEEDTBLOUT' => { fileLocation => "$dir/$family/SEEDTBLOUT" }
                };
 
   #Use Moose to coerce these through!
