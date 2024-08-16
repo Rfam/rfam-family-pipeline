@@ -261,6 +261,10 @@ sub checkCMFormat {
     chomp $line;
     if($line =~ /^#=GC\s+SS_cons\s+(\S+)/) {
       $cm_ss_cons = $1;
+      # remove any gaps, this is rare but gaps can occur if cmalign thinks a consensus position
+      # should be inserted followed by a nearby deletion (e.g. RF00023 and RF03057 for Rfam
+      # 15.0 with infernal 1.1.5)
+      $cm_ss_cons =~ s/\.//g;
     }
     else {
       warn "Failed to read SS_cons from alignment created with command $cmd\n";
