@@ -34,7 +34,9 @@ use Log::Log4perl qw( get_logger );
 use POSIX qw( setsid );
 use File::Basename;
 use Data::Dump qw( dump );
-use LSF::Job;
+use strict;
+use warnings;
+#use LSF::Job;
 
 #-------------------------------------------------------------------------------
 #- configure logging -----------------------------------------------------------
@@ -363,22 +365,30 @@ sub _submit_job {
 
   $self->_log->debug( "submitting $scheduler job" );
 
+  my $job_id = undef;
   if($scheduler eq "LSF") { 
-    my $lsf_job = LSF::Job->submit(
-      -o => $log_file,
-      -q => $job_spec->{lsf_queue},
-      -R => $memory_resource,
-      -R => $job_spec->{tmp_space},
-      -M => $job_spec->{memory},
-      $lsf_command
-        );
-    $job_id = $lsf_job->id;
+    die "LSF is no longer supported";
+    #my $lsf_job = LSF::Job->submit(
+    #  -o => $log_file,
+    #  -q => $job_spec->{lsf_queue},
+    #  -R => $memory_resource,
+    #  -R => $job_spec->{tmp_space},
+    #  -M => $job_spec->{memory},
+    #  $command
+    #    );
+    #$job_id = $lsf_job->id;
   }
   else { # slurm
-    my $submit_cmd .= "sbatch -o $log_file -n 1 $memory_resource --time=48:00:00 --wrap \"$slurm_command\" > /dev/null";
+    my $submit_cmd .= "sbatch -o $log_file -n 1 $memory_resource --time=48:00:00 --wrap \"$command\" > /dev/null";
     $self->_log->debug( "$scheduler submit command: |$submit_cmd|" );
+    # debugging print statement
+    print STDERR "command:    $command\n";
+    # debugging print statement
+    print STDERR "submit_cmd: $submit_cmd\n";
     # we need to determine the job id, so we capture the stdout of sbatch
     my $slurm_output = `$submit_cmd`;
+    # debugging print statement
+    print STDERR "slurm_output: $slurm_output\n");
     # Submitted batch job 102045
     if($slurm_output =~ /^Submitted batch job (\d+)/) {
       $job_id = $1;
@@ -386,6 +396,8 @@ sub _submit_job {
     else {
       $job_id = undef;
     }
+    # debugging print statement
+    print STDERR "job_id: $job_id\n");
   }
 
   return $job_id;
