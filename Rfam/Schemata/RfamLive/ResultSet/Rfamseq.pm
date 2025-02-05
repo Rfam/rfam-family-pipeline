@@ -109,6 +109,16 @@ sub updateRfamseqFromFamilyObj {
         croak "ERROR in $sub_name, invalid source read from seed info hash, valid values are \"SEED:GenBank\" and \"SEED:RNAcentral\" but read $source"; 
       }
 
+      # enforce maximum number of characters for each value,
+      # for overflows in description we just truncate, overflow in others are fatal
+      if(length($seed_name)   > 20)  { croak "ERROR in $sub_name, rfamseq_acc $seed_name exceeds 20 characters"; }
+      if(length($accession)   > 15)  { croak "ERROR in $sub_name, accession $accession exceeds 15 characters"; }
+      if(length($version)     > 6)   { croak "ERROR in $sub_name, version $version exceeds 6 characters"; }
+      if(length($ncbi_id)     > 10)  { croak "ERROR in $sub_name, ncbi_id $ncbi_id exceeds 10 characters"; }
+      if(length($length)      > 10)  { croak "ERROR in $sub_name, length $length exceeds 10 characters"; }
+      if(length($source)      > 20)  { croak "ERROR in $sub_name, source $source exceeds 20 characters"; }
+      if(length($description) > 250) { $description = substr($description, 0, 250); }
+
       push(@row_AH, { rfamseq_acc => $seed_name, 
                       accession   => $accession,
                       version     => $version,
