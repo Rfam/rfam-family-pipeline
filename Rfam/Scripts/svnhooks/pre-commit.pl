@@ -16,13 +16,12 @@ use Data::Printer;
 use Log::Log4perl qw(get_logger);
 
 # set up logging
-my $logger_conf = q(
-  log4perl.logger                         = DEBUG, FileAppender
-  log4perl.appender.FileAppender          = Log::Log4perl::Appender::File
-  log4perl.appender.FileAppender.filename = /tmp/pre-commit.log
-  log4perl.appender.FileAppender.layout   = Log::Log4perl::Layout::PatternLayout
-  log4perl.appender.FileAppender.layout.ConversionPattern = %d %F{1}: %M %L> %m %n
-);
+my $logger_conf = sprintf("%s\n%s\n%s\n%s\n%s\n",
+                          "  log4perl.logger                         = DEBUG, FileAppender",
+                          "  log4perl.appender.FileAppender          = Log::Log4perl::Appender::File",
+                          sprintf("  log4perl.appender.FileAppender.filename = /tmp/pre-commit.%s.log", $$,
+                          "  log4perl.appender.FileAppender.layout   = Log::Log4perl::Layout::PatternLayout",
+                          "  log4perl.appender.FileAppender.layout.ConversionPattern = %d %F{1}: %M %L> %m %n");
 
 Log::Log4perl->init( \$logger_conf );
 
