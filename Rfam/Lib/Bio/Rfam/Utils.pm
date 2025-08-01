@@ -2494,6 +2494,10 @@ sub genbank_nse_lookup_and_md5 {
   if(! defined $nattempts) { $nattempts = 1; }
   if(! defined $nseconds)  { $nseconds  = 3; }
 
+  if(id_looks_like_rnacentral($name)) {
+    return (0, 0, undef); # RNAcentral seq, just return
+  }
+
   # $nse will have end < start if it is negative strand, but we can't fetch from ENA
   # with an end coord less than start, so if we are negative strand, we need to fetch
   # the positive strand, and then revcomp it later.
@@ -2511,25 +2515,22 @@ sub genbank_nse_lookup_and_md5 {
   my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
   my $url = sprintf("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=%s&rettype=fasta&retmode=text&from=%d&to=%d&api_key=%s", $name, $qstart, $qend, $api_key);
   my $got_url = get($url);
-  my $looks_like_rnacentral = id_looks_like_rnacentral($name);
 
   if(! defined $got_url) {
-    if(! $looks_like_rnacentral) {
-      # if NCBI is being hit by a bunch of requests, the get() command
-      # may fail in that $got_url may be undefined. If that happens we
-      # wait a few seconds ($nseconds) and try again (up to
-      # $nattempts) times BUT we only do this for sequences that
-      # don't look like they are RNAcentral ids. For sequences that
-      # look like they are RNAcentral ids we do not do more attempts.
-      my $attempt_ctr = 1;
-      while((! defined $got_url) && ($attempt_ctr < $nattempts)) {
-        sleep($nseconds);
-        $got_url = get($url);
-        $attempt_ctr++;
-      }
-      if(($attempt_ctr >= $nattempts) && (! defined $got_url)) {
-        croak "ERROR trying to fetch sequence info for $name from genbank, reached maximum allowed number of attempts ($nattempts)";
-      }
+    # if NCBI is being hit by a bunch of requests, the get() command
+    # may fail in that $got_url may be undefined. If that happens we
+    # wait a few seconds ($nseconds) and try again (up to
+    # $nattempts) times BUT we only do this for sequences that
+    # don't look like they are RNAcentral ids. For sequences that
+    # look like they are RNAcentral ids we do not do more attempts.
+    my $attempt_ctr = 1;
+    while((! defined $got_url) && ($attempt_ctr < $nattempts)) {
+      sleep($nseconds);
+      $got_url = get($url);
+      $attempt_ctr++;
+    }
+    if(($attempt_ctr >= $nattempts) && (! defined $got_url)) {
+      croak "ERROR trying to fetch sequence info for $name from genbank, reached maximum allowed number of attempts ($nattempts)";
     }
   }
   elsif($got_url !~ m/^>/) {
@@ -2620,34 +2621,34 @@ sub genbank_fetch_seq_info {
     $info_HHR->{$name}{"length"}      = "-";
     $info_HHR->{$name}{"mol_type"}    = "-";
 
-    my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
-    my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str . "&api_key=" . $api_key;
-    my $xml = undef;
-    my $xml_string = get($genbank_url);
-    my $xml_valid = 0;
-    if(defined $xml_string) {
-      # Previously, we tried to substitute out the GBSeq_sequence and translation lines
-      # but in Sept 2022 this was identified as a bottleneck for at least some families
-      # these substitution commands are now commented out but left here for reference.
-      # The motivation for them in the first place was to save memory so if memory
-      # does not become an issue it should be fine to leave them commented out.
-      # However, if we do want to put the substitution commands back in, an alternative
-      # strategy might be to add a 'usleep(0.1)' call just prior to the substitution
-      # commands. In 2019 testing, this seemed to work when I encountered flakiness
-      # related to these substitution commands (see git commits on 7/9/2019, e.g. d1547f8)
-      # --------------
-      ## to save memory, remove sequence info from the xml_string since we don't need it
-      ## remove <GBSeq_sequence> lines
-      #$xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
-      ## remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
-      #$xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
-      $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
-      if($@) { $xml_valid = 0; }
-      else   { $xml_valid = 1; }
-    }
+    if(! $looks_like_rnacentral) { 
+      my $api_key = "472570bf7f5d4d9d52023765697b4957fa08";
+      my $genbank_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&retmode=xml&id=" . $name_str . "&api_key=" . $api_key;
+      my $xml = undef;
+      my $xml_string = get($genbank_url);
+      my $xml_valid = 0;
+      if(defined $xml_string) {
+        # Previously, we tried to substitute out the GBSeq_sequence and translation lines
+        # but in Sept 2022 this was identified as a bottleneck for at least some families
+        # these substitution commands are now commented out but left here for reference.
+        # The motivation for them in the first place was to save memory so if memory
+        # does not become an issue it should be fine to leave them commented out.
+        # However, if we do want to put the substitution commands back in, an alternative
+        # strategy might be to add a 'usleep(0.1)' call just prior to the substitution
+        # commands. In 2019 testing, this seemed to work when I encountered flakiness
+        # related to these substitution commands (see git commits on 7/9/2019, e.g. d1547f8)
+        # --------------
+        ## to save memory, remove sequence info from the xml_string since we don't need it
+        ## remove <GBSeq_sequence> lines
+        #$xml_string =~ s/[^\n]+\<GBSeq\_sequence\>\w+\<\/GBSeq\_sequence\>\n//g;
+        ## remove <GBQualifier>\n<GBQualifer_name>translation\nGBQualifier_value\n<\GBQualifier> sets of 4 lines
+        #$xml_string =~ s/[^\n]+\<GBQualifier\>\n[^\n]+\<GBQualifier\_name\>translation\<\/GBQualifier\_name\>\n[^\n]+\<GBQualifier\_value\>\w+\<\/GBQualifier\_value\>\n[^\n]+\<\/GBQualifier\>\n//g;
+        $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+        if($@) { $xml_valid = 0; }
+        else   { $xml_valid = 1; }
+      }
 
-    if(! $xml_valid) {
-      if(! $looks_like_rnacentral) {
+      if(! $xml_valid) {
         # the get() command either failed (returned undef) or
         # returned an invalid xml string, either way we
         # wait a few seconds ($nseconds) and try again (up to
@@ -2680,95 +2681,95 @@ sub genbank_fetch_seq_info {
           croak "ERROR trying to fetch sequence data for sequence $name from genbank, reached maximum allowed number of attempts ($attempt_ctr)";
         }
       }
-    }
-    else {
-      # if we get here: we know that $xml_string is defined and valid
-      # and $xml is ready for parsing
-      foreach my $gbseq ($xml->findnodes('//GBSeq')) {
-        my $accver = $gbseq->findvalue('./GBSeq_accession-version');
-        if(! defined $accver) {
-          croak "ERROR in $sub_name problem parsing XML, no accession-version read";
-        }
-        if(! exists $info_HHR->{$accver}) {
-          croak "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver";
-        }
-
-        my $description = $gbseq->findvalue('./GBSeq_definition');
-        if(! defined $description) {
-          croak "ERROR in $sub_name problem parsing XML, no definition (description) read";
-        }
-        $info_HHR->{$accver}{"description"} = $description;
-
-        my $length = $gbseq->findvalue('./GBSeq_length');
-        if(! defined $length) {
-          croak "ERROR in $sub_name problem parsing XML, no length read";
-        }
-        $info_HHR->{$accver}{"length"} = $length;
-
-        # for taxid and mol_type, we have to fetch from Qualifier_values, and may have more than 1
-        # in that case, they will be concatenated together
-        my $taxid_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
-        my $taxid = undef;
-        my $orig_taxid_val = $taxid_val;
-        if(! defined $taxid_val) {
-          croak "ERROR in $sub_name did not read taxon info for $accver";
-        }
-        # $taxid_val will be concatenation of taxon:<\d+> N >= 1 times, we want to make sure <\d+> is equivalent all N instances
-        while($taxid_val =~ /^taxon\:(\d+)/) {
-          my $cur_taxid = $1;
-          if(! defined $taxid) { # first taxid
-            $taxid = $cur_taxid;
+      else {
+        # if we get here: we know that $xml_string is defined and valid
+        # and $xml is ready for parsing
+        foreach my $gbseq ($xml->findnodes('//GBSeq')) {
+          my $accver = $gbseq->findvalue('./GBSeq_accession-version');
+          if(! defined $accver) {
+            croak "ERROR in $sub_name problem parsing XML, no accession-version read";
           }
-          elsif($cur_taxid != $taxid) {
-            ; # do nothing, see comment below
-            # Change Jan 29, 2021: if multiple taxids are returned for a single accession,
-            # always use the first one and don't complain. Previously we would fail here
-            # with following croak:
-            #croak "ERROR in $sub_name for $accver, > 1 taxids read: $taxid and $cur_taxid\nFull taxon values read: $orig_taxid_val\n";
+          if(! exists $info_HHR->{$accver}) {
+            croak "ERROR in $sub_name problem parsing XML, unexpected accession.version $accver";
           }
-          $taxid_val =~ s/^taxon\:(\d+)//;
-        }
-        if($taxid_val ne "") {
-          croak "ERROR in $sub_name could not parse taxon info $accver\nFull taxon values read: $orig_taxid_val\n";
-        }
-        $info_HHR->{$accver}{"ncbi_id"} = $taxid;
-
-        # mol_type is like taxid in that we may fetch more than one value concatenated together
-        # but more complicated because we don't have the 'taxon:' at the beginning to use to parse
-        # to determine the single value that we want
-        # For example if we have more than 3 mol_type qualifiers, they will just be concatenated
-        # together like "genomic DNAgenomic DNAgenomic DNA" and the single value we want is
-        # "genomic DNA". To figure out the single value we assume it is repeated N times,
-        # determine N, then determine its length, use substr to get it, and then verify
-        # we have that same single value concatenated N times.
-        my $mol_type_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
-        my $mol_type = undef;
-        my $orig_mol_type_val = $mol_type_val;
-        my $nmol_type = $gbseq->findvalue('count(./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value)');
-        # the value we want ($mol_type) is concatenated $nmol_type times together in $mol_type_val, determine what it is, croaking if we can't
-        if((length($mol_type_val) % ($nmol_type)) != 0) {
-          croak "ERROR in $sub_name could not parse mol_type info $mol_type_val\n";
-        }
-        my $mol_type_len = int((length($mol_type_val) / $nmol_type) + 0.01);
-        my $mol_type_val_start = 0;
-        while($mol_type_val_start < $mol_type_len) {
-          my $cur_mol_type = substr($mol_type_val, $mol_type_val_start, $mol_type_len);
-          if(! defined $mol_type) {
-            $mol_type = $cur_mol_type;
+          
+          my $description = $gbseq->findvalue('./GBSeq_definition');
+          if(! defined $description) {
+            croak "ERROR in $sub_name problem parsing XML, no definition (description) read";
           }
-          elsif($cur_mol_type ne $mol_type) {
-            croak "ERROR in $sub_name for $accver, > 1 mol_types read: $mol_type and $cur_mol_type\nFull mol_type values read: $orig_mol_type_val\n";
+          $info_HHR->{$accver}{"description"} = $description;
+          
+          my $length = $gbseq->findvalue('./GBSeq_length');
+          if(! defined $length) {
+            croak "ERROR in $sub_name problem parsing XML, no length read";
           }
-          $mol_type_val_start += $mol_type_len;
+          $info_HHR->{$accver}{"length"} = $length;
+          
+          # for taxid and mol_type, we have to fetch from Qualifier_values, and may have more than 1
+          # in that case, they will be concatenated together
+          my $taxid_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_value[starts-with(text(), "taxon:")]');
+          my $taxid = undef;
+          my $orig_taxid_val = $taxid_val;
+          if(! defined $taxid_val) {
+            croak "ERROR in $sub_name did not read taxon info for $accver";
+          }
+          # $taxid_val will be concatenation of taxon:<\d+> N >= 1 times, we want to make sure <\d+> is equivalent all N instances
+          while($taxid_val =~ /^taxon\:(\d+)/) {
+            my $cur_taxid = $1;
+            if(! defined $taxid) { # first taxid
+              $taxid = $cur_taxid;
+            }
+            elsif($cur_taxid != $taxid) {
+              ; # do nothing, see comment below
+              # Change Jan 29, 2021: if multiple taxids are returned for a single accession,
+              # always use the first one and don't complain. Previously we would fail here
+              # with following croak:
+              #croak "ERROR in $sub_name for $accver, > 1 taxids read: $taxid and $cur_taxid\nFull taxon values read: $orig_taxid_val\n";
+            }
+            $taxid_val =~ s/^taxon\:(\d+)//;
+          }
+          if($taxid_val ne "") {
+            croak "ERROR in $sub_name could not parse taxon info $accver\nFull taxon values read: $orig_taxid_val\n";
+          }
+          $info_HHR->{$accver}{"ncbi_id"} = $taxid;
+          
+          # mol_type is like taxid in that we may fetch more than one value concatenated together
+          # but more complicated because we don't have the 'taxon:' at the beginning to use to parse
+          # to determine the single value that we want
+          # For example if we have more than 3 mol_type qualifiers, they will just be concatenated
+          # together like "genomic DNAgenomic DNAgenomic DNA" and the single value we want is
+          # "genomic DNA". To figure out the single value we assume it is repeated N times,
+          # determine N, then determine its length, use substr to get it, and then verify
+          # we have that same single value concatenated N times.
+          my $mol_type_val = $gbseq->findvalue('./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value');
+          my $mol_type = undef;
+          my $orig_mol_type_val = $mol_type_val;
+          my $nmol_type = $gbseq->findvalue('count(./GBSeq_feature-table/GBFeature/GBFeature_quals/GBQualifier/GBQualifier_name[text()="mol_type"]/following-sibling::GBQualifier_value)');
+          # the value we want ($mol_type) is concatenated $nmol_type times together in $mol_type_val, determine what it is, croaking if we can't
+          if((length($mol_type_val) % ($nmol_type)) != 0) {
+            croak "ERROR in $sub_name could not parse mol_type info $mol_type_val\n";
+          }
+          my $mol_type_len = int((length($mol_type_val) / $nmol_type) + 0.01);
+          my $mol_type_val_start = 0;
+          while($mol_type_val_start < $mol_type_len) {
+            my $cur_mol_type = substr($mol_type_val, $mol_type_val_start, $mol_type_len);
+            if(! defined $mol_type) {
+              $mol_type = $cur_mol_type;
+            }
+            elsif($cur_mol_type ne $mol_type) {
+              croak "ERROR in $sub_name for $accver, > 1 mol_types read: $mol_type and $cur_mol_type\nFull mol_type values read: $orig_mol_type_val\n";
+            }
+            $mol_type_val_start += $mol_type_len;
+          }
+          if($mol_type_val_start != $mol_type_len) {
+            croak "ERROR in $sub_name could not parse mol_type value for $accver\nFull mol_type values read: $orig_mol_type_val\n";
+          }
+          $info_HHR->{$accver}{"mol_type"} = $mol_type;
+          
+          $info_HHR->{$accver}{"source"} = "SEED:GenBank";
         }
-        if($mol_type_val_start != $mol_type_len) {
-          croak "ERROR in $sub_name could not parse mol_type value for $accver\nFull mol_type values read: $orig_mol_type_val\n";
-        }
-        $info_HHR->{$accver}{"mol_type"} = $mol_type;
-
-        $info_HHR->{$accver}{"source"} = "SEED:GenBank";
-      }
-    } # end of 'else' entered if $xml_string is defined
+      } # end of 'else' entered if $xml_string is defined
+    } # end of 'if(! $looks_like_rnacentral)'
   } # end of 'for' loop over seq names for fetching and adding data per seq name
 
   return;
