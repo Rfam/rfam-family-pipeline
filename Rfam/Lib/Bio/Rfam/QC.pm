@@ -1822,7 +1822,7 @@ sub findInternalOverlaps {
         $overlap;
         print $OVERLAP $eString;
         print STDERR $eString;
-	# $error = 1;
+        $error = 1;
       }
     }
   }
