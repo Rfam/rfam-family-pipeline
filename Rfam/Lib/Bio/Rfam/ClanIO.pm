@@ -124,9 +124,6 @@ sub loadClanFromSVN {
 }
 
 
-# parseDESC: normally takes two arguments, but if we want to allow
-# the --hmmonly option in 'SM' pass a third argument: '1'.
-
 sub parseDESC {
   my ( $self, $file) = @_;
 
@@ -314,6 +311,7 @@ sub parseDESC {
     REFLINE:
       foreach ( my $j = $i ; $j <= $#file ; $j++ ) {
         chomp($file[$j]);
+        $file[$j] =~ s/\s+$//; # remove any trailing whitespace
         if($file[$j] =~ /\t/ or $file[$j] =~ /\s$/ ){
           croak("A terminal whitespace found in |$file[$j]| of your DESC file!\n");
         }
