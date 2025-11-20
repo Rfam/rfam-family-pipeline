@@ -758,12 +758,13 @@ sub checkClanFixedFields {
   Function : Checks that certain fields in the DESC have not changed between
            : different the checked-in and modified versions
   Args     : Bio::Rfam::Family object for both the old and updated families.
+           : $force_tag_HR, ref to hash of tags to allow to be changed overriding defaults
   Returns  : 1 on error, 0 on success.
 
 =cut
 
 sub checkNonFreeText {
-  my($upFamilyObj, $oldFamilyObj) = @_;
+  my($upFamilyObj, $oldFamilyObj, $force_tag_HR) = @_;
   #Check that none of the lines that should not be touch are not
 
   #Need to check that we have correct objects.
@@ -776,26 +777,28 @@ sub checkNonFreeText {
   }
 
   #The list of fields  that cannot be altered are:
-  # NC, TC, GA,
+  # NC, TC, GA
   my $error = 0;
-  foreach my $tag (qw(NC TC GA)) {
+  foreach my $tag (qw(NC TC GA)) { # we ignore $force_tag_HR here, don't allow caller to override these
     my $ftag = 'CUT'.$tag;
     unless ( $oldFamilyObj->DESC->$ftag eq $upFamilyObj->DESC->$ftag )
     {
       warn
-"There is a differnce in your $tag lines between what is in the SVN repository and this local copy.".
-        " You can not do this when only commint a DESC file!\n";
+          "There is a differnce in your $tag lines between what is in the SVN repository and this local copy.".
+          " You can not do this when only commint a DESC file!\n";
       $error = 1;
     }
   }
 
-  #ID, AC, PI, SE, SS, BM, SM
+  #ID, AC, PI, SE, SS, BM, SM, CB, CL
   foreach my $tag (qw(ID AC PI SE BM SM CB CL)) {
     next unless(defined($oldFamilyObj->DESC->$tag));
     unless ( $oldFamilyObj->DESC->$tag eq $upFamilyObj->DESC->$tag ) {
-      warn
+      if((! defined $force_tag_HR) || (! defined $force_tag_HR->{$tag})) {  # allow caller to override
+        warn
 "You are only checking in the DESC file, yet the $tag line has change. You can not do this!\n";
-      $error = 1;
+        $error = 1;
+      }
     }
   }
 
