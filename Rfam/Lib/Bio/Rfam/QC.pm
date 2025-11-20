@@ -1819,7 +1819,7 @@ sub findInternalOverlaps {
         $overlap;
         print $OVERLAP $eString;
         print STDERR $eString;
-        $error = 1;
+	# $error = 1;
       }
     }
   }
@@ -1857,7 +1857,7 @@ sub codingSeqs {
   my @cmd = qw(RNAcode -s -p );
   push(@cmd, $pvalue, $filename);
   my($out, $err, $in);
-  run \@cmd, \$in, \$out, \$err, or die "FATAL: Error running RNAcode: $?";
+  run \@cmd, \$in, \$out, \$err, or die "FATAL: Error running RNAcode: $?\n$out\n$err";
   if($out =~ /No significant coding regions found/ || $err =~ /Skipping alignment\. There must be at least three sequences in the alignment\./){
     #No errors, or alignment too small to check for coding seqs
     return 0;
