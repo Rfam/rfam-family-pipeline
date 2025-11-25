@@ -16,7 +16,8 @@ use Bio::Rfam::QC;
 #-------------------------------------------------------------------------------
 # Deal with all of the options
 
-my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan );
+my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan, $force_se_tag );
+$force_se_tag = undef;
 
 &GetOptions(
   "m=s"              => \$message,
@@ -25,6 +26,7 @@ my ( $message, @ignore, $preseed, $onlydesc, $help, $addToClan, $removeFromClan 
   "onlydesc"         => \$onlydesc,
   "add_to_clan"      => \$addToClan,
   "remove_from_clan" => \$removeFromClan,
+  "force_se_tag"     => \$force_se_tag,
   "help"             => \$help
 ) or die "Unrecognised option passed in to the script.\n";
 
@@ -158,11 +160,15 @@ if ( defined($upFamilyObj->DESC->CL) and !defined($oldFamilyObj->DESC->CL)){
 my $acc = defined($upFamilyObj->DESC->AC) ? $upFamilyObj->DESC->AC : '';
 my $overrideHashRef = Bio::Rfam::QC::processIgnoreOpt(\@ignore, $config, $acc);
 
+my %force_tag_H = ();
+if((defined $force_se_tag) && ($force_se_tag)) {
+  $force_tag_H{"SE"} = 1;
+}
 
 my $error = 0;
 if ($onlydesc) {
   #If people are only making an annotation change....We just need to check this.
-  $error = Bio::Rfam::QC::checkNonFreeText($upFamilyObj, $oldFamilyObj);
+  $error = Bio::Rfam::QC::checkNonFreeText($upFamilyObj, $oldFamilyObj, \%force_tag_H);
   die "You have modified illegal fields.\n" if($error);
   $error = Bio::Rfam::QC::checkDESCFormat( $upFamilyObj ) if(!$error);
   die "DESC fails format QC.\n" if($error);
@@ -218,22 +224,23 @@ AIM: To perform quality control checks on an existing family and commit to the S
 
 OPTIONS:
 
+  -m                - Specify the message that describes the changes you have made to this family
+                      on the command line, avoid being prompted for it at a later stage.
+  -i <option>       - Ignore some of the QC steps to speed up check-in or get family through.
+                      Valid options are: 'overlap', 'spell', 'coding', 'seed', 'missing', 'length'
+                      and 'seedrf'. 
+                      To skip more than one, use -i <s> multiple times
+  -preseed            Use this flag to update an old Rfam family that does not yet have SEEDTBLOUT
+                      and SEEDSCORES files in the SVN.
   -onlydesc         - Speeds up check-ins a bit by avoiding the QC and only updating the contents
                       in the DESC file.  Do not change DESC contents that affect the other files,
                       particularly cut-offs. Useful for when making updates to annotation or
                       adding a family to a clan. If you are uncertain of what you are doing, do
                       not use this option.
-  -i <option>       - Ignore some of the QC steps to speed up check-in or get family through.
-                      Valid options are: 'overlap', 'spell', 'coding', 'seed', 'missing', 'length'
-                      and 'seedrf'. 
-                      To skip more than one, use -i <s> multiple times
-  -m                - Specify the message that describes the changes you have made to this family
-                      on the command line, avoid being prompted for it at a later stage.
   -add_to_clan      - Use this flag along with a new CL line in the DESC file to add a family to a clan.
   -remove_from_clan - Use this flag and delete a CL line from the DESC file to remove a family from
                       a clan. The flag confirms that clan removal is intentional.
-  -preseed            Use this flag to update an old Rfam family that does not yet have SEEDTBLOUT
-                      and SEEDSCORES files in the SVN.
+  -force_se_tag     - With --onlydesc, allow change of SE field value
 EOF
 
 exit(1);
