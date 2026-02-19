@@ -515,9 +515,11 @@ sub writeDESC {
           }
           print D "RN   [" . $ref->{RN} . "]\n";
           print D "RM   " . $ref->{RM} . "\n";
-          print D wrap( "RT   ", "RT   ", $ref->{RT} );
+          (my $rt = $ref->{RT}) =~ s/\s+$//;
+          print D wrap( "RT   ", "RT   ", $rt );
           print D "\n";
-          print D wrap( "RA   ", "RA   ", $ref->{RA} );
+          (my $ra = $ref->{RA}) =~ s/\s+$//;
+          print D wrap( "RA   ", "RA   ", $ra );
           print D "\n";
           print D "RL   " . $ref->{RL} . "\n";
 

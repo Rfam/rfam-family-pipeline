@@ -1017,6 +1017,7 @@ sub parseDESC {
     REFLINE:
       foreach ( my $j = $i ; $j <= $#file ; $j++ ) {
         chomp($file[$j]);
+        $file[$j] =~ s/\s+$//; # remove any trailing whitespace
         if($file[$j] =~ /\t/ or $file[$j] =~ /\s$/ ){
           croak("A terminal whitespace found in |$file[$j]| of your DESC file!\n");
         }
@@ -1286,9 +1287,11 @@ sub writeDESC {
           }
           print D "RN   [" . $ref->{RN} . "]\n";
           print D "RM   " . $ref->{RM} . "\n";
-          print D wrap( "RT   ", "RT   ", $ref->{RT} );
+          (my $rt = $ref->{RT}) =~ s/\s+$//;
+          print D wrap( "RT   ", "RT   ", $rt );
           print D "\n";
-          print D wrap( "RA   ", "RA   ", $ref->{RA} );
+          (my $ra = $ref->{RA}) =~ s/\s+$//;
+          print D wrap( "RA   ", "RA   ", $ra );
           print D "\n";
           print D "RL   " . $ref->{RL} . "\n";
 
