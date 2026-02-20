@@ -140,7 +140,7 @@ my $error = 0;
 my $overlapIgnore = {};
 
 #Okay, this a full check-in, perform whole QC repetoire.
-$error = Bio::Rfam::QC::essential($newFamObj, "$pwd/$family", undef, $config);
+$error = Bio::Rfam::QC::essential($newFamObj, "$pwd/$family", undef, $config, $overrideHashRef);
 die "Failed essential QC step.\n" if($error);
 $error = Bio::Rfam::QC::optional( $newFamObj, "$pwd/$family", undef, 
                                     $config, $overrideHashRef, $overlapIgnore );

@@ -176,7 +176,7 @@ if ($onlydesc) {
   my $overlapIgnore = {};
   $overlapIgnore->{$acc} = 1;
   #Okay, this a full check-in, perform whole QC repetoire.
-  $error = Bio::Rfam::QC::essential($upFamilyObj, "$pwd/$family", $oldFamilyObj, $config);
+  $error = Bio::Rfam::QC::essential($upFamilyObj, "$pwd/$family", $oldFamilyObj, $config, $overrideHashRef);
   die "Failed essential QC step.\n" if($error);
 
   printf("calling optional checks\n");
