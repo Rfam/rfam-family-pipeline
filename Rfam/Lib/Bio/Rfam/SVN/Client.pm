@@ -623,9 +623,9 @@ sub addFamily {
   my $url = $self->newFamilyLocation;
   print "$url\n";
 
-  #Generate a new tempdir
+  #Generate a new tempdir; resolve any symlinks so SVN gets a canonical path
   my $dir  = File::Temp->newdir();
-  my $dest = $dir . "/ModelsPending";
+  my $dest = (Cwd::abs_path("$dir") // "$dir") . "/ModelsPending";
 
   #Now check out the latest version the holding area.
   eval {
@@ -1535,9 +1535,9 @@ sub addClan {
   #Repository location of where to put new families
   my $url = $self->newClanLocation;
 
-  #Generate a new tempdir
+  #Generate a new tempdir; resolve any symlinks so SVN gets a canonical path
   my $dir  = File::Temp->newdir('CLEANUP' => 1);
-  my $dest = $dir . "/ClansPending";
+  my $dest = (Cwd::abs_path("$dir") // "$dir") . "/ClansPending";
 
   #Now check out the latest version the holding area.
   eval {
