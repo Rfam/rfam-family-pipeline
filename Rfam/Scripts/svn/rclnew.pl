@@ -100,7 +100,6 @@ unless ( $newClanObj->DESC->ID ) {
 #should be removed immediately into the main repository.
 
 $client->checkNewClanDoesNotExist($newClanObj->DESC->ID );
-print STDERR "DEBUG: passed checkNewClanDoesNotExist\n";
 
 #-------------------------------------------------------------------------------
 #Perform the QC on the clan
@@ -109,7 +108,6 @@ print STDERR "DEBUG: passed checkNewClanDoesNotExist\n";
 my $error = 0;
 $error = Bio::Rfam::QC::essentialClan($newClanObj, undef, $config);
 die "Failed essential QC step.\n" if($error);
-print STDERR "DEBUG: passed essentialClan QC\n";
 
 #-------------------------------------------------------------------------------
 #Automatically write the 'new' message and add it the binding.
@@ -118,7 +116,6 @@ open( M, ">.default" . $$ . "rclnew" )
 print M $newClanObj->DESC->ID . " deposited\n";
 close M;
 $client->addRCLNEWLog();
-print STDERR "DEBUG: about to call addClan\n";
 
 #-------------------------------------------------------------------------------
 #If we get here, then great! We can now add the clan!
