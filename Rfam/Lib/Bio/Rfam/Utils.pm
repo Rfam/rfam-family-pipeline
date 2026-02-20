@@ -2991,26 +2991,25 @@ sub rnacentral_md5_lookup {
 sub rnacentral_id_lookup {
   my ( $in_id ) = @_;
 
-  my $rnacentral_url = "https://rnacentral.org/api/v1/rna?rnacentral_id5=" . $in_id;
+  my $rnacentral_url = "https://rnacentral.org/api/v1/rna/" . $in_id . "/?format=json";
   #printf("rnacentral_url: $rnacentral_url\n");
   my $json = get($rnacentral_url);
-  if(! defined $json) { croak "ERROR trying to fetch from rnacentral using id: " . $in_id; }
-  # Decode the entire JSON
-  my $decoded_json = decode_json($json);
-  #print Dumper $decoded_json;
 
   my $have_seq = 0;
   my $md5    = undef;
   my $desc   = undef;
   my $length = undef;
 
-  if((defined $decoded_json->{'results'}) &&
-     (defined $decoded_json->{'results'}[0]{'md5'}) &&
-     (defined $decoded_json->{'results'}[0]{'rnacentral_id'})) {
-    $have_seq = 1;
-    $md5    = $decoded_json->{'results'}[0]{'md5'};
-    $desc   = $decoded_json->{'results'}[0]{'description'};
-    $length = $decoded_json->{'results'}[0]{'length'};
+  if(defined $json) {
+    # Decode the entire JSON
+    my $decoded_json = decode_json($json);
+    #print Dumper $decoded_json;
+    if(defined $decoded_json->{'rnacentral_id'}) {
+      $have_seq = 1;
+      $md5    = $decoded_json->{'md5'};
+      $desc   = $decoded_json->{'description'};
+      $length = $decoded_json->{'length'};
+    }
   }
   return ($have_seq, $md5, $desc, $length);
 }
