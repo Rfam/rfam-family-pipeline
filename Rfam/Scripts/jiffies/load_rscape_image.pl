@@ -82,11 +82,11 @@ if (-e $rscape_cyk_img){
 	gzip $rscape_cyk_img => \$rscapeCykGzipped;
 	my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                    {    rfam_acc => $family,
-                        type => 'rscape-cyk'},
+                        type => 'rscape-cacofold'},
                    {    key => 'acc_and_type'});
 
 	$fam_cyk_entry->update({image => $rscapeCykGzipped,
-                        type => 'rscape-cyk'},
+                        type => 'rscape-cacofold'},
                    {    key => 'acc_and_type'});
 }
                    

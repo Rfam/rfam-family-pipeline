@@ -161,11 +161,11 @@ sub makeRscape{
         #load image to the database
         my $fam_cyk_entry = $rfamdb->resultset('SecondaryStructureImage')->find_or_create(
                             {    rfam_acc => $rfam_acc,
-                                type => 'rscape-cyk'},
+                                type => 'rscape-cacofold'},
                             {    key => 'acc_and_type'});
 
         $fam_cyk_entry->update({    image => $rscapeCykGzipped,
-                                type => 'rscape-cyk'},
+                                type => 'rscape-cacofold'},
                             {    key => 'acc_and_type'});
         }
 
