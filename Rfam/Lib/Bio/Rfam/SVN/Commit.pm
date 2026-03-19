@@ -80,7 +80,11 @@ sub commitEntry {
   ( $familyObj, $family, $dir ) = $self->_getEntryObjFromTrans( $familyIO, 0 );
   $self->{logger}->debug( 'got a family object; committing' );
 
-  $self->_commitEntry($familyObj);
+  eval { $self->_commitEntry($familyObj); };
+  if ($@) {
+    (my $err = $@) =~ s/[^\x00-\x7F]/?/g;
+    die $err;
+  }
 
 }
 
