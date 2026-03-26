@@ -1018,8 +1018,8 @@ sub parseDESC {
       foreach ( my $j = $i ; $j <= $#file ; $j++ ) {
         chomp($file[$j]);
         $file[$j] =~ s/\s+$//; # remove any trailing whitespace
-        if($file[$j] =~ /\t/ or $file[$j] =~ /\s$/ ){
-          croak("A terminal whitespace found in |$file[$j]| of your DESC file!\n");
+        if ( $file[$j] =~ /\t/ ) {
+          croak("A tab character was found in |$file[$j]| of your DESC file (tabs are not allowed).\n");
         }
         if ( $file[$j] =~ /^(\w{2})\s{3}(.*?);?$/ ) {
           my $thisTag = $1;
