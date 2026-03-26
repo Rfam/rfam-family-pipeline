@@ -274,18 +274,15 @@ sub checkFamilyExists {
 sub checkNewFamilyDoesNotExist {
   my ( $self, $entry ) = @_;
 
-  my $url     = $self->newFamilyLocation . "/" . $entry;
-  my $codeRef = sub {
-    my ( $path, $info, $pool ) = @_;
-    unless ($info) {
-      die "$path is invalid\n";
-    }
-  };
+  # Use ls on the parent URL rather than info on the (non-existent) child path.
+  # SVN 1.14.x triggers a uri_skip_ancestor assertion when info is called on
+  # a path that does not exist in the repository.
+  my $parent_url = $self->newFamilyLocation;
+  my $entries;
+  eval { $entries = $self->{txn}->ls( $parent_url, 'HEAD', 0 ); };
 
-  #This should throw a warning!
-  eval { $self->{txn}->info( $url, undef, 'HEAD', $codeRef, 0 ); };
-
-  unless ($@) {
+  if ( !$@ && defined $entries && exists $entries->{$entry} ) {
+    my $url = $parent_url . "/" . $entry;
     confess( "$entry exist in the repository, at $url.  "
         . "This should not happen, as the new family should be moved into "
         . "the repository shortly after being added.  Please try again in a "
@@ -623,9 +620,9 @@ sub addFamily {
   my $url = $self->newFamilyLocation;
   print "$url\n";
 
-  #Generate a new tempdir
+  #Generate a new tempdir; resolve any symlinks so SVN gets a canonical path
   my $dir  = File::Temp->newdir();
-  my $dest = $dir . "/ModelsPending";
+  my $dest = (Cwd::abs_path("$dir") // "$dir") . "/ModelsPending";
 
   #Now check out the latest version the holding area.
   eval {
@@ -1498,20 +1495,17 @@ sub addRCLNEWLog {
 sub checkNewClanDoesNotExist {
   my ( $self, $entry ) = @_;
 
-  my $url     = $self->newClanLocation . "/" . $entry;
-  my $codeRef = sub {
-    my ( $path, $info, $pool ) = @_;
-    unless ($info) {
-      die "$path is invalid\n";
-    }
-  };
+  # Use ls on the parent URL rather than info on the (non-existent) child path.
+  # SVN 1.14.x triggers a uri_skip_ancestor assertion when info is called on
+  # a path that does not exist in the repository.
+  my $parent_url = $self->newClanLocation;
+  my $entries;
+  eval { $entries = $self->{txn}->ls( $parent_url, 'HEAD', 0 ); };
 
-  #This should throw a warning!
-  eval { $self->{txn}->info( $url, undef, 'HEAD', $codeRef, 0 ); };
-
-  unless ($@) {
+  if ( !$@ && defined $entries && exists $entries->{$entry} ) {
+    my $url = $parent_url . "/" . $entry;
     confess( "$entry exist in the repository, at $url.  "
-        . "This should not happen, as the new family should be moved into "
+        . "This should not happen, as the new clan should be moved into "
         . "the repository shortly after being added.  Please try again in a "
         . "few minutes, if the problem persists, then something is wrong!\n" );
   }
@@ -1535,9 +1529,9 @@ sub addClan {
   #Repository location of where to put new families
   my $url = $self->newClanLocation;
 
-  #Generate a new tempdir
+  #Generate a new tempdir; resolve any symlinks so SVN gets a canonical path
   my $dir  = File::Temp->newdir('CLEANUP' => 1);
-  my $dest = $dir . "/ClansPending";
+  my $dest = (Cwd::abs_path("$dir") // "$dir") . "/ClansPending";
 
   #Now check out the latest version the holding area.
   eval {

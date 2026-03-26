@@ -3040,7 +3040,18 @@ sub rnacentral_subseq_lookup {
 
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna/" . $urs . ".fasta";
   my $fasta = get($rnacentral_url);
-  if(! defined $fasta) { croak "ERROR trying to fetch fasta from RNAcentral $rnacentral_url"; }
+  if(! defined $fasta) {
+    my $attempt_ctr = 1;
+    while((! defined $fasta) && ($attempt_ctr < 10)) {
+      sleep(3);
+      $fasta = get($rnacentral_url);
+      $attempt_ctr++;
+    }
+    if(! defined $fasta) {
+      warn "WARNING: failed to fetch fasta from RNAcentral $rnacentral_url after 10 attempts\n";
+      return (0, undef);
+    }
+  }
 
   my @lines = split(/^/m, $fasta);
   my $sequence = '';

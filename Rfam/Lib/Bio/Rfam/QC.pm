@@ -1877,20 +1877,22 @@ sub codingSeqs {
 
   Title    : essential
   Incept   : finnr, Aug 5, 2013 3:55:24 PM
-  Usage    : Bio::Rfam::QC::essential($newFamilyObj, $dir, $oldFamily, $config)
+  Usage    : Bio::Rfam::QC::essential($newFamilyObj, $dir, $oldFamily, $config, $override)
   Function : Takes the new family and performs all of the essential QC steps on
            : the family. Due to the repetoire of QC, need file location, old family
            : and config objects.
   Args     : Bio::Rfam::Family object for the new family,
            : path to the family,
            : Bio::Rfam::Family object for the old family or undef if new,
-           : A Bio::Rfam::Config object
+           : A Bio::Rfam::Config object,
+           : (optional) hashref of QC steps to skip, e.g. {overlap => 1}
   Returns  : 1 on error, 0 on success.
 
 =cut
 
 sub essential {
-  my ($newFamily, $dir, $oldFamily, $config) = @_;
+  my ($newFamily, $dir, $oldFamily, $config, $override) = @_;
+  if(! defined $override) { $override = {}; }
 
   my $masterError = 0;
   my $error = 0;
@@ -1929,12 +1931,14 @@ sub essential {
     }
   }
 
-  open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
-  $error = findInternalOverlaps($newFamily, $OVERLAP);
-  close($OVERLAP);
-  if($error){
-    warn "Found internal SEED overlaps.\n";
-    $masterError = 1;
+  if(!exists($override->{overlap})){
+    open( my $OVERLAP, '>>', "$dir/overlap") or die "Could not open $dir/overlap:[$!]";
+    $error = findInternalOverlaps($newFamily, $OVERLAP);
+    close($OVERLAP);
+    if($error){
+      warn "Found internal SEED overlaps.\n";
+      $masterError = 1;
+    }
   }
 
   $error = checkIdIsNew($newFamily, $config);

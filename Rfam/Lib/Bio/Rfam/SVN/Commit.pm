@@ -80,7 +80,11 @@ sub commitEntry {
   ( $familyObj, $family, $dir ) = $self->_getEntryObjFromTrans( $familyIO, 0 );
   $self->{logger}->debug( 'got a family object; committing' );
 
-  $self->_commitEntry($familyObj);
+  eval { $self->_commitEntry($familyObj); };
+  if ($@) {
+    (my $err = $@) =~ s/[^\x00-\x7F]/?/g;
+    die $err;
+  }
 
 }
 
@@ -187,7 +191,7 @@ sub _commitEntry {
   $self->{logger}->debug( 'updated author tables' );
   
  
-  if ( scalar(@updated) == 1 and $updated[0] eq 'DESC' ) {
+  if ( scalar(@updated) == 1 and $updated[0] =~ m{/DESC$} ) {
     $self->{logger}->debug( 'only the DESC file was changed' );
   }else{
     #There is more to change than just the DESC file....
@@ -394,10 +398,6 @@ sub _getEntryObjFromTrans {
     }
   }
 
-  print STDERR p(@updated_files);
-  print STDERR p(@added_files);
-  print STDERR p(@deleted_files);
-
   unless ( $path and $family ) {
     confess(
       "Failed to find path [$path] to family [$family] in SVN repository\n");
@@ -565,6 +565,8 @@ sub deleteFamily {
 
 #We should have create the dead row if we get here, so now delete it and let the
 #database cascade the delete.
+  $rfamdb->resultset('MotifFamilyStat')->search( { rfam_acc => $family } )->delete();
+  $self->{logger}->debug( 'deleted motif_family_stats rows for family' );
   $entry->delete();
   $self->{logger}->debug( 'deleted the family' );
   
