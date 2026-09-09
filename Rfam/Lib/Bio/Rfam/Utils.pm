@@ -2821,14 +2821,17 @@ sub ncbi_taxonomy_fetch_taxinfo {
     my $xml_valid = 0;
     if(defined $xml_string) {
       $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
+      # NCBI's throttle response is valid XML but contains no Taxon node at
+      # all, which would otherwise be silently accepted as "valid" and leave
+      # this taxid unpopulated; treat it the same as an invalid response
       if($@) { $xml_valid = 0; }
-      else   { $xml_valid = 1; }
+      else   { $xml_valid = ($xml->findnodes('/TaxaSet/Taxon')->size() > 0) ? 1 : 0; }
     }
 
     if(! $xml_valid) {
-      # the get() command either failed (returned undef) or
-      # returned an invalid xml string, either way we
-      # wait a few seconds ($nseconds) and try again (up to
+      # the get() command either failed (returned undef), returned an
+      # invalid xml string, or returned valid-but-empty (throttled) xml,
+      # either way we wait a few seconds ($nseconds) and try again (up to
       # $nattempts) times BUT we only do this if the ID doesn't look
       # like a RNAcentral ids. If it does, we do not do more attempts.
       my $attempt_ctr = 1;
@@ -2838,7 +2841,7 @@ sub ncbi_taxonomy_fetch_taxinfo {
         if(defined $xml_string) {
           $xml = eval { XML::LibXML->load_xml(string => $xml_string); };
           if($@) { $xml_valid = 0; }
-          else   { $xml_valid = 1; }
+          else   { $xml_valid = ($xml->findnodes('/TaxaSet/Taxon')->size() > 0) ? 1 : 0; }
         }
         $attempt_ctr++;
       }
