@@ -74,7 +74,11 @@ my $masterError = 0;
 eval{
   $error = Bio::Rfam::QC::checkCMFormat($familyObj, $config);
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -96,7 +100,11 @@ eval{
     $error = Bio::Rfam::QC::checkSpell("$pwd/$family", $config->dictionary) if(!$error);
   }
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -113,7 +121,11 @@ $error = 0;
 eval{
   $error = Bio::Rfam::QC::checkOverlaps($familyObj, $config, \%ignore, "$pwd/$family");
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -130,7 +142,11 @@ $error = 0;
 eval{
   $error = Bio::Rfam::QC::ssStats($familyObj, "$pwd/$family");
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -148,7 +164,11 @@ $error = 0;
 eval{
   $error = Bio::Rfam::QC::compareSeedAndSeedScores($familyObj);
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -164,7 +184,11 @@ eval{
     $oldFamilyObj = $familyIO->loadRfamFromLocalFile( $familyObj->DESC->AC, $pwd );
   }
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -176,8 +200,14 @@ eval {
  ($found, $missing) =
    Bio::Rfam::QC::compareOldAndNew($oldFamilyObj, $familyObj);
 };
-if(scalar(@$missing)){
-  print $L $@ if($@);
+if($@) {
+  # this check is deliberately non-fatal (does not increment $masterError),
+  # but a died eval leaves $missing undefined, and dereferencing it below
+  # would itself die uncaught, aborting every later check
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@\t--errors (but non-fatal)";
+}
+elsif(scalar(@$missing)){
   print STDERR "\t--errors (but non-fatal)"
 } else {
   print STDERR "\t--MISSING check completed with no major errors";
@@ -196,7 +226,11 @@ else {
     $error = $error = Bio::Rfam::QC::checkSEEDSeqs($familyObj, $rfamseqObj );
     $error = Bio::Rfam::QC::checkScoresSeqs($familyObj, $rfamseqObj) if(!$error);
   };
-  print $L $@ if($@);
+  if($@) {
+    print $L $@;
+    print STDERR "\n\tERROR: check died: $@";
+    $error = 1;
+  }
   if ($error){
     $masterError++;
     print STDERR "\t--errors"
@@ -217,7 +251,11 @@ else { # -nocoding not enabled
   eval{
     ($error, $coding) = Bio::Rfam::QC::codingSeqs($familyObj, $config);
   };
-  print $L $@ if($@);
+  if($@) {
+    print $L $@;
+    print STDERR "\n\tERROR: check died: $@";
+    $error = 1;
+  }
   if ($error){
     print $L $coding if($coding);
     $masterError++;
@@ -234,7 +272,11 @@ $error = 0;
 eval{
   $error = Bio::Rfam::QC::checkIdIsNew($familyObj, $config);
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
@@ -250,7 +292,11 @@ $error = 0;
 eval{
   $error = Bio::Rfam::QC::checkCMLength($familyObj);
 };
-print $L $@ if($@);
+if($@) {
+  print $L $@;
+  print STDERR "\n\tERROR: check died: $@";
+  $error = 1;
+}
 if ($error){
   $masterError++;
   print STDERR "\t--errors"
