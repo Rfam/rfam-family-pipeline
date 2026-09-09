@@ -13,6 +13,7 @@ use Carp;
 
 use Digest::MD5 qw(md5_hex);
 use LWP::Simple;
+use LWP::UserAgent;
 use JSON qw( decode_json );
 use XML::LibXML;
 use Time::HiRes qw(usleep);
@@ -2933,6 +2934,63 @@ sub ncbi_taxonomy_fetch_taxinfo {
 }
 
 #-------------------------------------------------------------------------------
+=head2 _rnacentral_json_fetch
+  Title    : _rnacentral_json_fetch
+  Incept   : EPN, Wed Sep  9 2026
+  Function : Internal helper for rnacentral_md5_lookup() and rnacentral_id_lookup().
+           : Fetches $url and returns the decoded JSON response, distinguishing
+           : a definitive 404 (not found in RNAcentral, no retry) from a
+           : throttled or otherwise transient failure (retried with backoff).
+           : RNAcentral's throttling can return a '200 OK' with a non-JSON
+           : (text/html) body instead of the expected '429', so the response's
+           : status code and content type are both checked before decoding.
+  Args     : $url:       URL to fetch, expected to return a JSON response
+           : $nattempts: max number of attempts, undef to use default of 10
+           : $nseconds:  seconds to sleep between attempts, undef to use default of 3
+  Returns  : the decoded JSON (a hashref), or undef if $url returned a 404 or if
+           : all attempts to fetch valid JSON failed
+  Dies     : never; warns and returns undef on repeated failure
+=cut
+
+sub _rnacentral_json_fetch {
+  my ( $url, $nattempts, $nseconds ) = @_;
+
+  if(! defined $nattempts) { $nattempts = 10; }
+  if(! defined $nseconds)  { $nseconds  = 3;  }
+
+  my $ua = LWP::UserAgent->new();
+  my $attempt_ctr = 0;
+  while(1) {
+    $attempt_ctr++;
+    my $response = $ua->get($url);
+
+    if($response->code() == 404) {
+      # not found in RNAcentral, this is expected and not a failure: no retry
+      return undef;
+    }
+
+    if($response->is_success() && (defined $response->content_type()) &&
+       ($response->content_type() eq "application/json")) {
+      # 2xx response with a JSON content type: try to decode it, but a JSON
+      # content type is not a guarantee of a parseable JSON body
+      my $decoded_json = eval { decode_json($response->decoded_content()); };
+      if(! $@) {
+        return $decoded_json;
+      }
+    }
+
+    # any other outcome (throttled '200 OK' with a non-JSON body, '429', a
+    # 5xx server error, or a JSON content type with an unparseable body) is
+    # treated as transient: retry with backoff
+    if($attempt_ctr >= $nattempts) {
+      warn "WARNING: failed to fetch valid JSON from $url after $nattempts attempts (last HTTP status: " . $response->code() . ")\n";
+      return undef;
+    }
+    sleep($nseconds);
+  }
+}
+
+#-------------------------------------------------------------------------------
 =head2 rnacentral_md5_lookup
   Title    : rnacentral_md5_lookup
   Incept   : EPN, Tue Nov 27 11:33:59 2018
@@ -2944,7 +3002,8 @@ sub ncbi_taxonomy_fetch_taxinfo {
            :            if defined, this should be equal to $md5 input
            : $id:       if $have_seq is '1': RNAcentral ID for sequence, else undefined
            : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
-  Dies     : if there is a problem fetching from RNAcentral
+  Dies     : never; warns and treats as 'not found' if RNAcentral cannot be
+           : reached after repeated attempts
 =cut
 
 sub rnacentral_md5_lookup {
@@ -2952,22 +3011,18 @@ sub rnacentral_md5_lookup {
 
   my $rnacentral_url = "https://rnacentral.org/api/v1/md5/" . $in_md5;
   #printf("rnacentral_url: $rnacentral_url\n");
-  my $json = get($rnacentral_url);
+  my $decoded_json = _rnacentral_json_fetch($rnacentral_url);
 
   my $have_seq = 0;
   my $md5  = undef;
   my $id   = undef;
   my $desc = undef;
 
-  if( defined $json) {
-    # Decode the entire JSON
-    my $decoded_json = decode_json($json);
-    if((defined $decoded_json->{'rnacentral_id'})) {
-      $have_seq = 1;
-      $md5  = $in_md5;
-      $id   = $decoded_json->{'rnacentral_id'};
-      $desc = $decoded_json->{'description'};
-    }
+  if((defined $decoded_json) && (defined $decoded_json->{'rnacentral_id'})) {
+    $have_seq = 1;
+    $md5  = $in_md5;
+    $id   = $decoded_json->{'rnacentral_id'};
+    $desc = $decoded_json->{'description'};
   }
 
   return ($have_seq, $md5, $id, $desc);
@@ -2985,7 +3040,8 @@ sub rnacentral_md5_lookup {
            :            if defined, this should be equal to $md5 input
            : $desc:     if $have_seq is '1': RNAcentral description for sequence, else undefined
            : $length:   if $have_seq is '1': length for sequence, else undefined
-  Dies     : if there is a problem fetching from RNAcentral
+  Dies     : never; warns and treats as 'not found' if RNAcentral cannot be
+           : reached after repeated attempts
 =cut
 
 sub rnacentral_id_lookup {
@@ -2993,23 +3049,18 @@ sub rnacentral_id_lookup {
 
   my $rnacentral_url = "https://rnacentral.org/api/v1/rna/" . $in_id . "/?format=json";
   #printf("rnacentral_url: $rnacentral_url\n");
-  my $json = get($rnacentral_url);
+  my $decoded_json = _rnacentral_json_fetch($rnacentral_url);
 
   my $have_seq = 0;
   my $md5    = undef;
   my $desc   = undef;
   my $length = undef;
 
-  if(defined $json) {
-    # Decode the entire JSON
-    my $decoded_json = decode_json($json);
-    #print Dumper $decoded_json;
-    if(defined $decoded_json->{'rnacentral_id'}) {
-      $have_seq = 1;
-      $md5    = $decoded_json->{'md5'};
-      $desc   = $decoded_json->{'description'};
-      $length = $decoded_json->{'length'};
-    }
+  if((defined $decoded_json) && (defined $decoded_json->{'rnacentral_id'})) {
+    $have_seq = 1;
+    $md5    = $decoded_json->{'md5'};
+    $desc   = $decoded_json->{'description'};
+    $length = $decoded_json->{'length'};
   }
   return ($have_seq, $md5, $desc, $length);
 }
