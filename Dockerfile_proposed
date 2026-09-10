@@ -82,7 +82,7 @@ RUN mkdir -p /Rfam/software/bin \
              /workdir \
              /root/.pixi/bin
 
-ENV PERL5LIB=/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/bin/perl5
+ENV PERL5LIB=/usr/share/perl5
 ENV USR_BIN=/Rfam/software/bin
 ENV DISPLAY=0.0
 
@@ -136,18 +136,31 @@ RUN cd /Rfam/software && \
 
 # RAxML
 RUN cd /Rfam/software && \
-    git clone --depth 1 https://github.com/stamatak/standard-RAxML.git && \
+    git init standard-RAxML && \
+    cd standard-RAxML && \
+    git remote add origin https://github.com/stamatak/standard-RAxML.git && \
+    git fetch --depth 1 origin 69a7edcba961f95f732e07ce64e7e5b1c7ae548b && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
     cd /Rfam/software/standard-RAxML && \
     make -j$(nproc) -f Makefile.gcc && \
     cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # ── Bio-Easel ─────────────────────────────────────────────────────────
 RUN cd /Rfam && \
-    git clone --depth 1 https://github.com/nawrockie/Bio-Easel.git && \
+    git init Bio-Easel && \
     cd Bio-Easel && \
+    git remote add origin https://github.com/nawrockie/Bio-Easel.git && \
+    git fetch --depth 1 origin ec77fa923b501768346b8870667e7c674a50b009 && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
     mkdir src && cd src && \
-    git clone --depth 1 --branch Bio-Easel-0.06 https://github.com/EddyRivasLab/easel.git easel && \
-    cd easel && rm -rf .git && \
+    git init easel && \
+    cd easel && \
+    git remote add origin https://github.com/EddyRivasLab/easel.git && \
+    git fetch --depth 1 origin 3b8fae1aafd36c544108f755a871fcb0d2e7c749 && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
     sed -i 's/ax_cv_gcc_archflag="unknown"/ax_cv_gcc_archflag="unknown"; :/' aclocal.m4 && \
     autoconf && \
     sed -i -E '/^[[:space:]]*(then|else)[[:space:]]*$/ { n; /^[[:space:]]*fi[[:space:]]*$/ { s/^[[:space:]]*/  :; / } }' configure && \
@@ -176,6 +189,6 @@ ENV PATH=/root/.pixi/bin:/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pip
 
 ENV RFAM_CONFIG=/Rfam/config/rfam.conf
 
-ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/usr/local/share/perl/5.24.1:/usr/bin/perl/:/usr/share/perl:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:$PERL5LIB
-ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
+ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata
+ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
