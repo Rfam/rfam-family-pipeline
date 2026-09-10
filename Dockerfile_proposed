@@ -1,0 +1,194 @@
+# Rfam family pipeline Docker image
+# Base: ubuntu:22.04 (GCC 11.4 — compatible with older bioinformatics tools)
+FROM ghcr.io/prefix-dev/pixi:latest AS pixi-provider
+FROM ubuntu:22.04
+
+USER root
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# ── System dependencies & Pre-compiled Perl libraries ─────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata && \
+    ln -fs /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata && \
+    apt-get install -y --no-install-recommends \
+    aspell \
+    automake \
+    cpanminus \
+    curl \
+    default-jdk \
+    fort77 \
+    g++ \
+    gcc \
+    gfortran \
+    git \
+    gzip \
+    less \
+    libbio-perl-perl \
+    libcatalyst-action-renderview-perl \
+    libcatalyst-perl \
+    libconfig-general-perl \
+    libconvert-color-perl \
+    libdata-pageset-perl \
+    libdata-printer-perl \
+    libdata-uuid-perl \
+    libdatetime-format-mysql-perl \
+    libdatetime-perl \
+    libdbd-mysql-perl \
+    libdbix-class-perl \
+    libfile-sharedir-install-perl \
+    libfile-slurp-perl \
+    libfile-touch-perl \
+    libimage-size-perl \
+    libinline-c-perl \
+    libinline-perl \
+    libio-all-perl \
+    libio-string-perl \
+    libipc-run-perl \
+    libjson-perl \
+    liblog-log4perl-perl \
+    libmailtools-perl \
+    libmoosex-nonmoose-perl \
+    libmoosex-types-loadableclass-perl \
+    libmoosex-types-perl \
+    libmoosex-types-structured-perl \
+    libsearch-queryparser-perl \
+    libsvn-perl \
+    libterm-readpassword-perl \
+    libtest-most-perl \
+    libtext-diff-perl \
+    libx11-6 \
+    libxml-libxml-perl \
+    libxml2 \
+    libxml2-dev \
+    make \
+    perl \
+    r-base \
+    r-base-dev \
+    subversion \
+    tar \
+    unzip \
+    vim \
+    wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# ── Directory layout ─────────────────────────────────────────────────
+RUN mkdir -p /Rfam/software/bin \
+             /Rfam/rfamseq \
+             /Rfam/config \
+             /workdir \
+             /root/.pixi/bin
+
+ENV PERL5LIB=/usr/share/perl5
+ENV USR_BIN=/Rfam/software/bin
+ENV DISPLAY=0.0
+
+# ── Pixi installation & Exact Version Tools ───────────────────────────
+COPY --from=pixi-provider /usr/local/bin/pixi /usr/local/bin/pixi
+ENV PATH=/root/.pixi/bin:$PATH
+
+RUN pixi global install \
+    --channel conda-forge \
+    --channel bioconda \
+    clustalo==1.2.4 \
+    rnacode==0.3 \
+    viennarna==2.4.9 \
+    t_coffee==11.0.8 \
+    infernal==1.1.2 \
+    hmmer==3.2.1 \
+    mafft==7.402 \
+    muscle==3.8.31
+
+RUN pixi global install \
+    --channel conda-forge \
+    --channel bioconda \
+    rscape \
+    --expose R-scape && \
+    pixi clean cache --yes
+
+RUN cp -s /root/.pixi/bin/R-scape /Rfam/software/bin/R-scape
+
+# ── Compile from source ───────────────────────────────────────────────
+
+# ERATE 0.8
+RUN cd /Rfam/software && \
+    curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
+    tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
+    cd erate-v.0.8/phylip3.66-erate/src && \
+    make -j$(nproc) dnaml && \
+    cp dnaml /Rfam/software/bin/
+
+# CMfinder 0.2
+RUN cd /Rfam/software && \
+    curl -OL https://web.archive.org/web/20150803073138/http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
+    tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
+    cd CMfinder_0.2 && \
+    make -j$(nproc) && \
+    cp bin/cmfinder /Rfam/software/bin/.
+
+# PPfold 3.1.1
+RUN cd /Rfam/software && \
+    curl -OL https://web.archive.org/web/20180721090259/http://www.daimi.au.dk/~compbio/pfold/PPfold/PPfold3.1.1.jar && \
+    cp PPfold3.1.1.jar /Rfam/software/bin/. && rm PPfold3.1.1.jar
+
+# RAxML
+RUN cd /Rfam/software && \
+    git init standard-RAxML && \
+    cd standard-RAxML && \
+    git remote add origin https://github.com/stamatak/standard-RAxML.git && \
+    git fetch --depth 1 origin 69a7edcba961f95f732e07ce64e7e5b1c7ae548b && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
+    cd /Rfam/software/standard-RAxML && \
+    make -j$(nproc) -f Makefile.gcc && \
+    cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
+
+# ── Bio-Easel ─────────────────────────────────────────────────────────
+RUN cd /Rfam && \
+    git init Bio-Easel && \
+    cd Bio-Easel && \
+    git remote add origin https://github.com/nawrockie/Bio-Easel.git && \
+    git fetch --depth 1 origin ec77fa923b501768346b8870667e7c674a50b009 && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
+    mkdir src && cd src && \
+    git init easel && \
+    cd easel && \
+    git remote add origin https://github.com/EddyRivasLab/easel.git && \
+    git fetch --depth 1 origin 3b8fae1aafd36c544108f755a871fcb0d2e7c749 && \
+    git checkout --detach FETCH_HEAD && \
+    rm -rf .git && \
+    sed -i 's/ax_cv_gcc_archflag="unknown"/ax_cv_gcc_archflag="unknown"; :/' aclocal.m4 && \
+    autoconf && \
+    sed -i -E '/^[[:space:]]*(then|else)[[:space:]]*$/ { n; /^[[:space:]]*fi[[:space:]]*$/ { s/^[[:space:]]*/  :; / } }' configure && \
+    sed -i 's/^[[:space:]]*fi[[:space:]]*$/:; fi/g' configure && \
+    ./configure --prefix=/usr/local --enable-pic --enable-sse && \
+    make -j$(nproc) && \
+    make install && \
+    cd /Rfam/Bio-Easel && \
+    perl Makefile.PL && \
+    make -j$(nproc) && \
+    make install
+
+# ── Clone Rfam pipeline repo ─────────────────────────────────────────
+RUN cd /Rfam && git clone --depth 1 https://github.com/Rfam/rfam-family-pipeline.git
+
+# Provide a fallback default rfam.conf so scripts can initialize when run standalone
+RUN if [ -f /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf ]; then \
+        ln -sf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf /Rfam/config/rfam.conf; \
+    fi
+
+# ── Fallback for any missing Perl modules ──────────────────────────────
+RUN cpanm --notest Catalyst::Utils 2>/dev/null || true
+
+# ── Environment setup ─────────────────────────────────────────────────
+ENV PATH=/root/.pixi/bin:/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+
+ENV RFAM_CONFIG=/Rfam/config/rfam.conf
+
+ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata
+ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib
+ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
