@@ -94,7 +94,7 @@ print $L "\n** FORMAT check **\n";
 $error = 0;
 eval{
   $error = Bio::Rfam::QC::checkTimestamps("$pwd/$family", $config);
-  $error = Bio::Rfam::QC::checkFamilyFormat( $familyObj ) if(!$error);
+  $error = Bio::Rfam::QC::checkFamilyFormat( $familyObj, $config ) if(!$error);
   #Spell check
   if(!$nospell){
     $error = Bio::Rfam::QC::checkSpell("$pwd/$family", $config->dictionary) if(!$error);
