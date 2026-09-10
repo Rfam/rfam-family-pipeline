@@ -1,0 +1,7 @@
+node_modules/
+*.pl
+*.pm
+*.py
+*.sh
+*.bash
+*.t
