@@ -97,10 +97,25 @@ RUN pixi global install \
     rnacode==0.3 \
     viennarna==2.4.9 \
     t_coffee==11.0.8 \
-    infernal==1.1.2 \
     hmmer==3.2.1 \
     mafft==7.402 \
     muscle==3.8.31
+
+RUN pixi global install \
+    --environment infernal \
+    --channel conda-forge \
+    --channel bioconda \
+    infernal==1.1.2 \
+    --expose cmbuild \
+    --expose cmcalibrate \
+    --expose cmalign \
+    --expose cmconvert \
+    --expose cmemit \
+    --expose cmfetch \
+    --expose cmpress \
+    --expose cmscan \
+    --expose cmsearch \
+    --expose cmstat
 
 RUN pixi global install \
     --channel conda-forge \
@@ -118,7 +133,7 @@ RUN cd /Rfam/software && \
     curl -OL http://eddylab.org/software/erate/erate-v.0.8.tar.gz && \
     tar -xzf erate-v.0.8.tar.gz && rm erate-v.0.8.tar.gz && \
     cd erate-v.0.8/phylip3.66-erate/src && \
-    make -j$(nproc) dnaml && \
+    make dnaml && \
     cp dnaml /Rfam/software/bin/
 
 # CMfinder 0.2
@@ -126,7 +141,7 @@ RUN cd /Rfam/software && \
     curl -OL https://web.archive.org/web/20150803073138/http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
     tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
     cd CMfinder_0.2 && \
-    make -j$(nproc) && \
+    make && \
     cp bin/cmfinder /Rfam/software/bin/.
 
 # PPfold 3.1.1
@@ -143,7 +158,7 @@ RUN cd /Rfam/software && \
     git checkout --detach FETCH_HEAD && \
     rm -rf .git && \
     cd /Rfam/software/standard-RAxML && \
-    make -j$(nproc) -f Makefile.gcc && \
+    make -f Makefile.gcc && \
     cp /Rfam/software/standard-RAxML/raxmlHPC /Rfam/software/bin/.
 
 # ── Bio-Easel ─────────────────────────────────────────────────────────
@@ -166,11 +181,11 @@ RUN cd /Rfam && \
     sed -i -E '/^[[:space:]]*(then|else)[[:space:]]*$/ { n; /^[[:space:]]*fi[[:space:]]*$/ { s/^[[:space:]]*/  :; / } }' configure && \
     sed -i 's/^[[:space:]]*fi[[:space:]]*$/:; fi/g' configure && \
     ./configure --prefix=/usr/local --enable-pic --enable-sse && \
-    make -j$(nproc) && \
+    make && \
     make install && \
     cd /Rfam/Bio-Easel && \
     perl Makefile.PL && \
-    make -j$(nproc) && \
+    make && \
     make install
 
 # ── Clone Rfam pipeline repo ─────────────────────────────────────────
