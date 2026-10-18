@@ -6,11 +6,11 @@
 
 ```
     docker buildx build --platform linux/amd64 --load \
-        -t family-pipeline-amd64:latest \
+        -t family-pipeline-amd64:1.0.0 \
         -f Dockerfile_proposed .
 ```
 
-- **Build Time**: Building 740.6s (23/23) FINISHED
+- **Build Time**: [+] Building 1576.1s (25/25) FINISHED                              docker:rancher-desktop
 - **Image Footprint**: 1.3 GB compressed content size (vs. 1.5 GB upstream `rfam/family-pipeline:latest`), ~5.0 GB uncompressed runtime disk usage.
 - **Host & Runtime**: Apple MacBook Pro (M5 Pro, ARM64, 24 GB RAM) via Rancher Desktop (`containerd`/`nerdctl`) targeted to `linux/amd64`.
 - Available in Dockerhub `sainsachiko/family-pipeline-amd64:092026`
@@ -24,7 +24,27 @@
 The image built from `Dockerfile_proposed` was loaded locally as `family-pipeline-amd64:latest` and tested on `linux/amd64`.
 
 ```sh
-docker run --platform linux/amd64 --rm family-pipeline-amd64:092026 bash -c "
+docker run --platform linux/amd64 --rm sainsachiko/family-pipeline-amd64:1.0.0 \
+    bash -lc "perl \
+    -MFile::ShareDir::Install \
+    -MInline::C \
+    -MData::Printer \
+    -MConfig::General \
+    -MDBIx::Class::Schema \
+    -MDateTime \
+    -MDateTime::Format::MySQL \
+    -MMooseX::NonMoose \
+    -MBio::Annotation::Reference \
+    -MFile::Touch \
+    -MIPC::Run \
+    -MTerm::ReadPassword \
+    -MFile::Spec \
+    -MJSON \
+    -MXML::LibXML \
+    -MCatalyst::Utils \
+    -MMooseX::Role::Pluggable \
+    -e 'print qq{Required Perl modules load successfully\n}'" -c "
+	RNAcode && \
 	echo '=== 1. Perl Core & Modules ===' && \
 	perl -e 'use MooseX::Types; use Bio::Easel; use Mail::Mailer; print \"Perl & Bio-Easel bindings OK\n\";' && \
 	echo '=== 2. Pipeline Scripts ===' && \
@@ -33,12 +53,32 @@ docker run --platform linux/amd64 --rm family-pipeline-amd64:092026 bash -c "
     rfmake.pl | head -n 4 && \
     rfsearch.pl | head -n 4 && \
     rfnew.pl | head -n 4 && \
-	echo '=== 3. Bioinformatics Tools ===' && \
+	echo '=== 3. Executable Presence ===' && \
+	for tool in RNAcode clustalo mafft muscle t_coffee RNAfold R-scape \
+		hmmalign hmmbuild hmmsearch \
+		cmalign cmbuild cmcalibrate cmconvert cmemit cmfetch cmpress \
+		cmscan cmsearch cmstat dnaml cmfinder raxmlHPC munge remunge unmunge; do \
+		command -v \"\$tool\"; \
+	done && \
+	test -f /Rfam/software/bin/PPfold3.1.1.jar && \
+	test -f \"\$RFAM_CONFIG\" && \
+	echo '=== 4. Tool Invocation ===' && \
+	RNAcode --version && \
 	clustalo --version && \
-	cmalign -h | head -n 2 && \
-	hmmalign -h | head -n 2 && \
-	R-scape -h | head -n 2 && \
-	raxmlHPC -v | head -n 2
+	mafft --version 2>&1 | head -n 1 && \
+	muscle 2>&1 | head -n 2 && \
+	t_coffee -version 2>&1 | head -n 2 && \
+	RNAfold --version && \
+	R-scape -h 2>&1 | head -n 2 && \
+	hmmalign -h 2>&1 | head -n 2 && \
+	hmmbuild -h 2>&1 | head -n 2 && \
+	hmmsearch -h 2>&1 | head -n 2 && \
+	cmalign -h 2>&1 | head -n 2 && \
+	cmbuild -h 2>&1 | head -n 2 && \
+	cmsearch -h 2>&1 | head -n 2 && \
+	cmstat -h 2>&1 | head -n 2 && \
+	raxmlHPC -v 2>&1 | head -n 2 && \
+	munge --version 2>&1 | head -n 2
 "
 ```
 

@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dpkg-reconfigure --frontend noninteractive tzdata && \
     apt-get install -y --no-install-recommends \
     aspell \
+    aspell-en \
+    locales \
     automake \
     cpanminus \
     curl \
@@ -38,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libdatetime-perl \
     libdbd-mysql-perl \
     libdbix-class-perl \
+    libexpat1-dev \
     libfile-sharedir-install-perl \
     libfile-slurp-perl \
     libfile-touch-perl \
@@ -50,17 +53,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjson-perl \
     liblog-log4perl-perl \
     libmailtools-perl \
+    libmunge2 \
     libmoosex-nonmoose-perl \
     libmoosex-types-loadableclass-perl \
     libmoosex-types-perl \
     libmoosex-types-structured-perl \
     libsearch-queryparser-perl \
     libsvn-perl \
+    libsvn-look-perl \
     libterm-readpassword-perl \
     libtest-most-perl \
     libtext-diff-perl \
     libx11-6 \
     libxml-libxml-perl \
+    libxml-simple-perl \
     libxml2 \
     libxml2-dev \
     make \
@@ -75,37 +81,49 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# ── Generate and select locale for Perl
+RUN echo "en_GB.UTF-8 UTF-8" > /etc/locale.gen && locale-gen en_GB.UTF-8
+ENV LANG=en_GB.UTF-8
+ENV LANGUAGE=en_GB:en
+ENV LC_ALL=en_GB.UTF-8
+
 # ── Directory layout ─────────────────────────────────────────────────
 RUN mkdir -p /Rfam/software/bin \
              /Rfam/rfamseq \
              /Rfam/config \
              /workdir \
-             /root/.pixi/bin
+             /opt/pixi/bin \
+             /opt/pixi/cache
 
-ENV PERL5LIB=/usr/share/perl5
 ENV USR_BIN=/Rfam/software/bin
 ENV DISPLAY=0.0
 
 # ── Pixi installation & Exact Version Tools ───────────────────────────
 COPY --from=pixi-provider /usr/local/bin/pixi /usr/local/bin/pixi
-ENV PATH=/root/.pixi/bin:$PATH
 
-RUN pixi global install \
+ENV PIXI_HOME=/opt/pixi
+ENV PIXI_CACHE_DIR=/opt/pixi/cache
+ENV PATH=/opt/pixi/bin:$PATH
+
+RUN --mount=type=cache,target=/opt/pixi/cache,sharing=locked \
+    pixi global install \
     --channel conda-forge \
     --channel bioconda \
     clustalo==1.2.4 \
     rnacode==0.3 \
-    viennarna==2.4.9 \
+    viennarna==2.7.0 \
     t_coffee==11.0.8 \
     hmmer==3.2.1 \
     mafft==7.402 \
-    muscle==3.8.31
+    muscle==3.8.31 \
+    cmfinder==0.2
 
-RUN pixi global install \
+RUN --mount=type=cache,target=/opt/pixi/cache,sharing=locked \
+    pixi global install \
     --environment infernal \
     --channel conda-forge \
     --channel bioconda \
-    infernal==1.1.2 \
+    infernal==1.1.4 \
     --expose cmbuild \
     --expose cmcalibrate \
     --expose cmalign \
@@ -117,14 +135,17 @@ RUN pixi global install \
     --expose cmsearch \
     --expose cmstat
 
-RUN pixi global install \
+RUN --mount=type=cache,target=/opt/pixi/cache,sharing=locked \
+    pixi global install \
     --channel conda-forge \
     --channel bioconda \
-    rscape \
-    --expose R-scape && \
-    pixi clean cache --yes
+    rscape==2.0.4.a \
+    --expose R-scape
 
-RUN cp -s /root/.pixi/bin/R-scape /Rfam/software/bin/R-scape
+# Grant execution and read permissions across all users (Singularity compatibility)
+RUN chmod -R a+rX /opt/pixi/bin /opt/pixi/envs
+
+RUN cp -s /opt/pixi/bin/R-scape /Rfam/software/bin/R-scape
 
 # ── Compile from source ───────────────────────────────────────────────
 
@@ -135,14 +156,6 @@ RUN cd /Rfam/software && \
     cd erate-v.0.8/phylip3.66-erate/src && \
     make dnaml && \
     cp dnaml /Rfam/software/bin/
-
-# CMfinder 0.2
-RUN cd /Rfam/software && \
-    curl -OL https://web.archive.org/web/20150803073138/http://bio.cs.washington.edu/yzizhen/CMfinder/CMfinder_0.2.tgz && \
-    tar -xvf CMfinder_0.2.tgz && rm CMfinder_0.2.tgz && \
-    cd CMfinder_0.2 && \
-    make && \
-    cp bin/cmfinder /Rfam/software/bin/.
 
 # PPfold 3.1.1
 RUN cd /Rfam/software && \
@@ -191,19 +204,26 @@ RUN cd /Rfam && \
 # ── Clone Rfam pipeline repo ─────────────────────────────────────────
 RUN cd /Rfam && git clone --depth 1 https://github.com/Rfam/rfam-family-pipeline.git
 
+# ── Missing Perl module ───────────────────────────────────────────────
+RUN cpanm --notest MooseX::Role::Pluggable
+
 # Provide a fallback default rfam.conf so scripts can initialize when run standalone
 RUN if [ -f /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf ]; then \
         ln -sf /Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf /Rfam/config/rfam.conf; \
     fi
 
+# Copy CI test configuration into the image
+COPY Rfam/Tests/rfam_test.conf        /Rfam/config/rfam_test.conf
+
 # ── Fallback for any missing Perl modules ──────────────────────────────
 RUN cpanm --notest Catalyst::Utils 2>/dev/null || true
 
+# Ensure all software directories have universal execution rights
+RUN chmod -R a+rwx /Rfam /workdir
+
 # ── Environment setup ─────────────────────────────────────────────────
-ENV PATH=/root/.pixi/bin:/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
+ENV PATH=/ebi/slurm/codon/bin:/opt/pixi/bin:/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
 
 ENV RFAM_CONFIG=/Rfam/config/rfam.conf
 
-ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata
-ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib
-ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
+ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:/Rfam/rfam-family-pipeline/PfamLib:/Rfam/rfam-family-pipeline/PfamSchemata
