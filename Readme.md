@@ -70,6 +70,9 @@ docker build \
   "$PIPELINE_DIR"
 ```
 
+Or get the prebuilt image by:
+```docker pull rfam/family-pipeline:<tag>```
+
 ### Open a working shell
 
 ```bash
