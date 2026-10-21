@@ -35,6 +35,18 @@ jobs:
       - name: docker push
         run: docker push rfam/family-pipeline
 
+      # Runs after the image above has been pushed, so the scan always targets
+      # an image that actually exists in the registry. Fires the GitLab
+      # (gitlab.ebi.ac.uk) container_scanning pipeline directly; the mirror
+      # push of this same commit finishes long before the Docker build does.
+      - name: Trigger GitLab container scan
+        run: |
+          curl --fail --request POST \
+            --form token="${{ secrets.GITLAB_TRIGGER_TOKEN }}" \
+            --form ref="${{ github.ref_name }}" \
+            --form "variables[CS_IMAGE]=docker.io/rfam/family-pipeline:latest" \
+            "https://gitlab.ebi.ac.uk/api/v4/projects/Rfam%2Frfam-family-pipeline/trigger/pipeline"
+
   finished-notification:
     needs:
       - create-docker-image

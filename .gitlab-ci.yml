@@ -1,0 +1,55 @@
+include:
+  - template: Jobs/SAST.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - template: Jobs/Container-Scanning.gitlab-ci.yml
+
+# No Dependency-Scanning template: this repo is almost entirely Perl with no
+# dependency manifest GitLab can read. Its dependencies are installed into the
+# Docker image, so container_scanning is what covers them.
+
+workflow:
+  rules:
+    # Pipelines triggered via the GitLab pipeline trigger API (fired by GitHub
+    # Actions right after the Docker image is pushed to Docker Hub — see
+    # .github/workflows/main.yaml) only need container_scanning to run.
+    # gitlab-advanced-sast defines its own rules internally (not overridable
+    # from here), but respects the official disable flag, so use that instead.
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      variables:
+        SAST_DISABLED: 'true'
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  GIT_STRATEGY: clone
+  GITLAB_ADVANCED_SAST_ENABLED: 'true'
+
+sast:
+  tags:
+    - dind
+
+gitlab-advanced-sast:
+  variables:
+    SEARCH_MAX_DEPTH: 20
+    SAST_ANALYZER_IMAGE_TAG: '2.50'
+
+secret_detection:
+  tags:
+    - dind
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+container_scanning:
+  tags:
+    - dind
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+  variables:
+    GIT_STRATEGY: none
+    # The image lives on Docker Hub, not the GitLab registry the template
+    # assumes. CS_IMAGE normally comes from the trigger call as a pipeline
+    # variable (those outrank job variables); this is only a fallback.
+    CS_IMAGE: docker.io/rfam/family-pipeline:latest
