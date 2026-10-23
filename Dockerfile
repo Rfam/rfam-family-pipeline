@@ -1,6 +1,6 @@
 # Rfam family pipeline Docker image
 # Base: ubuntu:22.04 (GCC 11.4 — compatible with older bioinformatics tools)
-FROM ghcr.io/prefix-dev/pixi:latest AS pixi-provider
+FROM ghcr.io/prefix-dev/pixi:0.83.0-jammy AS pixi-provider
 FROM ubuntu:22.04
 
 USER root
