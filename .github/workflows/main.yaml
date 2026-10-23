@@ -31,13 +31,13 @@ jobs:
 
       - name: docker build
         run: |
-          TAG=$(git rev-parse --short HEAD)
+          TAG=$(echo "$GITHUB_SHA" | cut -c1-7)
           docker build -f Dockerfile -t rfam/family-pipeline:${TAG} .
           docker tag rfam/family-pipeline:${TAG} rfam/family-pipeline:master
 
       - name: docker push
         run: |
-          TAG=$(git rev-parse --short HEAD)
+          TAG=$(echo "$GITHUB_SHA" | cut -c1-7)
           docker push rfam/family-pipeline:${TAG}
           docker push rfam/family-pipeline:master
 

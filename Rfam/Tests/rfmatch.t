@@ -28,7 +28,9 @@ $testctr++;
 push(@unlinkA, @reqdfilesA);
 if(($status = TcopyFiles($datadir, \@reqdfilesA)) ne "") { TcleanUpAndDie($status, \@unlinkA); }
 # run the script
-$status = TrunScript($scriptdir . "/rfmatch.pl", "-dbfile $datadir/testtinydb.fa -f $matchfile test > /dev/null", "rfmatch.test.log", \@unlinkA, $testctr);# verify that test.outlist and test.species are correct
+$status = TrunScript($scriptdir . "/rfmatch.pl", "-dbfile $datadir/testtinydb.fa -f $matchfile test > /dev/null", "rfmatch.test.log", \@unlinkA, $testctr);
+if($status ne "") { TcleanUpAndDie($status, \@unlinkA); }
+# verify that test.outlist and test.species are correct
 open(OUTLIST, "test.outlist") || die "ERROR unable to open test.outlist";
 open(SPECIES, "test.species") || die "ERROR unable to open test.species";
 
