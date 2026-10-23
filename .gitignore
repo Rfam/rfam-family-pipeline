@@ -1,10 +1,9 @@
 Rfam/Tests/.tmp/
-Rfam/Tests/SEED
-Rfam/Tests/DESC
+Rfam/Tests/SEED*
+Rfam/Tests/seed*
+Rfam/Tests/DESC*
 Rfam/Tests/CM
 Rfam/Tests/TBLOUT
-Rfam/Tests/SEEDTBLOUT
-Rfam/Tests/SEEDSCORES
 Rfam/Tests/SCORES
 Rfam/Tests/outlist
 Rfam/Tests/species
@@ -14,4 +13,5 @@ Rfam/Tests/*.log
 Rfam/Tests/s.*
 Rfam/Tests/[0-9]*
 Rfam/Tests/rin*
+Rfam/Tests/**/*.ssi
 
