@@ -1,0 +1,21 @@
+#target name               accession query name           accession mdl mdl from   mdl to seq from   seq to strand trunc pass   gc  bias  score   E-value inc description of target
+#------------------------- --------- -------------------- --------- --- -------- -------- -------- -------- ------ ----- ---- ---- ----- ------ --------- --- ---------------------
+CP000468.1/2032638-2032552 -         SEED                 -          cm        1       85        1       87      +    no    1 0.44   0.0  102.8   3.1e-24 !   -
+CP001383.1/2080784-2080698 -         SEED                 -          cm        1       85        1       87      +    no    1 0.43   0.0  101.7   5.8e-24 !   -
+M15749.1/155-239           -         SEED                 -          cm        1       85        1       85      +    no    1 0.47   0.0  101.5   6.3e-24 !   -
+CP000857.1/1802194-1802277 -         SEED                 -          cm        1       85        1       84      +    no    1 0.46   0.0   96.7     8e-23 !   -
+CP000653.1/2739273-2739189 -         SEED                 -          cm        1       85        1       85      +    no    1 0.48   0.0   96.2   1.1e-22 !   -
+M15749.1/155-239           -         SEED                 -          cm       58       85       85       58      -    5'    2 0.57   0.0   12.3    0.0029 !   -
+CP000857.1/1802194-1802277 -         SEED                 -          cm       58       85       84       58      -    5'    2 0.63   0.0   10.9    0.0063 !   -
+CP000468.1/2032638-2032552 -         SEED                 -          cm       58       85       87       59      -    5'    2 0.62   0.0   10.1    0.0098 !   -
+CP001383.1/2080784-2080698 -         SEED                 -          cm       58       85       87       59      -    5'    2 0.59   0.0    7.1     0.048 ?   -
+#
+# Program:         cmsearch
+# Version:         1.1.4 (Dec 2020)
+# Pipeline mode:   SEARCH
+# Query file:      CM
+# Target file:     seed.fa
+# Option settings: /opt/pixi/envs/infernal/bin/cmsearch --tblout SEEDTBLOUT CM seed.fa 
+# Current dir:     /Rfam/rfam-family-pipeline/Rfam/Tests/data/RF00014
+# Date:            Sun Oct  4 22:08:00 2026
+# [ok]

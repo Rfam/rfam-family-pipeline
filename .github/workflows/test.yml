@@ -1,0 +1,200 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths-ignore:
+      - '**/*.md'
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build-docker:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and save Docker image
+        run: |
+          docker build --platform linux/amd64 \
+            --tag family-pipeline:test \
+            --file Dockerfile .
+
+          docker save --output family-pipeline.tar family-pipeline:test
+
+      - name: Upload Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: family-pipeline.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  build-singularity:
+    needs: build-docker
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Install Apptainer
+        uses: eWaterCycle/setup-apptainer@v2
+
+      - name: Build and inspect Singularity image
+        run: |
+          apptainer --version
+          apptainer build family-pipeline.sif \
+            docker-archive:family-pipeline.tar
+          apptainer inspect family-pipeline.sif
+          apptainer exec family-pipeline.sif perl --version
+
+      - name: Upload Singularity image
+        uses: actions/upload-artifact@v4
+        with:
+          name: singularity-image
+          path: family-pipeline.sif
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-tests:
+    needs: build-docker
+    runs-on: ubuntu-22.04
+
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - "3307:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: testpass
+          MYSQL_DATABASE: rfam_test
+          MYSQL_USER: rfamro
+          MYSQL_PASSWORD: testpass
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Docker image
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: docker load --input family-pipeline.tar
+
+      - name: Prepare database
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: |
+          docker exec -i "$MYSQL_CONTAINER" \
+            mysql -uroot -ptestpass rfam_test \
+            < "$GITHUB_WORKSPACE/Rfam/Tests/data/setup_test_db.sql"
+
+          docker exec "$MYSQL_CONTAINER" \
+            mysql -uroot -ptestpass \
+            -e "ALTER USER 'rfamro'@'%'
+                IDENTIFIED WITH mysql_native_password BY 'testpass';"
+
+      - name: Prepare CI config
+        run: |
+          sed \
+            -e 's/host\.docker\.internal/127.0.0.1/g' \
+            -e 's/port[[:space:]]\+3306/port 3307/g' \
+            "$GITHUB_WORKSPACE/Rfam/Tests/rfam_test.conf" \
+            > "$RUNNER_TEMP/rfam_test.conf"
+
+      - name: Run all tests via Docker
+        run: |
+          docker run --rm \
+            --network host \
+            --platform linux/amd64 \
+            --volume "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline" \
+            --volume "$RUNNER_TEMP/rfam_test.conf:/tmp/rfam_test.conf:ro" \
+            --workdir /Rfam/rfam-family-pipeline/Rfam/Tests \
+            --env RFAM_CONFIG=/tmp/rfam_test.conf \
+            family-pipeline:test \
+            bash -c 'prove --jobs=1 *.t'
+
+  singularity-tests:
+    needs: build-singularity
+    runs-on: ubuntu-22.04
+
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - "3307:3306"
+        env:
+          MYSQL_ROOT_PASSWORD: testpass
+          MYSQL_DATABASE: rfam_test
+          MYSQL_USER: rfamro
+          MYSQL_PASSWORD: testpass
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Singularity image
+        uses: actions/download-artifact@v4
+        with:
+          name: singularity-image
+
+      - name: Install Apptainer
+        uses: eWaterCycle/setup-apptainer@v2
+
+      - name: Prepare database
+        env:
+          MYSQL_CONTAINER: ${{ job.services.mysql.id }}
+        run: |
+          docker exec -i "$MYSQL_CONTAINER" \
+            mysql -uroot -ptestpass rfam_test \
+            < "$GITHUB_WORKSPACE/Rfam/Tests/data/setup_test_db.sql"
+
+          docker exec "$MYSQL_CONTAINER" \
+            mysql -uroot -ptestpass \
+            -e "ALTER USER 'rfamro'@'%'
+                IDENTIFIED WITH mysql_native_password BY 'testpass';"
+
+      - name: Prepare CI config
+        run: |
+          mkdir -p "$RUNNER_TEMP/rfam-test"
+          sed \
+            -e 's/host\.docker\.internal/127.0.0.1/g' \
+            -e 's/port[[:space:]]\+3306/port 3307/g' \
+            "$GITHUB_WORKSPACE/Rfam/Tests/rfam_test.conf" \
+            > "$RUNNER_TEMP/rfam-test/rfam_test.conf"
+
+      - name: Run all tests via Apptainer
+        run: |
+          test -f "$RUNNER_TEMP/rfam-test/rfam_test.conf"
+          apptainer exec --cleanenv \
+            --pwd /Rfam/rfam-family-pipeline/Rfam/Tests \
+            --bind "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline:rw" \
+            --bind "$RUNNER_TEMP/rfam-test:/tmp/rfam-test:ro" \
+            family-pipeline.sif \
+            bash -c \
+              'RFAM_CONFIG=/tmp/rfam-test/rfam_test.conf prove --jobs=1 *.t'
