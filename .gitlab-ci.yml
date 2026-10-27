@@ -2,6 +2,7 @@ include:
   - template: Jobs/SAST.gitlab-ci.yml
   - template: Jobs/Secret-Detection.gitlab-ci.yml
   - template: Jobs/Container-Scanning.gitlab-ci.yml
+  - template: Jobs/SAST-IaC.gitlab-ci.yml   # Dockerfiles + k8s manifests (KICS)
 
 # No Dependency-Scanning template: this repo is almost entirely Perl with no
 # dependency manifest GitLab can read. Its dependencies are installed into the
