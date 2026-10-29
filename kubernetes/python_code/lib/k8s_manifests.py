@@ -44,6 +44,8 @@ spec:
       - name: rfam-login-pod-USERID
         image: rfam/cloud:kubes
         imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
         ports:
         - containerPort: 9876
         volumeMounts:
