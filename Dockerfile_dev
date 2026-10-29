@@ -215,7 +215,7 @@ make install
 RUN cd /Rfam && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && \
-pip install requests
+pip install --no-cache-dir requests
 
 # clone Rfam repo
 RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \

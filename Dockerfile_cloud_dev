@@ -208,7 +208,7 @@ make install
 RUN cd /Rfam && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && \
-pip install requests
+pip install --no-cache-dir requests
 
 RUN apt-get install -y libclass-dbi-loader-perl
 
@@ -239,7 +239,7 @@ RUN apt-get install -y nano \
 less
 
 RUN apt-get install -y python3 
-RUN python3 /Rfam/get-pip.py && pip3 install kubernetes
+RUN python3 /Rfam/get-pip.py && pip3 install --no-cache-dir kubernetes
 
 # R-scape installation - release 1.5.10
 RUN cd /Rfam/software && wget http://eddylab.org/software/rscape/rscape.tar.gz && \
