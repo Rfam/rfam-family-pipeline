@@ -298,3 +298,5 @@ ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
 
 ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
+# no long-running service to probe (batch/interactive image)
+HEALTHCHECK NONE

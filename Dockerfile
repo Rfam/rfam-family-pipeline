@@ -231,3 +231,7 @@ ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5
 # ── Non-root runtime user ────────────────────────────────────────────
 RUN useradd --create-home -s /bin/bash rfam-user
 USER rfam-user
+
+# ── Healthcheck ──────────────────────────────────────────────────────
+# Batch/interactive image with no long-running service to probe
+HEALTHCHECK NONE
