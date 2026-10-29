@@ -48,6 +48,9 @@ spec:
           allowPrivilegeEscalation: false
           seccompProfile:
             type: RuntimeDefault
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 9876
         volumeMounts:
