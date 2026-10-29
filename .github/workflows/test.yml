@@ -126,6 +126,7 @@ jobs:
       - name: Run all tests via Docker
         run: |
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
             --network host \
             --platform linux/amd64 \
             --volume "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline" \

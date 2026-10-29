@@ -233,9 +233,10 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 cd python && python setup.py install
 
 # set up user account to prevent from using root to run the scripts
-#RUN useradd --create-home -s /bin/bash centos
-#WORKDIR /home/centos
-#USER centos
+RUN useradd --create-home -s /bin/bash rfam-user && \
+chown rfam-user:rfam-user /workdir
+WORKDIR /home/rfam-user
+USER rfam-user
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
