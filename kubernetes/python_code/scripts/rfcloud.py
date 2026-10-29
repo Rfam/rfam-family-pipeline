@@ -34,7 +34,7 @@ def create_new_user_login_pod(username):
 	fp.close()
 
 	#k8s_api = utils.create_from_yaml(k8s_client, login_deployment)
-	subprocess.call("kubectl create -f %s" % login_deployment, shell=True)
+	subprocess.call(["kubectl", "create", "-f", login_deployment])
 
 	# delete file when done
 	os.remove(login_deployment)
@@ -103,7 +103,6 @@ def get_interactive_rfam_cloud_session(username):
 	
 	# variable declarations
 	user_login_pod_id = ""
-	exec_cmd = "kubectl exec -it %s bash"
 	
 	# check if the user login pod exists
 	login_exists = check_k8s_login_deployment_exists(username)
@@ -123,7 +122,7 @@ def get_interactive_rfam_cloud_session(username):
 		# and we can login to it
 		user_login_pod_id = get_k8s_login_pod_id(username)
 
-	subprocess.call(exec_cmd % user_login_pod_id, shell=True)
+	subprocess.call(["kubectl", "exec", "-it", user_login_pod_id, "bash"])
 
 # --------------------------------------------------------------------------------------------
 
@@ -159,9 +158,9 @@ def get_user_jobs(username):
 	return: void
 	"""
 	
-	k8s_cmd = "kubectl get jobs --selector=user=%s --selector=tier=backend"
+	k8s_cmd_args = ["kubectl", "get", "jobs", "--selector=user=%s" % username, "--selector=tier=backend"]
 
-	subprocess.call(k8s_cmd % username, shell=True)
+	subprocess.call(k8s_cmd_args)
 
 # --------------------------------------------------------------------------------------------
 
@@ -176,8 +175,6 @@ def copy_items_between_home_pod(item, direction='to'):
 	direction: A string speficifying the direction in which to copy 
 	the item (to: from home to pod, from: from pod to home)
 	"""
-	cp_to_cmd = "kubectl cp %s %s:workdir"
-	cp_from_cmd = "kubectl cp %s:%s %s"
 	
 	# get username - in the future lookup the database for auth
 	username = get_username()
@@ -192,7 +189,7 @@ def copy_items_between_home_pod(item, direction='to'):
 	if direction == "to":
 
 		try:
-			subprocess.call(cp_to_cmd % (item, login_pod_id), shell=True)
+			subprocess.call(["kubectl", "cp", item, "%s:workdir" % login_pod_id])
 		
 		except:
 			print ("\nItem %s could not be copied to your pod workdir!" % item)
@@ -209,7 +206,7 @@ def copy_items_between_home_pod(item, direction='to'):
 
 				# get local path to copy item to the pod
 				local_path = item	
-				subprocess.call(cp_from_cmd % (login_pod_id, item_pod_path, local_path), shell=True)
+				subprocess.call(["kubectl", "cp", "%s:%s" % (login_pod_id, item_pod_path), local_path])
 		except:
 
 			print ("\nItem %s could not be copied from the pod!" % item)

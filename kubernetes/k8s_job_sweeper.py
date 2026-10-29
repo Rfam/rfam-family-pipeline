@@ -15,9 +15,6 @@ def delete_completed_jobs():
 	all completed ones to relieve the k8s scheduler
 	"""
 	
-	# k8s command to delete a job
-	deletion_cmd = "kubectl delete job %s"
-	
 	# k8s command to list all jobs
 	cmd_args = ["kubectl", "get", "jobs"]	
 	process = Popen(cmd_args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -31,7 +28,7 @@ def delete_completed_jobs():
 	for job in jobs:
 		# check if job completed
 		if job[1] == '1/1':
-			subprocess.call(deletion_cmd % job[0], shell=True)
+			subprocess.call(["kubectl", "delete", "job", job[0]])
 						
 # -----------------------------------------------------------------------------------------
 
