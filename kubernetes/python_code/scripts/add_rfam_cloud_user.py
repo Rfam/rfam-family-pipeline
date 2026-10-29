@@ -34,7 +34,8 @@ def generate_random_password(length=10):
 
 	chars = string.ascii_uppercase + string.ascii_lowercase + string.digits + "&$!"
 
-	random_password = ''.join(random.choice(chars) for x in range(length))
+	rng = random.SystemRandom()
+	random_password = ''.join(rng.choice(chars) for x in range(length))
 
 	return random_password
 
