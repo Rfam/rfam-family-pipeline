@@ -75,6 +75,7 @@ my %classes = (
 	"Gene; snRNA; snoRNA; scaRNA;" => "snoRNA",   
 	"Gene; lncRNA;" => "lncRNA",                  
 	"Gene; CRISPR;" => "other",
+	"Gene; RT-template;" => "other",
 	"Cis-reg; riboswitch;" => "other",
 	"Cis-reg; leader;" => "other",
 	"Cis-reg; thermoregulator;" => "other", 
