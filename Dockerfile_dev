@@ -215,7 +215,7 @@ make install
 RUN cd /Rfam && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && \
-pip install requests
+pip install --no-cache-dir requests
 
 # clone Rfam repo
 RUN cd /Rfam && git clone -b rfam-cloud https://github.com/Rfam/rfam-family-pipeline.git && \
@@ -233,9 +233,10 @@ git clone --recursive https://github.com/kubernetes-client/python.git && \
 cd python && python setup.py install
 
 # set up user account to prevent from using root to run the scripts
-#RUN useradd --create-home -s /bin/bash centos
-#WORKDIR /home/centos
-#USER centos
+RUN useradd --create-home -s /bin/bash rfam-user && \
+chown rfam-user:rfam-user /workdir
+WORKDIR /home/rfam-user
+USER rfam-user
 
 # Environment setup
 ENV PATH=/usr/bin:$PATH:/Rfam/software/bin:/Rfam/rscape_v0.3.3/bin/:/Rfam/rfam-family-pipeline/Rfam/Scripts/make:/Rfam/rfam-family-pipeline/Rfam/Scripts/qc:/Rfam/rfam-family-pipeline/Rfam/Scripts/jiffies:/Rfam/rfam-family-pipeline/Rfam/Scripts/curation:/Rfam/rfam-family-pipeline/Rfam/Scripts/view:/Rfam/rfam_production/rfam-family-pipeline/Rfam/Scripts/svn:/Rfam/Bio-Easel/scripts
@@ -246,3 +247,6 @@ ENV PERL5LIB=/usr/bin/perl:/usr/bin/perl5:/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Eas
 
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamLib:/usr/share/perl:/usr/share/perl5
 ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
+
+# no long-running service to probe (batch/interactive image)
+HEALTHCHECK NONE
