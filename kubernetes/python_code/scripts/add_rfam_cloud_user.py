@@ -34,7 +34,8 @@ def generate_random_password(length=10):
 
 	chars = string.ascii_uppercase + string.ascii_lowercase + string.digits + "&$!"
 
-	random_password = ''.join(random.choice(chars) for x in range(length))
+	rng = random.SystemRandom()
+	random_password = ''.join(rng.choice(chars) for x in range(length))
 
 	return random_password
 
@@ -55,8 +56,6 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 
 	# TODO - generate a uid too
 	
-	cmd = "useradd --create-home --expiredate %s --password %s --shell /bin/%s %s" 
-
 	user_home_dir = os.path.join("/home", username)
 	
 	# check account does not already exist
@@ -72,7 +71,8 @@ def create_new_rfam_user(username, expire_date, group, shell="bash"):
 	
 	try:
 		password = generate_random_password(length=10)
-		subprocess.call(cmd % (expire_date, password, shell, username), shell=True)
+		subprocess.call(["useradd", "--create-home", "--expiredate", expire_date,
+			"--password", password, "--shell", "/bin/%s" % shell, username])
 		# at this point the user was created successfully
 
 		# Check if homedir exists
@@ -301,14 +301,16 @@ def activate_login_pod_in_user_home(username):
 
 	# call kubectl exec in user bashrc
 	try:
-		subprocess.call("echo %s >> %s" % (kubectl_exec_cmd, bashrc_path), shell=True)
+		with open(bashrc_path, 'a') as fp:
+			fp.write(kubectl_exec_cmd + "\n")
 	except:
 		sys.exit("ERROR: User %s bashrc file could not be updated" % username)
 
 
 	# call kubectl exec in user profile
 	try:
-		subprocess.call("echo %s >> %s" % (kubectl_exec_cmd, profile_path), shell=True)
+		with open(profile_path, 'a') as fp:
+			fp.write(kubectl_exec_cmd + "\n")
 	except:
 		sys.exit("ERROR: User %s profile file could not be updated" % username)
 
