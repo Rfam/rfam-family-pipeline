@@ -14,8 +14,10 @@ jobs:
     steps:
       - name: "Pull image"
         run: |
-          singularity pull  --name rfam-rfam-families-latest.sif docker://rfam/family-pipeline:latest
+          TAG=$(echo "$GITHUB_SHA" | cut -c1-7)
+          singularity pull --name rfam-rfam-families-${TAG}.sif docker://rfam/family-pipeline:${TAG}
       - name: "Push to ghcr"
         run: |
+          TAG=$(echo "$GITHUB_SHA" | cut -c1-7)
           echo ${{ secrets.GITHUB_TOKEN }} | singularity remote login -u ${{ github.actor }} --password-stdin oras://ghcr.io
-          singularity push rfam-rfam-families-latest.sif oras://ghcr.io/${GITHUB_REPOSITORY}:latest
+          singularity push rfam-rfam-families-${TAG}.sif oras://ghcr.io/${GITHUB_REPOSITORY}:${TAG}

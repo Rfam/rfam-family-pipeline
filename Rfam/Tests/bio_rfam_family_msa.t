@@ -45,7 +45,6 @@ $msa->revert_to_original;
 $msa->seqToBitNSEAndSpecies($rfamdb, 'RF00014', 1);
 $msa->write_msa('SEED.bit.nse.sp');
 
-
 # test nse_create
 $msa->revert_to_original;
 my $nadded = $msa->nse_createHAA;

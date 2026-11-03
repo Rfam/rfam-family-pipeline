@@ -244,6 +244,8 @@ sub rfamlive {
       database => $self->{_config}->{Model}->{Rfamlive}->{database},
       password => $self->{_config}->{Model}->{Rfamlive}->{password},
       driver   => 'mysql',
+      # Allow MySQL 8 caching_sha2_password over non-SSL connections
+      mysql_allow_publickey_retrieval => 1,
     @_,
     };
 

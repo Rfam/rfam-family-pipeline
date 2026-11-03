@@ -16,7 +16,7 @@ my $datadir1  = "./data/RF00006";
 my $scriptdir = "../Scripts/make/";
 
 my @unlinkA    = (); # array of files to unlink after each test
-my @reqdfilesA = ("SEED", "DESC", "CM", "TBLOUT"); # list of files to copy to current dir before each test
+my @reqdfilesA = ("SEED", "DESC", "CM", "TBLOUT", "SEEDTBLOUT"); # list of files to copy to current dir before each test
 
 my $testctr   = 0; # counter over script runs
 my ($oline, $oname, $opid);
@@ -24,24 +24,26 @@ my ($sline, $sname, $spid);
 my $status; # return value from a T* test subroutine, if != "", we've got an ERROR and we need to do the drill for cleaning up and exiting.
 
 
-my @optA           = ("",      "-t 40.0",   "-e 1E-6");
-my @gaA            = ("29.00", "40.00",     "57.00"  );
-my @tcA            = ("29.00", "40.20",     "57.00"  );
-my @ncA            = ("28.90", "39.90",     "56.70"  );
-my @nabove_ga_expA = (687,     550,         372      );
-my @ntaxinfo_expA  = (57,      56,          56       );
+my @optA             = ("",      "-t 40.0",   "-e 1E-6");
+my @gaA              = ("29.00", "40.00",     "56.00"  );
+my @tcA              = ("29.00", "40.20",     "56.20"  );
+my @ncA              = ("28.90", "39.90",     "55.80"  );
+my @nabove_ga_expA   = (760,     621,         429      );
+my @nabove_ga_s_expA = (687,     550,         375      );
+my @ntaxinfo_expA    = (41,      41,          41       );
 
 #######################################################################
 # Script test 1, 2, and 3: (Default parameters, -t 40.00 and -e 1E-6)
 #######################################################################
 @unlinkA = ();
 for(my $t = 1; $t <= 3; $t++) { 
-  my $opt           = $optA[$t-1];
-  my $nabove_ga_exp = $nabove_ga_expA[$t-1];
-  my $ga_exp        = $gaA[$t-1];
-  my $nc_exp        = $ncA[$t-1];
-  my $tc_exp        = $tcA[$t-1];
-  my $ntaxinfo_exp  = $ntaxinfo_expA[$t-1];
+  my $opt             = $optA[$t-1];
+  my $nabove_ga_exp   = $nabove_ga_expA[$t-1];
+  my $nabove_ga_s_exp = $nabove_ga_s_expA[$t-1];
+  my $ga_exp          = $gaA[$t-1];
+  my $nc_exp          = $ncA[$t-1];
+  my $tc_exp          = $tcA[$t-1];
+  my $ntaxinfo_exp    = $ntaxinfo_expA[$t-1];
 
   push(@unlinkA, @reqdfilesA);
   if(($status = TcopyFiles($datadir1, \@reqdfilesA)) ne "") { TcleanUpAndDie($status, \@unlinkA); }
@@ -62,7 +64,7 @@ for(my $t = 1; $t <= 3; $t++) {
   # test 2: verify 'SCORES' has number of expected hits
   ($status, $nabove_ga_obs) = TnumLinesInFile("SCORES");
   if($status ne "") { TcleanUpAndDie($status, \@unlinkA); }
-  is($nabove_ga_obs, $nabove_ga_exp, "correct number of hits above GA in SCORES files (test: $t)");
+  is($nabove_ga_obs, $nabove_ga_s_exp, "correct number of hits above GA in SCORES files (test: $t)");
 
   # test 3: make sure 'outlist.pdf' and 'species.pdf' files exist -- note that we don't check their contents at all
   if(($status = TverifyNonEmptyFileExists("outlist.pdf")) ne "") { TcleanUpAndDie($status, \@unlinkA); }
@@ -84,4 +86,5 @@ for(my $t = 1; $t <= 3; $t++) {
   TcleanUp(\@unlinkA);
 }
 exit 0;
+
 

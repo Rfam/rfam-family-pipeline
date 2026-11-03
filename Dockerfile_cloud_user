@@ -208,7 +208,7 @@ make install
 RUN cd /Rfam && \
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
 python get-pip.py && \
-pip install requests
+pip install --no-cache-dir requests
 
 
 RUN apt-get install -y libclass-dbi-loader-perl
@@ -233,7 +233,7 @@ chmod +x ./kubectl
 
 RUN apt-get install -y python3 && \
 python3 /Rfam/get-pip.py && \
-pip3 install kubernetes
+pip3 install --no-cache-dir kubernetes
 
 RUN apt-get update && apt-get install -y libcatalyst-devel-perl \
 libclass-dbi-mysql-perl \
@@ -279,7 +279,8 @@ RUN mkdir /mounts && mkdir mounts/mnt1 /mounts/mnt2 /mounts/mnt3
 RUN chmod 777 /workdir
 
 # set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash rfam-user
+RUN useradd --create-home -s /bin/bash rfam-user && \
+    printf "passwd: files\ngroup: files\nshadow: files\n" > /etc/nsswitch.conf
 WORKDIR /home/rfam-user
 USER rfam-user
 
@@ -298,3 +299,5 @@ ENV PERL5LIB=$PERL5LIB:/Rfam/rfam-family-pipeline/PfamSchemata
 
 ENV RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Conf/rfam.conf
 
+# no long-running service to probe (batch/interactive image)
+HEALTHCHECK NONE
