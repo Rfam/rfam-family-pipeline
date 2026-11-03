@@ -9,7 +9,7 @@ Rfam/Tests/outlist
 Rfam/Tests/species
 Rfam/Tests/taxinfo
 Rfam/Tests/warnings
-Rfam/Tests/*.log
+Rfam/Tests/*.log*
 Rfam/Tests/s.*
 Rfam/Tests/[0-9]*
 Rfam/Tests/rin*
