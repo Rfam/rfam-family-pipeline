@@ -115,26 +115,16 @@ jobs:
             -e "ALTER USER 'rfamro'@'%'
                 IDENTIFIED WITH mysql_native_password BY 'testpass';"
 
-      - name: Prepare CI config
-        run: |
-          sed \
-            -e 's/host\.docker\.internal/127.0.0.1/g' \
-            -e 's/port[[:space:]]\+3306/port 3307/g' \
-            "$GITHUB_WORKSPACE/Rfam/Tests/rfam_test.conf" \
-            > "$RUNNER_TEMP/rfam_test.conf"
-
       - name: Run all tests via Docker
         run: |
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             --network host \
             --platform linux/amd64 \
-            --volume "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline" \
-            --volume "$RUNNER_TEMP/rfam_test.conf:/tmp/rfam_test.conf:ro" \
+            --volume "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline:rw" \
             --workdir /Rfam/rfam-family-pipeline/Rfam/Tests \
-            --env RFAM_CONFIG=/tmp/rfam_test.conf \
             family-pipeline:test \
-            bash -c 'prove --jobs=1 *.t'
+            bash -c 'RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Tests/rfam_test.conf prove --jobs=1 *.t'
 
   singularity-tests:
     needs: build-singularity
@@ -180,22 +170,12 @@ jobs:
             -e "ALTER USER 'rfamro'@'%'
                 IDENTIFIED WITH mysql_native_password BY 'testpass';"
 
-      - name: Prepare CI config
-        run: |
-          mkdir -p "$RUNNER_TEMP/rfam-test"
-          sed \
-            -e 's/host\.docker\.internal/127.0.0.1/g' \
-            -e 's/port[[:space:]]\+3306/port 3307/g' \
-            "$GITHUB_WORKSPACE/Rfam/Tests/rfam_test.conf" \
-            > "$RUNNER_TEMP/rfam-test/rfam_test.conf"
-
       - name: Run all tests via Apptainer
         run: |
-          test -f "$RUNNER_TEMP/rfam-test/rfam_test.conf"
+          test -f "$GITHUB_WORKSPACE/Rfam/Tests/rfam_test.conf"
           apptainer exec --cleanenv \
             --pwd /Rfam/rfam-family-pipeline/Rfam/Tests \
             --bind "$GITHUB_WORKSPACE:/Rfam/rfam-family-pipeline:rw" \
-            --bind "$RUNNER_TEMP/rfam-test:/tmp/rfam-test:ro" \
             family-pipeline.sif \
             bash -c \
-              'RFAM_CONFIG=/tmp/rfam-test/rfam_test.conf prove --jobs=1 *.t'
+              'RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Tests/rfam_test.conf prove --jobs=1 *.t'

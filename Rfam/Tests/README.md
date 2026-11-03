@@ -105,16 +105,9 @@ Run from the repo root:
 docker run --platform linux/amd64 --network host --rm \
   -v $(pwd):/Rfam/rfam-family-pipeline \
   -w /Rfam/rfam-family-pipeline/Rfam/Tests \
-  sainsachiko/family-pipeline-amd64:1.0.0 \
+  family-pipeline-amd64:test \
   bash -c '
-    # Set up config
-    mkdir -p /Rfam/config
-    sed "s/host\.docker\.internal/127.0.0.1/g" \
-      /Rfam/rfam-family-pipeline/Rfam/Tests/rfam_test.conf \
-      > /Rfam/config/rfam_test.conf
-
-    # Run tests
-    RFAM_CONFIG=/Rfam/config/rfam_test.conf prove --jobs=1 *.t
+    RFAM_CONFIG=/Rfam/rfam-family-pipeline/Rfam/Tests/rfam_test.conf prove --jobs=1 *.t
   '
 ```
 
@@ -125,16 +118,23 @@ Singularity does not support `--network host`. On HPC systems (no Docker), run M
 ### 3.2.1. Initialize test DB (rootless)
 
 ```bash
-# Set runtime paths in user-writable space
-DB_DIR="/tmp/rfam_mysql_${USER}"
-mkdir -p "${DB_DIR}/data" "${DB_DIR}/run"
+# Set runtime paths in user-writable space & pull mysql image
+export DB_DIR="/tmp/rfam_mysql_${USER}"
+mkdir -p "$DB_DIR/data" "$DB_DIR/run" "$DB_DIR/build-tmp"
+
+cd "$DB_DIR" || exit 1
+export SINGULARITY_TMPDIR="$DB_DIR/build-tmp"
+
+singularity pull "$DB_DIR/mysql-8.0.sif" docker://mysql:8.0
 
 # 1. Initialize MySQL data directory (only needs to run once)
 singularity exec \
-  --bind "${DB_DIR}/data:/var/lib/mysql" \
-  --bind "${DB_DIR}/run:/var/run/mysqld" \
-  docker://mysql:8.0 \
-  mysqld --initialize-insecure --user=$(id -u)
+  --bind "$DB_DIR/data:/var/lib/mysql" \
+  --bind "$DB_DIR/run:/var/run/mysqld" \
+  "$DB_DIR/mysql-8.0.sif" \
+  mysqld --initialize-insecure \
+  --datadir=/var/lib/mysql \
+  --user="$(id -u)"
 
 # 2. Start MySQL background instance on port 3307
 singularity instance start \
