@@ -229,7 +229,8 @@ ENV RFAM_CONFIG=/Rfam/config/rfam.conf
 ENV PERL5LIB=/Rfam/Bio-Easel/blib/lib:/Rfam/Bio-Easel/blib/arch:/usr/share/perl5:/Rfam/rfam-family-pipeline/Rfam/Lib:/Rfam/rfam-family-pipeline/Rfam/Schemata:/Rfam/rfam-family-pipeline/PfamLib:/Rfam/rfam-family-pipeline/PfamSchemata
 
 # ── Non-root runtime user ────────────────────────────────────────────
-RUN useradd --create-home -s /bin/bash rfam-user
+RUN useradd --create-home -s /bin/bash rfam-user && \
+    printf "passwd: files\ngroup: files\nshadow: files\n" > /etc/nsswitch.conf
 USER rfam-user
 
 # ── Healthcheck ──────────────────────────────────────────────────────

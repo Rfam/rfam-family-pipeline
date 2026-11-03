@@ -279,7 +279,8 @@ RUN mkdir /mounts && mkdir mounts/mnt1 /mounts/mnt2 /mounts/mnt3
 RUN chmod 777 /workdir
 
 # set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash rfam-user
+RUN useradd --create-home -s /bin/bash rfam-user && \
+    printf "passwd: files\ngroup: files\nshadow: files\n" > /etc/nsswitch.conf
 WORKDIR /home/rfam-user
 USER rfam-user
 

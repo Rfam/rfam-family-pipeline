@@ -264,7 +264,8 @@ tar -xzvf ralee-mode*.tar.gz
 #COPY ralee-emacs /workdir/.emacs
 
 # set up user account to prevent from using root to run the scripts
-RUN useradd --create-home -s /bin/bash rfam-user
+RUN useradd --create-home -s /bin/bash rfam-user && \
+    printf "passwd: files\ngroup: files\nshadow: files\n" > /etc/nsswitch.conf
 WORKDIR /home/rfam-user
 USER rfam-user
 
