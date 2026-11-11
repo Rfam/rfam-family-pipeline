@@ -2533,11 +2533,13 @@ sub genbank_nse_lookup_and_md5 {
       croak "ERROR trying to fetch sequence info for $name from genbank, reached maximum allowed number of attempts ($nattempts)";
     }
   }
-  elsif($got_url !~ m/^>/) {
+
+  if(defined $got_url && $got_url !~ m/^>/) {
     # this shouldn't happen, if the sequence doesn't exist then $got_url should be undefined
     die "ERROR in genbank_nse_lookup_and_md5() get() returned a value that is not a sequence";
   }
-  else {
+
+  if(defined $got_url) {
     # if we get here: we know that $got_url is defined and starts with a ">",
     # so we know that a sequence named $name exists in GenBank
     $have_source_seq = 1;

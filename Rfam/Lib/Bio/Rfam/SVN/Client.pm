@@ -856,9 +856,11 @@ sub familyLocation {
 
 sub newFamilyLocation {
   my ($self) = @_;
-  my $newFamilyUrl =
-    $self->{config}->svnRepos . $self->{config}->svnNewFamilies;
-  return ($newFamilyUrl);
+  my $repos = $self->{config}->svnRepos;
+  my $path  = $self->{config}->svnNewFamilies;
+  $repos =~ s{/+$}{};
+  $path  =~ s{^/+}{};
+  return "$repos/$path";
 }
 
 # Below here are all of the log message callbacks. There is a certain amount
