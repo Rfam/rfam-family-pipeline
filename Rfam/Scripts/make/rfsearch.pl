@@ -557,8 +557,9 @@ if ($do_build) {
   # clean up any files from previous runs
   if (-e "CM.xxx") { unlink "CM.xxx"; }
 
-  # run cmbuild to create new CM
-  $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
+  # run cmbuild to create new CM, saving the RF and SS_cons annotated alignment with -O
+  # (-O is not added to $buildopts, so it is not written to the DESC BM line below)
+  $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts -O $cmbuildO_file", $cmfile, $seedfile, $outfile);
   if(! $do_dirty) { unlink $outfile; }
   if($buildopts ne "") { $buildopts .= " "; } # add trailing single space so next line properly formats BM (and blank opts ("") will work too)
   #$famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
@@ -570,20 +571,34 @@ if ($do_build) {
 
   $is_cm_calibrated = 0;
 
-  # use cmalign --mapali to get an RF annotation version of the SEED that we 
-  # can use to map the RF onto the original seed. Actually we'll get an alignment
-  # that is the seed plus the consensus sequence, but then we'll remove the consensus
-  # sequence in add_rf_and_ss_cons_given_cmalign_mapali_output().
-  # first, generate $fafile using 'cmemit -c'
+  # get an RF and SS_cons annotated version of the SEED that we can use to map
+  # the RF and SS_cons onto the original SEED:
+  # - if the CM has at least one basepair, use the cmbuild -O alignment. We
+  #   used to use 'cmemit -c' plus 'cmalign --mapali SEED' for all models, but
+  #   cmalign --mapali in Infernal 1.1.2 to 1.1.5 corrupts SEED rows that begin
+  #   with the missing data character '~'. (cmbuild -O writes such rows
+  #   correctly from Infernal 1.1.5 on.)
+  # - if the CM has zero basepairs, cmbuild 'doctors' the implicit parsetrees
+  #   (removing D->I and I->D transitions, as HMMER does), which can move an
+  #   inserted residue into a match column in the -O alignment, after which it
+  #   no longer maps onto the original SEED. For those models use 'cmemit -c'
+  #   plus 'cmalign --mapali SEED', which preserves the SEED alignment exactly
+  #   and adds one extra sequence, the consensus sequence, at the end. Zero
+  #   basepair SEEDs with a row that begins with '~' will still fail.
+  my $annotated_file = $cmbuildO_file; 
+  my $nextra         = 0; # number of extra sequences at the end of $annotated_file
   my $emit_fafile         = "e.$$.fa";
   my $cmalign_mapali_file = "ma.$$.stk";
-  Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
+  if(! $cm->match_pair_node) { 
+    Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
+    Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
+    $annotated_file = $cmalign_mapali_file;
+    $nextra         = 1;
+  }
 
-  # add RF annotation from cmalign --mapali output file to original SEED
+  # add RF and SS_cons annotation from the annotated alignment to the original SEED
   # to create a new SEED file 
-  # (this subroutine expects the extra consensus sequence in the $cmalign_mapali_file alignment)
-  add_rf_and_ss_cons_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen});
+  add_rf_and_ss_cons_given_annotated_alignment($copied_seedfile, $annotated_file, $nextra, $seedfile, $cm->{cmHeader}->{clen});
 
   # rebuild CM from new SEED
   my $copied_cmfile = $cmfile . ".$$";
@@ -591,12 +606,19 @@ if ($do_build) {
   $outfile = "b2.$$.out";
   $build_elp_secs += Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
 
-  # verify that this new CM is the same as the original
-  verify_two_cms_have_identical_parameters($cmfile, $copied_cmfile, 0.00000001);
+  # verify that this new CM is the same as the original. Each printed number may
+  # differ by at most one unit in its last decimal place (e.g. 1e-5 for 2.60393, 1e-3
+  # for -6.677); integers and non-numbers must be identical. Such one unit differences
+  # can occur when the new SEED lists the sequences in a different order than the
+  # original SEED, which changes the order of floating point sums in cmbuild. For
+  # example, the Stockholm writer groups '#=GS' lines by tag (all DE lines first)
+  # and the reader orders sequences by where they are first mentioned, so a SEED in
+  # which only some sequences have a '#=GS' tag can be reordered when it is rewritten.
+  verify_two_cms_have_identical_parameters($cmfile, $copied_cmfile);
 
   # clean up
   if(! $do_dirty) { 
-    foreach my $file2unlink ($outfile, $copied_cmfile, $cmalign_mapali_file, $emit_fafile) { 
+    foreach my $file2unlink ($outfile, $copied_cmfile, $cmbuildO_file, $cmalign_mapali_file, $emit_fafile) { 
       if(-e $file2unlink) { unlink $file2unlink; }
     }
   }
@@ -1197,13 +1219,16 @@ sub strip_default_options_from_sm {
 
 ######################################################################
 #
-# add_rf_and_ss_cons_given_cmalign_mapali_output(): 
+# add_rf_and_ss_cons_given_annotated_alignment(): 
 #
 # Given an original SEED alignment ($orig_infile) used to build a CM,
-# and an alignment output from cmalign --mapali
-# ($cmalign_mapali_infile) with a single extra sequence other than the
-# original SEED, add RF and SS_cons annotation to the original SEED
-# alignment and save it as $outfile.
+# and an RF and SS_cons annotated alignment of the same sequences in
+# the same order ($annotated_infile), either the cmbuild -O alignment
+# saved when the CM was built from the SEED, or the output of cmalign
+# --mapali SEED, add RF and SS_cons annotation to the original SEED
+# alignment and save it as $outfile. $annotated_infile may have
+# $nextra extra sequences after the SEED sequences (the consensus
+# sequence in cmalign --mapali output), which are ignored.
 #
 # The motivation behind doing this is that we want the final output
 # SEED to be similar for all families in the following ways:
@@ -1215,8 +1240,8 @@ sub strip_default_options_from_sm {
 # AND we want the output SEED to be as similar as possible to the
 # input SEED with respect to the alignment. 
 #
-# However, if we just use the cmbuild -O output alignment then
-# we are only guaranteed to have the output SEED alignment
+# However, if we just used the annotated alignment as the new SEED
+# then we would only be guaranteed to have the output SEED alignment
 # match the input SEED alignment in match (nongap RF) positions,
 # because inserts may have moved around. This function maintains
 # the inserted residues in the original positions they were in 
@@ -1230,9 +1255,9 @@ sub strip_default_options_from_sm {
 # lost. Pseudoknots (k,l) will be preserved though (another reason we
 # need this function) unless k or l is an insert position.
 # 
-sub add_rf_and_ss_cons_given_cmalign_mapali_output {
+sub add_rf_and_ss_cons_given_annotated_alignment {
 
-  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen) = @_;
+  my ($orig_infile, $annotated_infile, $nextra, $outfile, $clen) = @_;
 
   # read in original seed
   my $orig_seed = Bio::Easel::MSA->new({
@@ -1240,19 +1265,32 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
     forceText    => 1
       });
   
-  # read in new seed plus consensus sequence aligned (created with cmalign --mapali SEED CM c.fa)
-  my $tmp_seed  = Bio::Easel::MSA->new({
-    fileLocation => $cmalign_mapali_infile,
-    forceText    => 1
-   });
+  # read in the annotated alignment
+  my $new_seed  = eval { 
+    Bio::Easel::MSA->new({
+      fileLocation => $annotated_infile,
+      forceText    => 1
+     });
+  };
+  if(! defined $new_seed) { 
+    die "ERROR unable to read $annotated_infile, the RF and SS_cons annotated alignment created by Infernal.\n" . 
+        "This can happen if a SEED sequence begins with the missing data character '~': cmbuild -O in\n" . 
+        "Infernal 1.1.4 and earlier, and cmalign --mapali (used for zero basepair models) in Infernal 1.1.5\n" . 
+        "and earlier, write such sequences incorrectly. Using Infernal 1.1.5 or later fixes this for models\n" . 
+        "with at least one basepair. Error reading the alignment:\n$@";
+  }
+  if($new_seed->nseq() != ($orig_seed->nseq() + $nextra)) { 
+    die "ERROR unexpected number of sequences in $annotated_infile.";
+  }
   
-  # remove final sequence, the consensus sequence, to get a new alignment
-  my @usemeA = ();
-  my $i;
-  for($i = 0;                  $i < $orig_seed->nseq; $i++) { $usemeA[$i] = 1; }
-  for($i = $orig_seed->nseq(); $i < $tmp_seed->nseq;  $i++) { $usemeA[$i] = 0; }
-  my $new_seed = $tmp_seed->sequence_subset(\@usemeA);
-  undef $tmp_seed;
+  # remove any extra final sequences (the consensus sequence in cmalign --mapali output)
+  if($nextra > 0) { 
+    my @usemeA = ();
+    my $i;
+    for($i = 0;                  $i < $orig_seed->nseq; $i++) { $usemeA[$i] = 1; }
+    for($i = $orig_seed->nseq(); $i < $new_seed->nseq; $i++) { $usemeA[$i] = 0; }
+    $new_seed = $new_seed->sequence_subset(\@usemeA);
+  }
   
   # verify sequences are in the same order in each MSA
   for(my $i = 0; $i < $orig_seed->nseq(); $i++) { 
@@ -1287,8 +1325,15 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
     }
     $cpos++;
     #printf("cpos: $cpos new_apos: $new_apos orig_apos: $orig_apos\n");
-    # get this column of the original seed
+    # get this column of the new seed, normalized the same way as the
+    # original seed columns below; in particular this maps missing data
+    # characters ('~') to '-', which is necessary because the annotated
+    # alignment does not necessarily have '~' in the same places as the
+    # original seed (cmbuild -O can add some)
     my $new_col = $new_seed->get_column($new_apos+1);
+    $new_col =~ tr/a-z/A-Z/;     # translate to upper case
+    $new_col =~ tr/T/U/;         # translate Ts to Us
+    $new_col =~ s/[^A-Za-z]/-/g; # translate non-alphacharacters to Infernal consensus gap char: '-'
     # find identical column in new seed
     my $found_match = 0;
     while((! $found_match) && ($orig_apos < $orig_alen)) { 
@@ -1356,10 +1401,12 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
 # have identical model parameters, including profile
 # HMM filter parameters. Do not check that other information
 # is identical, e.g. checksum, or E-value statistics.
+# Numbers are allowed to differ by one unit in their last
+# printed decimal place, see validate_line_given_precision_threshold().
 
 sub verify_two_cms_have_identical_parameters { 
 
-  my ($cmfile1, $cmfile2, $thr) = @_;
+  my ($cmfile1, $cmfile2) = @_;
 
   my ($line1, $line2, $i, $nlines);
   my $cm1 = $io->parseCM($cmfile1);
@@ -1371,7 +1418,7 @@ sub verify_two_cms_have_identical_parameters {
     $line1 = $cm1->{cmBody}->[$i];
     $line2  = $cm2->{cmBody}->[$i];
     if($line1 ne $line2) { 
-      validate_line_given_precision_threshold($line1, $line2, $thr);
+      validate_line_given_precision_threshold($line1, $line2);
       # this will die if lines are not equal with allowed precision difference
     }
   }
@@ -1382,7 +1429,7 @@ sub verify_two_cms_have_identical_parameters {
     $line1 = $cm1->{hmmBody}->[$i];
     $line2  = $cm2->{hmmBody}->[$i];
     if($line1 ne $line2) { 
-      validate_line_given_precision_threshold($line1, $line2, $thr); 
+      validate_line_given_precision_threshold($line1, $line2); 
       # this will die if lines are not equal with allowed precision difference
     }
   }
@@ -1391,16 +1438,27 @@ sub verify_two_cms_have_identical_parameters {
   return;
 }
 
-
 ##########################################
-# validate_line_given_precision_threshold
-# Given two parameter lines of a CM and a precision threshold,
-# ensure that they are 
+# validate_line_given_precision_threshold()
+# Given two parameter lines of a CM or its profile HMM filter,
+# die unless they are identical up to the precision the values
+# were printed with. Tokens are compared one at a time:
+#  - identical tokens (including non-numbers like '*') match;
+#  - two numbers that both have a decimal point match if they
+#    differ by at most one unit in their last printed decimal
+#    place (if the two numbers were printed with a different
+#    number of decimal places, the smaller number is used), so
+#    2.60393 and 2.60392 match, -6.677 and -6.678 match,
+#    1.99999 and 2.00000 match, but 2.60393 and 2.60391 do not,
+#    and -0.50000 and 0.50000 do not;
+#  - any other difference (integers that differ, a number vs a
+#    non-number, two different non-numbers) does not match.
+# Two parameter files built from the same alignment can differ
+# by one unit in a printed value due to floating point rounding,
+# for example because of a different order of summation.
 sub validate_line_given_precision_threshold { 
-  my($line1, $line2, $thr) = @_;
+  my($line1, $line2) = @_;
 
-  if($thr >= 1) { die "in validate_line_given_precision_threshold() threshold too high"; }
-  
   my @elA1 = split(/\s+/, $line1);
   my @elA2 = split(/\s+/, $line2);
 
@@ -1412,21 +1470,27 @@ sub validate_line_given_precision_threshold {
     my $el1 = $elA1[$i];
     my $el2 = $elA2[$i];
     if($el1 ne $el2) { 
-      # check if it's a number
-      if($el1 =~ /(\d+)(\.\d+)/) { 
-        my($n1a, $n1b) = ($1, $2);
-        if($el2 =~ /(\d+)(\.\d+)/) { 
-          my($n2a, $n2b) = ($1, $2);
-          if($n1a ne $n2a) { die "validate_line_given_precision_threshold() number mismatch $n1a != $n2a in ($el1 vs $el2) on lines:\n$line1\n$line2"; }
-          if($n1b ne $n2b) { 
-            if(abs($n1b - $n2b) > $thr) { 
-              die "validate_line_given_precision_threshold() number mismatch given precision $thr, $n1b != $n2b in ($el1 vs $el2) on lines:\n$line1\n$line2"; 
-            }
-          }
+      my @n1 = ($el1 =~ /^([-+]?)(\d+)\.(\d+)$/); # (sign, integer part, decimal part) if $el1 is a decimal number
+      my @n2 = ($el2 =~ /^([-+]?)(\d+)\.(\d+)$/); # (sign, integer part, decimal part) if $el2 is a decimal number
+      if((scalar(@n1) == 3) && (scalar(@n2) == 3)) { 
+        # both are decimal numbers; convert each to an integer number of
+        # units in the last decimal place of the more precise of the two,
+        # using string operations only so there is no floating point error
+        my $ndec1 = length($n1[2]);
+        my $ndec2 = length($n2[2]);
+        my $nmax  = ($ndec1 > $ndec2) ? $ndec1 : $ndec2;
+        my $nmin  = ($ndec1 < $ndec2) ? $ndec1 : $ndec2;
+        my $int1  = ($n1[1] . $n1[2] . ("0" x ($nmax - $ndec1))) + 0;
+        my $int2  = ($n2[1] . $n2[2] . ("0" x ($nmax - $ndec2))) + 0;
+        if($n1[0] eq "-") { $int1 = -1 * $int1; }
+        if($n2[0] eq "-") { $int2 = -1 * $int2; }
+        my $allowed = 10 ** ($nmax - $nmin); # one unit in the last decimal place of the less precise number
+        if(abs($int1 - $int2) > $allowed) { 
+          die "validate_line_given_precision_threshold() number mismatch, $el1 and $el2 differ by more than one unit in their last decimal place, on lines:\n$line1\n$line2"; 
         }
       }
       else { 
-        die "validate_line_given_precision_threshold() mismatch that isn't a real number on lines:\n$line1\n$line2"; 
+        die "validate_line_given_precision_threshold() mismatch that isn't between two decimal numbers ($el1 vs $el2) on lines:\n$line1\n$line2"; 
       }
     }
   }
