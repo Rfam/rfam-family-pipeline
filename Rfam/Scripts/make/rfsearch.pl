@@ -605,13 +605,15 @@ if ($do_build) {
   $outfile = "b2.$$.out";
   $build_elp_secs += Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
 
-  # verify that this new CM is the same as the original
-  # threshold raised from 1e-8 to 1e-4: seeds carrying Stockholm missing-data characters ('~')
-  # can produce a small number of leaf-state scores that differ from a direct rebuild by exactly
-  # 1e-5 (one unit in the last printed digit; confirmed on all differing values across 26 tested
-  # seeds, never larger). 1e-4 keeps two orders of magnitude of margin above that observed, bounded
-  # difference while still catching larger, real discrepancies.
-  verify_two_cms_have_identical_parameters($cmfile, $copied_cmfile, 0.0001);
+  # verify that this new CM is the same as the original. Each printed number may
+  # differ by at most one unit in its last decimal place (e.g. 1e-5 for 2.60393, 1e-3
+  # for -6.677); integers and non-numbers must be identical. Such one unit differences
+  # can occur when the new SEED lists the sequences in a different order than the
+  # original SEED, which changes the order of floating point sums in cmbuild. For
+  # example, the Stockholm writer groups '#=GS' lines by tag (all DE lines first)
+  # and the reader orders sequences by where they are first mentioned, so a SEED in
+  # which only some sequences have a '#=GS' tag can be reordered when it is rewritten.
+  verify_two_cms_have_identical_parameters($cmfile, $copied_cmfile);
 
   # clean up
   if(! $do_dirty) { 
@@ -1398,10 +1400,12 @@ sub add_rf_and_ss_cons_given_annotated_alignment {
 # have identical model parameters, including profile
 # HMM filter parameters. Do not check that other information
 # is identical, e.g. checksum, or E-value statistics.
+# Numbers are allowed to differ by one unit in their last
+# printed decimal place, see validate_line_given_precision_threshold().
 
 sub verify_two_cms_have_identical_parameters { 
 
-  my ($cmfile1, $cmfile2, $thr) = @_;
+  my ($cmfile1, $cmfile2) = @_;
 
   my ($line1, $line2, $i, $nlines);
   my $cm1 = $io->parseCM($cmfile1);
@@ -1413,7 +1417,7 @@ sub verify_two_cms_have_identical_parameters {
     $line1 = $cm1->{cmBody}->[$i];
     $line2  = $cm2->{cmBody}->[$i];
     if($line1 ne $line2) { 
-      validate_line_given_precision_threshold($line1, $line2, $thr);
+      validate_line_given_precision_threshold($line1, $line2);
       # this will die if lines are not equal with allowed precision difference
     }
   }
@@ -1424,7 +1428,7 @@ sub verify_two_cms_have_identical_parameters {
     $line1 = $cm1->{hmmBody}->[$i];
     $line2  = $cm2->{hmmBody}->[$i];
     if($line1 ne $line2) { 
-      validate_line_given_precision_threshold($line1, $line2, $thr); 
+      validate_line_given_precision_threshold($line1, $line2); 
       # this will die if lines are not equal with allowed precision difference
     }
   }
@@ -1433,16 +1437,27 @@ sub verify_two_cms_have_identical_parameters {
   return;
 }
 
-
 ##########################################
-# validate_line_given_precision_threshold
-# Given two parameter lines of a CM and a precision threshold,
-# ensure that they are 
+# validate_line_given_precision_threshold()
+# Given two parameter lines of a CM or its profile HMM filter,
+# die unless they are identical up to the precision the values
+# were printed with. Tokens are compared one at a time:
+#  - identical tokens (including non-numbers like '*') match;
+#  - two numbers that both have a decimal point match if they
+#    differ by at most one unit in their last printed decimal
+#    place (if the two numbers were printed with a different
+#    number of decimal places, the smaller number is used), so
+#    2.60393 and 2.60392 match, -6.677 and -6.678 match,
+#    1.99999 and 2.00000 match, but 2.60393 and 2.60391 do not,
+#    and -0.50000 and 0.50000 do not;
+#  - any other difference (integers that differ, a number vs a
+#    non-number, two different non-numbers) does not match.
+# Two parameter files built from the same alignment can differ
+# by one unit in a printed value due to floating point rounding,
+# for example because of a different order of summation.
 sub validate_line_given_precision_threshold { 
-  my($line1, $line2, $thr) = @_;
+  my($line1, $line2) = @_;
 
-  if($thr >= 1) { die "in validate_line_given_precision_threshold() threshold too high"; }
-  
   my @elA1 = split(/\s+/, $line1);
   my @elA2 = split(/\s+/, $line2);
 
@@ -1454,21 +1469,27 @@ sub validate_line_given_precision_threshold {
     my $el1 = $elA1[$i];
     my $el2 = $elA2[$i];
     if($el1 ne $el2) { 
-      # check if it's a number
-      if($el1 =~ /(\d+)(\.\d+)/) { 
-        my($n1a, $n1b) = ($1, $2);
-        if($el2 =~ /(\d+)(\.\d+)/) { 
-          my($n2a, $n2b) = ($1, $2);
-          if($n1a ne $n2a) { die "validate_line_given_precision_threshold() number mismatch $n1a != $n2a in ($el1 vs $el2) on lines:\n$line1\n$line2"; }
-          if($n1b ne $n2b) { 
-            if(abs($n1b - $n2b) > $thr) { 
-              die "validate_line_given_precision_threshold() number mismatch given precision $thr, $n1b != $n2b in ($el1 vs $el2) on lines:\n$line1\n$line2"; 
-            }
-          }
+      my @n1 = ($el1 =~ /^([-+]?)(\d+)\.(\d+)$/); # (sign, integer part, decimal part) if $el1 is a decimal number
+      my @n2 = ($el2 =~ /^([-+]?)(\d+)\.(\d+)$/); # (sign, integer part, decimal part) if $el2 is a decimal number
+      if((scalar(@n1) == 3) && (scalar(@n2) == 3)) { 
+        # both are decimal numbers; convert each to an integer number of
+        # units in the last decimal place of the more precise of the two,
+        # using string operations only so there is no floating point error
+        my $ndec1 = length($n1[2]);
+        my $ndec2 = length($n2[2]);
+        my $nmax  = ($ndec1 > $ndec2) ? $ndec1 : $ndec2;
+        my $nmin  = ($ndec1 < $ndec2) ? $ndec1 : $ndec2;
+        my $int1  = ($n1[1] . $n1[2] . ("0" x ($nmax - $ndec1))) + 0;
+        my $int2  = ($n2[1] . $n2[2] . ("0" x ($nmax - $ndec2))) + 0;
+        if($n1[0] eq "-") { $int1 = -1 * $int1; }
+        if($n2[0] eq "-") { $int2 = -1 * $int2; }
+        my $allowed = 10 ** ($nmax - $nmin); # one unit in the last decimal place of the less precise number
+        if(abs($int1 - $int2) > $allowed) { 
+          die "validate_line_given_precision_threshold() number mismatch, $el1 and $el2 differ by more than one unit in their last decimal place, on lines:\n$line1\n$line2"; 
         }
       }
       else { 
-        die "validate_line_given_precision_threshold() mismatch that isn't a real number on lines:\n$line1\n$line2"; 
+        die "validate_line_given_precision_threshold() mismatch that isn't between two decimal numbers ($el1 vs $el2) on lines:\n$line1\n$line2"; 
       }
     }
   }
