@@ -576,7 +576,8 @@ if ($do_build) {
   # - if the CM has at least one basepair, use the cmbuild -O alignment. We
   #   used to use 'cmemit -c' plus 'cmalign --mapali SEED' for all models, but
   #   cmalign --mapali in Infernal 1.1.2 to 1.1.5 corrupts SEED rows that begin
-  #   with the missing data character '~'.
+  #   with the missing data character '~'. (cmbuild -O writes such rows
+  #   correctly from Infernal 1.1.5 on.)
   # - if the CM has zero basepairs, cmbuild 'doctors' the implicit parsetrees
   #   (removing D->I and I->D transitions, as HMMER does), which can move an
   #   inserted residue into a match column in the -O alignment, after which it
