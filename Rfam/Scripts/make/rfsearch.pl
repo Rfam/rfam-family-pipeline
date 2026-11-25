@@ -557,8 +557,9 @@ if ($do_build) {
   # clean up any files from previous runs
   if (-e "CM.xxx") { unlink "CM.xxx"; }
 
-  # run cmbuild to create new CM
-  $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts", $cmfile, $seedfile, $outfile);
+  # run cmbuild to create new CM, saving the RF and SS_cons annotated alignment with -O
+  # (-O is not added to $buildopts, so it is not written to the DESC BM line below)
+  $build_elp_secs = Bio::Rfam::Infernal::cmbuild_wrapper($config, "$buildopts -O $cmbuildO_file", $cmfile, $seedfile, $outfile);
   if(! $do_dirty) { unlink $outfile; }
   if($buildopts ne "") { $buildopts .= " "; } # add trailing single space so next line properly formats BM (and blank opts ("") will work too)
   #$famObj->DESC->BM("cmbuild -n $id -F " . $buildopts . "CM SEED");
@@ -570,20 +571,33 @@ if ($do_build) {
 
   $is_cm_calibrated = 0;
 
-  # use cmalign --mapali to get an RF annotation version of the SEED that we 
-  # can use to map the RF onto the original seed. Actually we'll get an alignment
-  # that is the seed plus the consensus sequence, but then we'll remove the consensus
-  # sequence in add_rf_and_ss_cons_given_cmalign_mapali_output().
-  # first, generate $fafile using 'cmemit -c'
+  # get an RF and SS_cons annotated version of the SEED that we can use to map
+  # the RF and SS_cons onto the original SEED:
+  # - if the CM has at least one basepair, use the cmbuild -O alignment. We
+  #   used to use 'cmemit -c' plus 'cmalign --mapali SEED' for all models, but
+  #   cmalign --mapali in Infernal 1.1.2 to 1.1.5 corrupts SEED rows that begin
+  #   with the missing data character '~'.
+  # - if the CM has zero basepairs, cmbuild 'doctors' the implicit parsetrees
+  #   (removing D->I and I->D transitions, as HMMER does), which can move an
+  #   inserted residue into a match column in the -O alignment, after which it
+  #   no longer maps onto the original SEED. For those models use 'cmemit -c'
+  #   plus 'cmalign --mapali SEED', which preserves the SEED alignment exactly
+  #   and adds one extra sequence, the consensus sequence, at the end. Zero
+  #   basepair SEEDs with a row that begins with '~' will still fail.
+  my $annotated_file = $cmbuildO_file; 
+  my $nextra         = 0; # number of extra sequences at the end of $annotated_file
   my $emit_fafile         = "e.$$.fa";
   my $cmalign_mapali_file = "ma.$$.stk";
-  Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
-  Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
+  if(! $cm->match_pair_node) { 
+    Bio::Rfam::Infernal::cmemit_wrapper($config, "-c -o $emit_fafile", $cmfile, undef, 0);
+    Bio::Rfam::Infernal::cmalign_wrapper($config, "", "", "--mapali SEED -o $cmalign_mapali_file", "CM", $emit_fafile, undef, "", 1, 100, 1, 0, 0, "", 1, undef, 0);
+    $annotated_file = $cmalign_mapali_file;
+    $nextra         = 1;
+  }
 
-  # add RF annotation from cmalign --mapali output file to original SEED
+  # add RF and SS_cons annotation from the annotated alignment to the original SEED
   # to create a new SEED file 
-  # (this subroutine expects the extra consensus sequence in the $cmalign_mapali_file alignment)
-  add_rf_and_ss_cons_given_cmalign_mapali_output($copied_seedfile, $cmalign_mapali_file, $seedfile, $cm->{cmHeader}->{clen});
+  add_rf_and_ss_cons_given_annotated_alignment($copied_seedfile, $annotated_file, $nextra, $seedfile, $cm->{cmHeader}->{clen});
 
   # rebuild CM from new SEED
   my $copied_cmfile = $cmfile . ".$$";
@@ -601,7 +615,7 @@ if ($do_build) {
 
   # clean up
   if(! $do_dirty) { 
-    foreach my $file2unlink ($outfile, $copied_cmfile, $cmalign_mapali_file, $emit_fafile) { 
+    foreach my $file2unlink ($outfile, $copied_cmfile, $cmbuildO_file, $cmalign_mapali_file, $emit_fafile) { 
       if(-e $file2unlink) { unlink $file2unlink; }
     }
   }
@@ -1202,13 +1216,16 @@ sub strip_default_options_from_sm {
 
 ######################################################################
 #
-# add_rf_and_ss_cons_given_cmalign_mapali_output(): 
+# add_rf_and_ss_cons_given_annotated_alignment(): 
 #
 # Given an original SEED alignment ($orig_infile) used to build a CM,
-# and an alignment output from cmalign --mapali
-# ($cmalign_mapali_infile) with a single extra sequence other than the
-# original SEED, add RF and SS_cons annotation to the original SEED
-# alignment and save it as $outfile.
+# and an RF and SS_cons annotated alignment of the same sequences in
+# the same order ($annotated_infile), either the cmbuild -O alignment
+# saved when the CM was built from the SEED, or the output of cmalign
+# --mapali SEED, add RF and SS_cons annotation to the original SEED
+# alignment and save it as $outfile. $annotated_infile may have
+# $nextra extra sequences after the SEED sequences (the consensus
+# sequence in cmalign --mapali output), which are ignored.
 #
 # The motivation behind doing this is that we want the final output
 # SEED to be similar for all families in the following ways:
@@ -1220,8 +1237,8 @@ sub strip_default_options_from_sm {
 # AND we want the output SEED to be as similar as possible to the
 # input SEED with respect to the alignment. 
 #
-# However, if we just use the cmbuild -O output alignment then
-# we are only guaranteed to have the output SEED alignment
+# However, if we just used the annotated alignment as the new SEED
+# then we would only be guaranteed to have the output SEED alignment
 # match the input SEED alignment in match (nongap RF) positions,
 # because inserts may have moved around. This function maintains
 # the inserted residues in the original positions they were in 
@@ -1235,9 +1252,9 @@ sub strip_default_options_from_sm {
 # lost. Pseudoknots (k,l) will be preserved though (another reason we
 # need this function) unless k or l is an insert position.
 # 
-sub add_rf_and_ss_cons_given_cmalign_mapali_output {
+sub add_rf_and_ss_cons_given_annotated_alignment {
 
-  my ($orig_infile, $cmalign_mapali_infile, $outfile, $clen) = @_;
+  my ($orig_infile, $annotated_infile, $nextra, $outfile, $clen) = @_;
 
   # read in original seed
   my $orig_seed = Bio::Easel::MSA->new({
@@ -1245,19 +1262,32 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
     forceText    => 1
       });
   
-  # read in new seed plus consensus sequence aligned (created with cmalign --mapali SEED CM c.fa)
-  my $tmp_seed  = Bio::Easel::MSA->new({
-    fileLocation => $cmalign_mapali_infile,
-    forceText    => 1
-   });
+  # read in the annotated alignment
+  my $new_seed  = eval { 
+    Bio::Easel::MSA->new({
+      fileLocation => $annotated_infile,
+      forceText    => 1
+     });
+  };
+  if(! defined $new_seed) { 
+    die "ERROR unable to read $annotated_infile, the RF and SS_cons annotated alignment created by Infernal.\n" . 
+        "This can happen if a SEED sequence begins with the missing data character '~': cmbuild -O in\n" . 
+        "Infernal 1.1.4 and earlier, and cmalign --mapali (used for zero basepair models) in Infernal 1.1.5\n" . 
+        "and earlier, write such sequences incorrectly. Using Infernal 1.1.5 or later fixes this for models\n" . 
+        "with at least one basepair. Error reading the alignment:\n$@";
+  }
+  if($new_seed->nseq() != ($orig_seed->nseq() + $nextra)) { 
+    die "ERROR unexpected number of sequences in $annotated_infile.";
+  }
   
-  # remove final sequence, the consensus sequence, to get a new alignment
-  my @usemeA = ();
-  my $i;
-  for($i = 0;                  $i < $orig_seed->nseq; $i++) { $usemeA[$i] = 1; }
-  for($i = $orig_seed->nseq(); $i < $tmp_seed->nseq;  $i++) { $usemeA[$i] = 0; }
-  my $new_seed = $tmp_seed->sequence_subset(\@usemeA);
-  undef $tmp_seed;
+  # remove any extra final sequences (the consensus sequence in cmalign --mapali output)
+  if($nextra > 0) { 
+    my @usemeA = ();
+    my $i;
+    for($i = 0;                  $i < $orig_seed->nseq; $i++) { $usemeA[$i] = 1; }
+    for($i = $orig_seed->nseq(); $i < $new_seed->nseq; $i++) { $usemeA[$i] = 0; }
+    $new_seed = $new_seed->sequence_subset(\@usemeA);
+  }
   
   # verify sequences are in the same order in each MSA
   for(my $i = 0; $i < $orig_seed->nseq(); $i++) { 
@@ -1292,8 +1322,15 @@ sub add_rf_and_ss_cons_given_cmalign_mapali_output {
     }
     $cpos++;
     #printf("cpos: $cpos new_apos: $new_apos orig_apos: $orig_apos\n");
-    # get this column of the original seed
+    # get this column of the new seed, normalized the same way as the
+    # original seed columns below; in particular this maps missing data
+    # characters ('~') to '-', which is necessary because the annotated
+    # alignment does not necessarily have '~' in the same places as the
+    # original seed (cmbuild -O can add some)
     my $new_col = $new_seed->get_column($new_apos+1);
+    $new_col =~ tr/a-z/A-Z/;     # translate to upper case
+    $new_col =~ tr/T/U/;         # translate Ts to Us
+    $new_col =~ s/[^A-Za-z]/-/g; # translate non-alphacharacters to Infernal consensus gap char: '-'
     # find identical column in new seed
     my $found_match = 0;
     while((! $found_match) && ($orig_apos < $orig_alen)) { 
