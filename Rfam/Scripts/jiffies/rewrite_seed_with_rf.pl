@@ -333,14 +333,17 @@ sub add_rf_and_ss_cons_given_annotated_alignment {
   my $new_rf       = $new_seed->get_rf();
   my @new_rfA      = split("", $new_rf);
   
-  my $new_ss_cons  = $new_seed->get_ss_cons();
-  my @new_ss_consA = split("", $new_ss_cons);
+  # The output SS_cons is the original SEED's SS_cons, with basepairs that
+  # involve a gap RF column removed by remove_gap_rf_basepairs() below. It is
+  # not taken from the annotated alignment, because the SS_cons of the cmbuild
+  # -O alignment has only the CM's nested basepairs, and this way the SEED's
+  # pseudoknots are kept. (This used to copy the SS_cons of the cmalign
+  # --mapstr --mapali output, which is based on the SEED's own SS_cons.)
   
   my $cpos         = 0;
   my $new_apos     = 0;
   my $orig_apos    = 0;
   my $orig_rf      = "";
-  my $orig_ss_cons = "";
   while(($new_apos < $new_alen) && ($cpos < $clen)) { 
     while($new_rfA[$new_apos] !~ m/[a-zA-Z]/) { 
       $new_apos++;
@@ -367,11 +370,9 @@ sub add_rf_and_ss_cons_given_annotated_alignment {
         $found_match = 1; 
         # printf("\tfound match new:orig $new_apos:$orig_apos\n"); 
         $orig_rf      .= "$new_rfA[$new_apos]";
-        $orig_ss_cons .= "$new_ss_consA[$new_apos]";
       }
       else { 
         $orig_rf      .= ".";
-        $orig_ss_cons .= ".";
       }
       $orig_apos++;
     }
@@ -379,10 +380,9 @@ sub add_rf_and_ss_cons_given_annotated_alignment {
     if((! $found_match) && ($orig_apos == $orig_alen)) { die "ERROR unable to find match for consensus position $cpos"; }
   }
   # we've reached clen, deal with possibility of inserts after final cpos
-  while(length($orig_rf) < $orig_alen) { $orig_rf .= "."; $orig_ss_cons .= "."; }
+  while(length($orig_rf) < $orig_alen) { $orig_rf .= "."; }
 
   $orig_seed->set_rf($orig_rf);
-  $orig_seed->set_ss_cons($orig_ss_cons);
   $orig_seed->capitalize_based_on_rf();
   $orig_seed->remove_gap_rf_basepairs(1); # 1: wussify SS_cons and change gap RF columns to '.' in SS_cons
 
